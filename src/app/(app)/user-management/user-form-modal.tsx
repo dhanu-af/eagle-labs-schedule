@@ -4,9 +4,9 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createUser, updateUser } from "@/lib/actions/user-management-actions";
 import type { Role } from "@/generated/prisma";
-import type { ManagedUser } from "./user-management-client";
+import { ROLE_LABEL, type ManagedUser } from "./user-management-client";
 
-const ROLE_OPTIONS: Role[] = ["ADMIN", "SUPERVISOR", "QA", "EMPLOYEE"];
+const ROLE_OPTIONS: Role[] = ["ADMIN", "SUPERVISOR", "TEAM_LEAD", "QA", "EMPLOYEE"];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -99,7 +99,7 @@ export default function UserFormModal({
               >
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r} value={r}>
-                    {r.replace("_", " ")}
+                    {ROLE_LABEL[r]}
                   </option>
                 ))}
               </select>

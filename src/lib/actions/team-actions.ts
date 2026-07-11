@@ -16,17 +16,15 @@ export async function createEmployee(formData: FormData) {
   const session = await requireAdmin();
 
   const name = String(formData.get("name") || "");
-  const email = String(formData.get("email") || "") || null;
   const role = String(formData.get("role") || "EMPLOYEE") as Role;
   const teamId = String(formData.get("teamId") || "");
   const shift = String(formData.get("shift") || "Day");
   const photoUrl = String(formData.get("photoUrl") || "") || null;
-  const hourlyRate = Number(formData.get("hourlyRate") || 0);
 
   if (!name || !teamId) throw new Error("Name and team are required");
 
   const employee = await prisma.employee.create({
-    data: { name, email, role, teamId, shift, photoUrl, hourlyRate },
+    data: { name, role, teamId, shift, photoUrl },
   });
 
   await logAudit(session, {
@@ -70,6 +68,39 @@ export async function updateEmployee(
     entityType: "Employee",
     entityId: id,
     summary: `Updated employee ${target.name}: ${JSON.stringify(data)}`,
+  });
+
+  revalidatePath("/team");
+}
+
+export async function deleteEmployee(id: string) {
+  const session = await requireAdmin();
+
+  const target = await prisma.employee.findUnique({ where: { id }, include: { user: true } });
+  if (!target) throw new Error("Employee not found");
+  if (target.user?.isPermanent) {
+    throw new Error("This is a protected permanent account and cannot be deleted");
+  }
+
+  await prisma.dailyTask.updateMany({ where: { employeeId: id }, data: { employeeId: null } });
+  await prisma.dailyTask.updateMany({ where: { updatedById: id }, data: { updatedById: null } });
+  await prisma.weeklyAssignment.deleteMany({ where: { employeeId: id } });
+  await prisma.attendance.deleteMany({ where: { employeeId: id } });
+  await prisma.leaveRequest.deleteMany({ where: { employeeId: id } });
+  await prisma.leaveRequest.updateMany({ where: { approverId: id }, data: { approverId: null } });
+  await prisma.payslip.deleteMany({ where: { employeeId: id } });
+  await prisma.notification.deleteMany({ where: { employeeId: id } });
+  await prisma.kpiRecord.deleteMany({ where: { employeeId: id } });
+  if (target.user) {
+    await prisma.user.delete({ where: { id: target.user.id } });
+  }
+  await prisma.employee.delete({ where: { id } });
+
+  await logAudit(session, {
+    action: "DELETE_EMPLOYEE",
+    entityType: "Employee",
+    entityId: id,
+    summary: `Deleted employee ${target.name}`,
   });
 
   revalidatePath("/team");

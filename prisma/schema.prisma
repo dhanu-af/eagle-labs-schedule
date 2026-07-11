@@ -13,6 +13,7 @@ enum Role {
   SUPER_ADMIN
   ADMIN
   SUPERVISOR
+  TEAM_LEAD
   QA
   EMPLOYEE
 }

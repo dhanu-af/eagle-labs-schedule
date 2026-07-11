@@ -23,14 +23,12 @@ export default async function TeamPage() {
       employees={employees.map((e) => ({
         id: e.id,
         name: e.name,
-        email: e.email,
         role: e.role,
         teamId: e.teamId,
         teamName: e.team.name,
         shift: e.shift,
         active: e.active,
         photoUrl: e.photoUrl,
-        hourlyRate: e.hourlyRate,
         isPermanent: e.user?.isPermanent ?? false,
       }))}
     />

@@ -12,6 +12,15 @@ import { initials } from "@/lib/ui";
 type NavItem = { href: string; label: string; icon: React.ReactNode };
 type NavGroup = { label: string; items: NavItem[] };
 
+const ROLE_DISPLAY: Record<string, string> = {
+  SUPER_ADMIN: "super admin",
+  ADMIN: "admin",
+  SUPERVISOR: "supervisor",
+  TEAM_LEAD: "team lead",
+  QA: "qa",
+  EMPLOYEE: "operator",
+};
+
 const icons = {
   dashboard: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -295,7 +304,7 @@ export default function AppShell({
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium leading-tight text-foreground">{user.name}</p>
                 <p className="text-xs leading-tight capitalize text-muted-foreground">
-                  {user.role.toLowerCase().replace("_", " ")}
+                  {ROLE_DISPLAY[user.role] ?? user.role.toLowerCase().replace("_", " ")}
                 </p>
               </div>
             </div>

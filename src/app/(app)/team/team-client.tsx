@@ -2,25 +2,32 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createEmployee, createTeam, deleteTeam, updateEmployee, updateTeam } from "@/lib/actions/team-actions";
+import { createEmployee, createTeam, deleteEmployee, deleteTeam, updateEmployee, updateTeam } from "@/lib/actions/team-actions";
 import { initials } from "@/lib/ui";
 
-type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "QA" | "EMPLOYEE";
+type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "TEAM_LEAD" | "QA" | "EMPLOYEE";
 type Team = { id: string; name: string; description: string | null };
 type Employee = {
   id: string;
   name: string;
-  email: string | null;
   role: Role;
   teamId: string;
   teamName: string;
   shift: string;
   active: boolean;
   photoUrl: string | null;
-  hourlyRate: number;
   isPermanent: boolean;
 };
-const ALL_ROLES: Role[] = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR", "QA", "EMPLOYEE"];
+const ALL_ROLES: Role[] = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR", "TEAM_LEAD", "QA", "EMPLOYEE"];
+
+export const ROLE_LABEL: Record<Role, string> = {
+  SUPER_ADMIN: "Super Admin",
+  ADMIN: "Admin",
+  SUPERVISOR: "Supervisor",
+  TEAM_LEAD: "Team Lead",
+  QA: "QA",
+  EMPLOYEE: "Operator",
+};
 
 export default function TeamClient({
   currentRole,
@@ -37,7 +44,8 @@ export default function TeamClient({
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [editTeam, setEditTeam] = useState<Team | null>(null);
-  const assignableRoles = currentRole === "SUPER_ADMIN" ? ALL_ROLES : (["ADMIN", "SUPERVISOR", "QA", "EMPLOYEE"] as Role[]);
+  const assignableRoles =
+    currentRole === "SUPER_ADMIN" ? ALL_ROLES : (["ADMIN", "SUPERVISOR", "TEAM_LEAD", "QA", "EMPLOYEE"] as Role[]);
 
   return (
     <div className="space-y-6">
@@ -94,12 +102,11 @@ export default function TeamClient({
           <thead>
             <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
               <th className="px-4 py-2">Employee</th>
-              <th className="px-4 py-2">Email</th>
               <th className="px-4 py-2">Team</th>
               <th className="px-4 py-2">Role</th>
               <th className="px-4 py-2">Shift</th>
-              <th className="px-4 py-2">Rate/hr</th>
               <th className="px-4 py-2">Active</th>
+              <th className="px-4 py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -149,7 +156,6 @@ function EmployeeRow({
   const [role, setRole] = useState(employee.role);
   const [teamId, setTeamId] = useState(employee.teamId);
   const [shift, setShift] = useState(employee.shift);
-  const [hourlyRate, setHourlyRate] = useState(employee.hourlyRate);
   const [active, setActive] = useState(employee.active);
   const [dirty, setDirty] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -158,11 +164,23 @@ function EmployeeRow({
 
   function save() {
     startTransition(async () => {
-      await updateEmployee(employee.id, { role, teamId, shift, active, hourlyRate });
+      await updateEmployee(employee.id, { role, teamId, shift, active });
       const team = teams.find((t) => t.id === teamId);
-      onUpdated({ ...employee, role, teamId, teamName: team?.name ?? employee.teamName, shift, active, hourlyRate });
+      onUpdated({ ...employee, role, teamId, teamName: team?.name ?? employee.teamName, shift, active });
       setDirty(false);
       router.refresh();
+    });
+  }
+
+  function remove() {
+    if (!confirm(`Remove ${employee.name} from the roster? This cannot be undone.`)) return;
+    startTransition(async () => {
+      try {
+        await deleteEmployee(employee.id);
+        router.refresh();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Could not remove employee");
+      }
     });
   }
 
@@ -181,7 +199,6 @@ function EmployeeRow({
           )}
         </div>
       </td>
-      <td className="px-4 py-2 text-muted-foreground">{employee.email ?? "—"}</td>
       <td className="px-4 py-2">
         <select
           value={teamId}
@@ -211,7 +228,7 @@ function EmployeeRow({
         >
           {(assignableRoles.includes(role) ? assignableRoles : [role, ...assignableRoles]).map((r) => (
             <option key={r} value={r}>
-              {r.replace("_", " ")}
+              {ROLE_LABEL[r]}
             </option>
           ))}
         </select>
@@ -231,19 +248,6 @@ function EmployeeRow({
         </select>
       </td>
       <td className="px-4 py-2">
-        <input
-          type="number"
-          step="0.5"
-          value={hourlyRate}
-          disabled={disabled}
-          onChange={(e) => {
-            setHourlyRate(Number(e.target.value));
-            setDirty(true);
-          }}
-          className="w-20 rounded-lg border border-border bg-surface px-2 py-1 text-xs text-foreground disabled:opacity-50"
-        />
-      </td>
-      <td className="px-4 py-2">
         <label className="inline-flex items-center gap-2">
           <input
             type="checkbox"
@@ -256,15 +260,28 @@ function EmployeeRow({
           />
           <span className="text-xs text-muted-foreground">{active ? "Active" : "Inactive"}</span>
         </label>
-        {dirty && !disabled && (
-          <button
-            onClick={save}
-            disabled={pending}
-            className="ml-2 rounded-lg bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-          >
-            {pending ? "..." : "Save"}
-          </button>
-        )}
+      </td>
+      <td className="px-4 py-2">
+        <div className="flex items-center gap-2">
+          {dirty && !disabled && (
+            <button
+              onClick={save}
+              disabled={pending}
+              className="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            >
+              {pending ? "..." : "Save"}
+            </button>
+          )}
+          {!locked && canEdit && (
+            <button
+              onClick={remove}
+              disabled={pending}
+              className="text-xs text-danger hover:opacity-80 disabled:opacity-60"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -421,10 +438,6 @@ function AddEmployeeModal({
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Name</span>
             <input name="name" required className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
           </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-muted-foreground">Email (contact info only — login accounts are created in User Management)</span>
-            <input name="email" type="email" className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
-          </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Team</span>
@@ -441,25 +454,19 @@ function AddEmployeeModal({
               <select name="role" defaultValue="EMPLOYEE" className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
                 {assignableRoles.map((r) => (
                   <option key={r} value={r}>
-                    {r.replace("_", " ")}
+                    {ROLE_LABEL[r]}
                   </option>
                 ))}
               </select>
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-muted-foreground">Shift</span>
-              <select name="shift" defaultValue="Day" className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
-                <option>Day</option>
-                <option>Night</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-muted-foreground">Hourly Rate</span>
-              <input name="hourlyRate" type="number" step="0.5" defaultValue={0} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
-            </label>
-          </div>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">Shift</span>
+            <select name="shift" defaultValue="Day" className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
+              <option>Day</option>
+              <option>Night</option>
+            </select>
+          </label>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
               Cancel
