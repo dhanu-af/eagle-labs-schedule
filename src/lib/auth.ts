@@ -33,6 +33,32 @@ export function canManageRole(role: Role) {
   return role === "ADMIN" || role === "SUPERVISOR" || role === "SUPER_ADMIN";
 }
 
+/** Checks module: who can submit/approve the Supervisor-owned steps. */
+export function canActAsSupervisor(role: Role) {
+  return role === "SUPERVISOR" || role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
+/** Checks module: who can submit/approve the QA-owned steps. */
+export function canActAsQa(role: Role) {
+  return role === "QA" || role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
+/** Checks module: who can submit day-to-day operator records (post-op cleaning, environmental readings). */
+export function canActAsOperator(role: Role) {
+  return (
+    role === "EMPLOYEE" ||
+    role === "SUPERVISOR" ||
+    role === "QA" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
+/** Checks module: who can unlock a record after QA approval to allow edits. */
+export function canUnlockChecks(role: Role) {
+  return isAdminRole(role);
+}
+
 /** Only the Super Admin can create, update, delete, or approve anything. */
 export function canEdit(role: Role) {
   return role === "SUPER_ADMIN";

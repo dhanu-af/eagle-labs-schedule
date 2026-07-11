@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createEmployee, createTeam, deleteTeam, updateEmployee, updateTeam } from "@/lib/actions/team-actions";
 import { initials } from "@/lib/ui";
 
-type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "EMPLOYEE";
+type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "QA" | "EMPLOYEE";
 type Team = { id: string; name: string; description: string | null };
 type Employee = {
   id: string;
@@ -20,7 +20,7 @@ type Employee = {
   hourlyRate: number;
   isPermanent: boolean;
 };
-const ALL_ROLES: Role[] = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR", "EMPLOYEE"];
+const ALL_ROLES: Role[] = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR", "QA", "EMPLOYEE"];
 
 export default function TeamClient({
   currentRole,
@@ -37,7 +37,7 @@ export default function TeamClient({
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [editTeam, setEditTeam] = useState<Team | null>(null);
-  const assignableRoles = currentRole === "SUPER_ADMIN" ? ALL_ROLES : (["ADMIN", "SUPERVISOR", "EMPLOYEE"] as Role[]);
+  const assignableRoles = currentRole === "SUPER_ADMIN" ? ALL_ROLES : (["ADMIN", "SUPERVISOR", "QA", "EMPLOYEE"] as Role[]);
 
   return (
     <div className="space-y-6">

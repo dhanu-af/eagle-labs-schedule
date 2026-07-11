@@ -13,6 +13,7 @@ enum Role {
   SUPER_ADMIN
   ADMIN
   SUPERVISOR
+  QA
   EMPLOYEE
 }
 
@@ -59,6 +60,32 @@ enum KbCategory {
 enum LoginStatus {
   SUCCESS
   FAILED
+}
+
+enum CheckStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+}
+
+enum CleaningType {
+  FULL_CLEAN
+  PROVISIONAL_CLEAN
+}
+
+enum PostOpItem {
+  BLENDING_ROOM
+  V_BLENDER_1
+  V_BLENDER_2
+  CAPSULE_ROOM
+  CAPSULE_EQUIPMENT
+  CAPSULE_MACHINE
+}
+
+enum EnvArea {
+  BLENDING_ROOM
+  CAPSULE_ROOM
 }
 
 model Team {
@@ -342,4 +369,167 @@ model KbQuestionLog {
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+}
+
+model SupervisorPreOpCheck {
+  id                 String      @id @default(cuid())
+  date               DateTime
+  room               String
+  roomCleanliness    Boolean     @default(false)
+  equipmentReadiness Boolean     @default(false)
+  safetyPpeVerified  Boolean     @default(false)
+  calibrationStatus  String?
+  comments           String?
+  status             CheckStatus @default(COMPLETED)
+  locked             Boolean     @default(false)
+
+  submittedById   String
+  submittedByName String
+  submittedByRole Role
+  submittedAt     DateTime @default(now())
+  signature       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([room])
+}
+
+model QaPreOpCheck {
+  id                     String      @id @default(cuid())
+  date                   DateTime
+  room                   String
+  qaRoomInspection       Boolean     @default(false)
+  equipmentVerification  Boolean     @default(false)
+  gmpCompliance          Boolean     @default(false)
+  environmentalCondition Boolean     @default(false)
+  comments               String?
+  status                 CheckStatus @default(COMPLETED)
+  locked                 Boolean     @default(false)
+
+  submittedById   String
+  submittedByName String
+  submittedByRole Role
+  submittedAt     DateTime @default(now())
+  signature       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([room])
+}
+
+model EnvironmentalCheck {
+  id          String      @id @default(cuid())
+  date        DateTime
+  area        EnvArea
+  temperature Float
+  humidity    Float
+  passFail    Boolean
+  remarks     String?
+  status      CheckStatus @default(PENDING)
+  locked      Boolean     @default(false)
+
+  submittedById   String
+  submittedByName String
+  submittedByRole Role
+  submittedAt     DateTime @default(now())
+  signature       String
+
+  supervisorApprovedById   String?
+  supervisorApprovedByName String?
+  supervisorApprovedAt     DateTime?
+
+  qaApprovedById   String?
+  qaApprovedByName String?
+  qaApprovedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([area])
+}
+
+model EnvironmentalLimit {
+  id        String   @id @default(cuid())
+  area      EnvArea  @unique
+  minTemp   Float
+  maxTemp   Float
+  minRH     Float
+  maxRH     Float
+  updatedAt DateTime @updatedAt
+}
+
+model LineClearance {
+  id                    String      @id @default(cuid())
+  date                  DateTime
+  line                  String
+  previousBatchCleared  Boolean     @default(false)
+  materialCleared       Boolean     @default(false)
+  labelPackagingCleared Boolean     @default(false)
+  equipmentCleared      Boolean     @default(false)
+  documentationVerified Boolean     @default(false)
+  comments              String?
+  status                CheckStatus @default(PENDING)
+  locked                Boolean     @default(false)
+
+  submittedById   String
+  submittedByName String
+  submittedByRole Role
+  submittedAt     DateTime @default(now())
+  signature       String
+
+  supervisorApprovedById   String?
+  supervisorApprovedByName String?
+  supervisorApprovedAt     DateTime?
+
+  qaApprovedById   String?
+  qaApprovedByName String?
+  qaApprovedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+model PostOpCheck {
+  id                         String       @id @default(cuid())
+  date                       DateTime
+  item                       PostOpItem
+  cleaningType               CleaningType
+  cleaningVerificationStatus String?
+  comments                   String?
+  status                     CheckStatus  @default(PENDING)
+  locked                     Boolean      @default(false)
+
+  submittedById   String
+  submittedByName String
+  submittedByRole Role
+  submittedAt     DateTime @default(now())
+  signature       String
+
+  verifiedById   String?
+  verifiedByName String?
+  verifiedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([item])
+}
+
+model CheckAttachment {
+  id         String   @id @default(cuid())
+  checkType  String
+  checkId    String
+  url        String
+  fileName   String
+  uploadedAt DateTime @default(now())
+
+  @@index([checkType, checkId])
 }

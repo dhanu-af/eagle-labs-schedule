@@ -24,6 +24,7 @@ const ROLE_LABEL: Record<Role, string> = {
   SUPER_ADMIN: "Super Admin",
   ADMIN: "Admin",
   SUPERVISOR: "Supervisor",
+  QA: "QA",
   EMPLOYEE: "Employee",
 };
 

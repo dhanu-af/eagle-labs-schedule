@@ -6,7 +6,7 @@ import { createUser, updateUser } from "@/lib/actions/user-management-actions";
 import type { Role } from "@/generated/prisma";
 import type { ManagedUser } from "./user-management-client";
 
-const ROLE_OPTIONS: Role[] = ["ADMIN", "SUPERVISOR", "EMPLOYEE"];
+const ROLE_OPTIONS: Role[] = ["ADMIN", "SUPERVISOR", "QA", "EMPLOYEE"];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
