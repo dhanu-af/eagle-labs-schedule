@@ -1,0 +1,344 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { createKpi, deleteKpi, setDailyTarget, updateKpi } from "@/lib/actions/kpi-actions";
+import { pct, toDateInputValue } from "@/lib/ui";
+import KpiChart from "./kpi-chart";
+
+type Team = { id: string; name: string };
+type Kpi = {
+  id: string;
+  teamId: string;
+  teamName: string;
+  product: string | null;
+  name: string;
+  unit: string;
+  target: number;
+};
+
+const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+export default function KpiClient({
+  weekStartStr,
+  todayStr,
+  teams,
+  kpis,
+  dailyByKpi,
+  dailyTargetsByKpi,
+  canManage,
+}: {
+  weekStartStr: string;
+  todayStr: string;
+  teams: Team[];
+  kpis: Kpi[];
+  dailyByKpi: Record<string, number[]>;
+  dailyTargetsByKpi: Record<string, number[]>;
+  canManage: boolean;
+}) {
+  const router = useRouter();
+  const [showAdd, setShowAdd] = useState(false);
+  const [editKpi, setEditKpi] = useState<Kpi | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const weekStartDate = new Date(`${weekStartStr}T00:00:00`);
+
+  function goWeek(offset: number) {
+    const d = new Date(weekStartDate);
+    d.setDate(d.getDate() + offset * 7);
+    router.push(`/kpi?week=${toDateInputValue(d)}`);
+  }
+
+  function remove(id: string) {
+    if (!confirm("Delete this KPI and all its recorded history? This cannot be undone.")) return;
+    startTransition(async () => {
+      await deleteKpi(id);
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">KPI Tracking</h1>
+          <p className="text-sm text-muted-foreground">Target vs actual, daily and weekly completion.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => goWeek(-1)} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            ← Prev week
+          </button>
+          <button onClick={() => goWeek(1)} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            Next week →
+          </button>
+          {canManage && (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+            >
+              + New KPI
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {kpis.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground lg:col-span-2">
+            No KPIs defined yet.{canManage ? " Click “+ New KPI” to add one." : ""}
+          </div>
+        )}
+        {kpis.map((k) => {
+          const dailyActuals = dailyByKpi[k.id] ?? [0, 0, 0, 0, 0, 0, 0];
+          const dailyTargets = dailyTargetsByKpi[k.id] ?? Array(7).fill(k.target);
+          const weeklyActual = dailyActuals.reduce((s, v) => s + v, 0);
+          const weeklyTarget = dailyTargets.reduce((s, v) => s + v, 0);
+          const weeklyPct = pct(weeklyActual, weeklyTarget);
+          const todayIndex = Math.round(
+            (new Date(`${todayStr}T00:00:00`).getTime() - weekStartDate.getTime()) / 86400000
+          );
+
+          const chartData = dailyActuals.map((actual, i) => ({
+            day: DAY_LABELS[i],
+            actual,
+            target: dailyTargets[i],
+            isToday: i === todayIndex,
+          }));
+          const chartColor = weeklyPct >= 100 ? "#4ade80" : weeklyPct >= 50 ? "#34d399" : "#e0aa4e";
+
+          return (
+            <div className="card-shadow rounded-2xl border border-border bg-surface p-5 transition hover:-translate-y-0.5" key={k.id}>
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {k.teamName} · {k.name}
+                    {k.product && (
+                      <span className="ml-1.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        {k.product}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Base daily target {k.target} {k.unit} (editable per day below)</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-foreground">{weeklyPct}%</p>
+                    <p className="text-xs text-muted-foreground">
+                      {weeklyActual}/{weeklyTarget} {k.unit} wk
+                    </p>
+                  </div>
+                  {canManage && (
+                    <div className="flex flex-col gap-1 text-xs">
+                      <button onClick={() => setEditKpi(k)} className="text-muted-foreground hover:text-primary">
+                        Edit
+                      </button>
+                      <button onClick={() => remove(k.id)} className="text-muted-foreground hover:text-danger">
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <KpiChart data={chartData} unit={k.unit} color={chartColor} />
+
+              <DailyTargetsRow
+                kpiId={k.id}
+                weekStartStr={weekStartStr}
+                targets={dailyTargets}
+                unit={k.unit}
+                canManage={canManage}
+              />
+
+              <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
+                <span className="text-muted-foreground">
+                  Actuals are synced automatically from the Daily Planner.
+                </span>
+                <Link href={`/daily?date=${todayStr}`} className="font-medium text-primary hover:underline">
+                  Update in Daily Planner →
+                </Link>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {showAdd && <KpiFormModal teams={teams} onClose={() => setShowAdd(false)} />}
+      {editKpi && (
+        <KpiFormModal teams={teams} existing={editKpi} onClose={() => setEditKpi(null)} />
+      )}
+    </div>
+  );
+}
+
+function DailyTargetsRow({
+  kpiId,
+  weekStartStr,
+  targets,
+  unit,
+  canManage,
+}: {
+  kpiId: string;
+  weekStartStr: string;
+  targets: number[];
+  unit: string;
+  canManage: boolean;
+}) {
+  const router = useRouter();
+  const [values, setValues] = useState(targets);
+  const [dirtyDays, setDirtyDays] = useState<Set<number>>(new Set());
+  const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setValues(targets);
+    setDirtyDays(new Set());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStartStr, kpiId]);
+
+  function dateForDay(i: number) {
+    const d = new Date(`${weekStartStr}T00:00:00`);
+    d.setDate(d.getDate() + i);
+    return toDateInputValue(d);
+  }
+
+  function save() {
+    const days = Array.from(dirtyDays);
+    startTransition(async () => {
+      await Promise.all(days.map((i) => setDailyTarget(kpiId, dateForDay(i), values[i])));
+      setDirtyDays(new Set());
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">
+        Daily targets ({unit})
+      </p>
+      <div className="grid grid-cols-7 gap-1">
+        {DAY_LABELS.map((label, i) => (
+          <div key={i} className="flex flex-col items-center gap-1">
+            <span className="text-[9px] text-muted-foreground">{label}</span>
+            {canManage ? (
+              <input
+                type="number"
+                value={values[i]}
+                onChange={(e) => {
+                  const next = [...values];
+                  next[i] = Number(e.target.value);
+                  setValues(next);
+                  setDirtyDays((prev) => new Set(prev).add(i));
+                }}
+                className="w-full rounded-md border border-border bg-surface px-1 py-1 text-center text-[10px] text-foreground"
+              />
+            ) : (
+              <span className="text-[10px] text-foreground">{values[i]}</span>
+            )}
+          </div>
+        ))}
+      </div>
+      {dirtyDays.size > 0 && (
+        <button
+          onClick={save}
+          disabled={pending}
+          className="mt-2 w-full rounded-lg bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+        >
+          {pending ? "Saving..." : "Save daily targets"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function KpiFormModal({
+  teams,
+  existing,
+  onClose,
+}: {
+  teams: Team[];
+  existing?: Kpi;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function submit(formData: FormData) {
+    startTransition(async () => {
+      if (existing) {
+        await updateKpi(existing.id, formData);
+      } else {
+        await createKpi(formData);
+      }
+      router.refresh();
+      onClose();
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-foreground">{existing ? "Edit KPI" : "New KPI"}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            ✕
+          </button>
+        </div>
+        <form action={submit} className="space-y-3">
+          {!existing && (
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">Team</span>
+              <select name="teamId" required className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">Name</span>
+            <input name="name" required defaultValue={existing?.name} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+              Product / Section (optional)
+            </span>
+            <input
+              name="product"
+              placeholder="e.g. Detox US — leave blank to track the whole room"
+              defaultValue={existing?.product ?? ""}
+              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+            />
+            <span className="mt-1 block text-[11px] text-muted-foreground">
+              Must match the product name used in the Daily Planner exactly.
+            </span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">Daily Target</span>
+              <input name="target" type="number" step="0.1" required defaultValue={existing?.target} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">Unit</span>
+              <input name="unit" defaultValue={existing?.unit ?? "kg"} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            </label>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            >
+              {pending ? "Saving..." : existing ? "Save Changes" : "Create KPI"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

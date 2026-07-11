@@ -1,0 +1,222 @@
+import { SignJWT, jwtVerify } from "jose";
+import { cookies, headers } from "next/headers";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import type { Role } from "@/generated/prisma";
+
+const COOKIE_NAME = "eagle_session";
+const secret = new TextEncoder().encode(
+  process.env.SESSION_SECRET ?? "dev-only-secret"
+);
+
+const FAILED_LOGIN_LOCK_THRESHOLD = 5;
+const SESSION_MAX_AGE_REMEMBER = 60 * 60 * 24 * 30; // 30 days
+const SESSION_MAX_AGE_DEFAULT = 60 * 60 * 24; // 1 day
+
+export type SessionPayload = {
+  userId: string;
+  username: string;
+  role: Role;
+  employeeId: string | null;
+  fullName: string;
+  isPermanent: boolean;
+  mustChangePassword: boolean;
+  loginEventId: string | null;
+};
+
+export function isAdminRole(role: Role) {
+  return role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
+/** Manager-tier: can *view* admin surfaces (Team, Payroll, Reports, Audit). */
+export function canManageRole(role: Role) {
+  return role === "ADMIN" || role === "SUPERVISOR" || role === "SUPER_ADMIN";
+}
+
+/** Only the Super Admin can create, update, delete, or approve anything. */
+export function canEdit(role: Role) {
+  return role === "SUPER_ADMIN";
+}
+
+export async function hashPassword(password: string) {
+  return bcrypt.hash(password, 10);
+}
+
+export async function verifyPassword(password: string, hash: string) {
+  return bcrypt.compare(password, hash);
+}
+
+async function getRequestMeta() {
+  const h = await headers();
+  const forwardedFor = h.get("x-forwarded-for");
+  const ip = forwardedFor?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+  const userAgent = h.get("user-agent") || "unknown";
+  return { ip, userAgent };
+}
+
+export async function createSession(payload: SessionPayload, remember = false) {
+  const maxAge = remember ? SESSION_MAX_AGE_REMEMBER : SESSION_MAX_AGE_DEFAULT;
+  const token = await new SignJWT({ ...payload })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(Math.floor(Date.now() / 1000) + maxAge)
+    .sign(secret);
+
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge,
+  });
+}
+
+export async function destroySession() {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
+}
+
+export async function getSession(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    return payload as unknown as SessionPayload;
+  } catch {
+    return null;
+  }
+}
+
+export async function login(username: string, password: string, remember = false) {
+  const { ip, userAgent } = await getRequestMeta();
+
+  const user = await prisma.user.findUnique({
+    where: { username },
+    include: { employee: true },
+  });
+
+  if (!user) {
+    await prisma.loginEvent.create({
+      data: { username, status: "FAILED", ipAddress: ip, userAgent },
+    });
+    return { error: "Invalid User ID or password" as const };
+  }
+
+  const logFailed = () =>
+    prisma.loginEvent.create({
+      data: {
+        userId: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        status: "FAILED",
+        ipAddress: ip,
+        userAgent,
+      },
+    });
+
+  if (user.locked) {
+    await logFailed();
+    return { error: "This account is locked due to repeated failed attempts. Contact your Super Admin to unlock it." as const };
+  }
+
+  if (user.disabled) {
+    await logFailed();
+    return { error: "This account has been disabled. Contact your Super Admin." as const };
+  }
+
+  if (user.employee && !user.employee.active) {
+    await logFailed();
+    return { error: "Your account has been deactivated." as const };
+  }
+
+  const valid = await verifyPassword(password, user.passwordHash);
+  if (!valid) {
+    const attempts = user.failedLoginAttempts + 1;
+    const shouldLock = attempts >= FAILED_LOGIN_LOCK_THRESHOLD;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: attempts, locked: shouldLock },
+    });
+    await logFailed();
+    return {
+      error: shouldLock
+        ? "Too many failed attempts. This account is now locked — contact your Super Admin to unlock it."
+        : ("Invalid User ID or password" as const),
+    };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { failedLoginAttempts: 0 },
+  });
+
+  const loginEvent = await prisma.loginEvent.create({
+    data: {
+      userId: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      role: user.role,
+      status: "SUCCESS",
+      ipAddress: ip,
+      userAgent,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: user.id,
+      actorName: user.fullName,
+      actorRole: user.role,
+      action: "LOGIN",
+      entityType: "User",
+      entityId: user.id,
+      summary: `${user.fullName} (${user.username}) logged in`,
+    },
+  });
+
+  await createSession(
+    {
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+      employeeId: user.employeeId,
+      fullName: user.fullName,
+      isPermanent: user.isPermanent,
+      mustChangePassword: user.mustChangePassword,
+      loginEventId: loginEvent.id,
+    },
+    remember
+  );
+
+  return { ok: true as const, mustChangePassword: user.mustChangePassword };
+}
+
+export async function logout() {
+  const session = await getSession();
+  if (session) {
+    if (session.loginEventId) {
+      const event = await prisma.loginEvent.findUnique({ where: { id: session.loginEventId } });
+      if (event && !event.logoutAt) {
+        await prisma.loginEvent.update({
+          where: { id: session.loginEventId },
+          data: { logoutAt: new Date() },
+        });
+      }
+    }
+    await prisma.auditLog.create({
+      data: {
+        actorId: session.userId,
+        actorName: session.fullName,
+        actorRole: session.role,
+        action: "LOGOUT",
+        entityType: "User",
+        entityId: session.userId,
+        summary: `${session.fullName} (${session.username}) logged out`,
+      },
+    });
+  }
+  await destroySession();
+}

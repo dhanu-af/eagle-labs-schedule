@@ -1,0 +1,344 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  SUPERVISOR
+  EMPLOYEE
+}
+
+enum PayRunStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  RUNNING
+  COMPLETED
+  DELAYED
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum KbCategory {
+  BLENDING_SOP
+  MACHINE_TROUBLESHOOTING
+  MAINTENANCE_CLEANING
+  SAFETY
+  PARTS
+}
+
+enum LoginStatus {
+  SUCCESS
+  FAILED
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  employees        Employee[]
+  dailyTasks       DailyTask[]
+  weeklyAssignments WeeklyAssignment[]
+  kpis             Kpi[]
+}
+
+model Employee {
+  id          String   @id @default(cuid())
+  name        String
+  photoUrl    String?
+  role        Role     @default(EMPLOYEE)
+  shift       String   @default("Day")
+  phone       String?
+  email       String?  @unique
+  teamId      String
+  active      Boolean  @default(true)
+  leaveBalance Int     @default(20)
+  hourlyRate  Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  team             Team               @relation(fields: [teamId], references: [id])
+  user             User?
+  dailyTasks       DailyTask[]        @relation("assignee")
+  weeklyAssignments WeeklyAssignment[]
+  kpiRecords       KpiRecord[]
+  attendance       Attendance[]
+  leaveRequests    LeaveRequest[]      @relation("requester")
+  approvedLeaves   LeaveRequest[]      @relation("approver")
+  statusUpdates    DailyTask[]        @relation("updatedBy")
+  payslips         Payslip[]
+  notifications    Notification[]
+
+  @@index([teamId])
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  username            String   @unique
+  passwordHash        String
+  role                Role     @default(EMPLOYEE)
+  fullName            String
+  department          String?
+  employeeId          String?  @unique
+  isPermanent         Boolean  @default(false)
+  disabled            Boolean  @default(false)
+  mustChangePassword  Boolean  @default(false)
+  failedLoginAttempts Int      @default(0)
+  locked              Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  employee    Employee?    @relation(fields: [employeeId], references: [id])
+  loginEvents LoginEvent[]
+}
+
+model LoginEvent {
+  id        String      @id @default(cuid())
+  userId    String?
+  username  String
+  fullName  String?
+  role      Role?
+  loginAt   DateTime    @default(now())
+  logoutAt  DateTime?
+  status    LoginStatus
+  ipAddress String?
+  userAgent String?
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([loginAt])
+  @@index([userId])
+}
+
+model DailyTask {
+  id            String     @id @default(cuid())
+  date          DateTime
+  teamId        String
+  employeeId    String?
+  product       String
+  batchNo       String?
+  process       String
+  targetQty     Float?
+  targetUnit    String     @default("kg")
+  actualQty     Float      @default(0)
+  plannedStart  String?
+  plannedFinish String?
+  priority      Priority   @default(MEDIUM)
+  status        TaskStatus @default(NOT_STARTED)
+  delayReason   String?
+  notes         String?
+  updatedById   String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  team       Team      @relation(fields: [teamId], references: [id])
+  employee   Employee? @relation("assignee", fields: [employeeId], references: [id])
+  updatedBy  Employee? @relation("updatedBy", fields: [updatedById], references: [id])
+
+  @@index([date])
+  @@index([teamId, date])
+}
+
+model WeeklyAssignment {
+  id         String   @id @default(cuid())
+  weekStart  DateTime
+  dayOfWeek  Int
+  teamId     String
+  employeeId String
+  task       String
+  hours      Float    @default(8)
+  createdAt  DateTime @default(now())
+
+  team     Team     @relation(fields: [teamId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([weekStart, teamId])
+}
+
+model Kpi {
+  id       String  @id @default(cuid())
+  teamId   String
+  product  String?
+  name     String
+  unit     String  @default("kg")
+  target   Float
+
+  team          Team             @relation(fields: [teamId], references: [id])
+  records       KpiRecord[]
+  dailyTargets  KpiDailyTarget[]
+}
+
+model KpiDailyTarget {
+  id     String   @id @default(cuid())
+  kpiId  String
+  date   DateTime
+  target Float
+
+  kpi Kpi @relation(fields: [kpiId], references: [id])
+
+  @@unique([kpiId, date])
+  @@index([date])
+}
+
+model KpiRecord {
+  id         String   @id @default(cuid())
+  kpiId      String
+  employeeId String?
+  date       DateTime
+  actual     Float    @default(0)
+  createdAt  DateTime @default(now())
+
+  kpi      Kpi       @relation(fields: [kpiId], references: [id])
+  employee Employee? @relation(fields: [employeeId], references: [id])
+
+  @@index([date])
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  employeeId String
+  date       DateTime
+  status     AttendanceStatus @default(PRESENT)
+  hoursWorked Float           @default(8)
+  overtime   Float            @default(0)
+  createdAt  DateTime         @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+  @@index([date])
+}
+
+model LeaveRequest {
+  id          String      @id @default(cuid())
+  employeeId  String
+  startDate   DateTime
+  endDate     DateTime
+  type        String      @default("Annual")
+  reason      String?
+  status      LeaveStatus @default(PENDING)
+  approverId  String?
+  createdAt   DateTime    @default(now())
+
+  employee Employee  @relation("requester", fields: [employeeId], references: [id])
+  approver Employee? @relation("approver", fields: [approverId], references: [id])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorName  String
+  actorRole  Role
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  employeeId String
+  title      String
+  message    String
+  type       String
+  link       String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, read])
+}
+
+model PayRun {
+  id           String       @id @default(cuid())
+  periodStart  DateTime
+  periodEnd    DateTime
+  status       PayRunStatus @default(DRAFT)
+  createdAt    DateTime     @default(now())
+  finalizedAt  DateTime?
+
+  payslips Payslip[]
+}
+
+model Payslip {
+  id             String  @id @default(cuid())
+  payRunId       String
+  employeeId     String
+  regularHours   Float   @default(0)
+  overtimeHours  Float   @default(0)
+  hourlyRate     Float   @default(0)
+  grossPay       Float   @default(0)
+  notes          String?
+
+  payRun   PayRun   @relation(fields: [payRunId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([payRunId, employeeId])
+}
+
+model KnowledgeEntry {
+  id        String     @id @default(cuid())
+  category  KbCategory
+  title     String
+  keywords  String
+  cause     String?
+  answer    String
+  source    String?
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([category])
+}
+
+model KbQuestionLog {
+  id          String   @id @default(cuid())
+  question    String
+  matchedId   String?
+  matchTitle  String?
+  matchScore  Float?
+  askedByName String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
