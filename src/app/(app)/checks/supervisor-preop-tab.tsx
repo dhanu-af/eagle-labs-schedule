@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createSupervisorPreOpCheck, unlockCheckRecord } from "@/lib/actions/checks-actions";
-import { toDateInputValue } from "@/lib/ui";
+import { toDateInputValue, formatBrisbaneTime } from "@/lib/ui";
 import type { SupervisorPreOp } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
@@ -96,6 +96,8 @@ export default function SupervisorPreOpTab({
                 <td className="px-3 py-2 text-muted-foreground">{r.calibrationStatus ?? "—"}</td>
                 <td className="px-3 py-2 text-muted-foreground">
                   {r.submittedByName} <span className="text-xs">({r.submittedByRole.replace("_", " ")})</span>
+                  <br />
+                  <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
                 </td>
                 <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
                 <td className="px-3 py-2">

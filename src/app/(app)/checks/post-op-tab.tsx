@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPostOpCheck, verifyPostOpCheck, unlockCheckRecord } from "@/lib/actions/checks-actions";
-import { toDateInputValue } from "@/lib/ui";
+import { toDateInputValue, formatBrisbaneTime } from "@/lib/ui";
 import type { CleaningType, PostOpItem } from "@/generated/prisma";
 import type { PostOpRow } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
@@ -122,16 +122,24 @@ export default function PostOpTab({
                 <td className="px-3 py-2 text-foreground">{ITEM_LABEL[r.item]}</td>
                 <td className="px-3 py-2 text-muted-foreground">{CLEANING_LABEL[r.cleaningType]}</td>
                 <td className="px-3 py-2 text-muted-foreground">{r.cleaningVerificationStatus ?? "—"}</td>
-                <td className="px-3 py-2 text-muted-foreground">{r.submittedByName}</td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  {r.submittedByName}
+                  <br />
+                  <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
+                </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {r.verifiedByName ?? (
-                    canVerify && !r.locked ? (
-                      <button onClick={() => setVerifyingId(r.id)} className="text-info hover:opacity-80">
-                        Verify
-                      </button>
-                    ) : (
-                      "—"
-                    )
+                  {r.verifiedByName ? (
+                    <>
+                      ✓ {r.verifiedByName}
+                      <br />
+                      {r.verifiedAt && `Signed ${formatBrisbaneTime(r.verifiedAt)}`}
+                    </>
+                  ) : canVerify && !r.locked ? (
+                    <button onClick={() => setVerifyingId(r.id)} className="text-info hover:opacity-80">
+                      Verify
+                    </button>
+                  ) : (
+                    "—"
                   )}
                 </td>
                 <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>

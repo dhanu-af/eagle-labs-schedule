@@ -43,12 +43,14 @@ export default function DailyPlannerClient({
   employees,
   tasks,
   canManage,
+  canUpdateProgress,
 }: {
   dateStr: string;
   teams: Team[];
   employees: Employee[];
   tasks: Task[];
   canManage: boolean;
+  canUpdateProgress: boolean;
 }) {
   const router = useRouter();
   const [teamFilter, setTeamFilter] = useState<string>("ALL");
@@ -156,7 +158,12 @@ export default function DailyPlannerClient({
       </div>
 
       {view === "kanban" ? (
-        <DailyKanban tasks={filteredTasks} employees={employees} canManage={canManage} />
+        <DailyKanban
+          tasks={filteredTasks}
+          employees={employees}
+          canManage={canManage}
+          canUpdateProgress={canUpdateProgress}
+        />
       ) : (
         <div className="space-y-3">
           {filteredTasks.length === 0 && (
@@ -165,7 +172,13 @@ export default function DailyPlannerClient({
             </div>
           )}
           {filteredTasks.map((t) => (
-            <TaskRow key={t.id} task={t} employees={employees} canManage={canManage} />
+            <TaskRow
+              key={t.id}
+              task={t}
+              employees={employees}
+              canManage={canManage}
+              canUpdateProgress={canUpdateProgress}
+            />
           ))}
         </div>
       )}
@@ -209,10 +222,12 @@ function TaskRow({
   task,
   employees,
   canManage,
+  canUpdateProgress,
 }: {
   task: Task;
   employees: Employee[];
   canManage: boolean;
+  canUpdateProgress: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(task.status);
@@ -302,7 +317,7 @@ function TaskRow({
         </div>
       )}
 
-      {canManage && (
+      {canUpdateProgress && (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
           <select
             value={status}

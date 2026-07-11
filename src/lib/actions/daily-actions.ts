@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit } from "@/lib/auth";
+import { getSession, canEdit, canUpdateDailyProgress } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { notifyManagers } from "@/lib/notify";
 import type { Priority, TaskStatus } from "@/generated/prisma";
@@ -10,6 +10,12 @@ import type { Priority, TaskStatus } from "@/generated/prisma";
 async function requireManager() {
   const session = await getSession();
   if (!session || !canEdit(session.role)) throw new Error("Not authorized");
+  return session;
+}
+
+async function requireProgressAccess() {
+  const session = await getSession();
+  if (!session || !canUpdateDailyProgress(session.role)) throw new Error("Not authorized");
   return session;
 }
 
@@ -128,7 +134,7 @@ export async function updateTaskStatus(
   delayReason?: string,
   actualQty?: number
 ) {
-  const session = await requireManager();
+  const session = await requireProgressAccess();
 
   const task = await prisma.dailyTask.update({
     where: { id: taskId },

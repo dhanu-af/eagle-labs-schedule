@@ -27,10 +27,12 @@ export default function DailyKanban({
   tasks: initialTasks,
   employees,
   canManage,
+  canUpdateProgress,
 }: {
   tasks: Task[];
   employees: Employee[];
   canManage: boolean;
+  canUpdateProgress: boolean;
 }) {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
@@ -84,7 +86,7 @@ export default function DailyKanban({
   }
 
   function onDragEnd(result: DropResult) {
-    if (!canManage) return;
+    if (!canUpdateProgress) return;
     const { destination, source, draggableId } = result;
     if (!destination || destination.droppableId === source.droppableId) return;
     changeStatus(draggableId, destination.droppableId as Task["status"]);
@@ -120,11 +122,12 @@ export default function DailyKanban({
                     className="min-h-[120px] space-y-2"
                   >
                     {colTasks.map((t, index) => (
-                      <Draggable key={t.id} draggableId={t.id} index={index} isDragDisabled={!canManage}>
+                      <Draggable key={t.id} draggableId={t.id} index={index} isDragDisabled={!canUpdateProgress}>
                         {(dragProvided, snapshot) => (
                           <KanbanCard
                             task={t}
                             canManage={canManage}
+                            canUpdateProgress={canUpdateProgress}
                             dragProvided={dragProvided}
                             snapshot={snapshot}
                             onEdit={() => setEditingTask(t)}
@@ -158,6 +161,7 @@ export default function DailyKanban({
 function KanbanCard({
   task: t,
   canManage,
+  canUpdateProgress,
   dragProvided,
   snapshot,
   onEdit,
@@ -166,6 +170,7 @@ function KanbanCard({
 }: {
   task: Task;
   canManage: boolean;
+  canUpdateProgress: boolean;
   dragProvided: DraggableProvided;
   snapshot: DraggableStateSnapshot;
   onEdit: () => void;
@@ -219,7 +224,7 @@ function KanbanCard({
               style={{ width: `${Math.min(100, Math.round((t.actualQty / t.targetQty) * 100))}%` }}
             />
           </div>
-          {canManage ? (
+          {canUpdateProgress ? (
             <div className="mt-1.5 flex items-center gap-1.5">
               <input
                 type="number"
@@ -271,7 +276,7 @@ function KanbanCard({
           </span>
         )}
       </div>
-      {canManage && (
+      {canUpdateProgress && (
         <select
           value={t.status}
           onMouseDown={(e) => e.stopPropagation()}

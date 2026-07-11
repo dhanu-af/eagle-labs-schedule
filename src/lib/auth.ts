@@ -64,6 +64,17 @@ export function canEdit(role: Role) {
   return role === "SUPER_ADMIN";
 }
 
+/**
+ * Daily Planner: any authenticated employee may update a task's actual
+ * production quantity and move its status (e.g. via "Move to..."), even
+ * though they can't create/edit/delete tasks or duplicate a day — an
+ * intentional, narrow exception to the Super-Admin-only rule above so
+ * floor operators can log their own progress in real time.
+ */
+export function canUpdateDailyProgress(_role: Role) {
+  return true;
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }

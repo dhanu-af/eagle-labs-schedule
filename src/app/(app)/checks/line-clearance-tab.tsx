@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createLineClearance, approveLineClearance, unlockCheckRecord } from "@/lib/actions/checks-actions";
-import { toDateInputValue } from "@/lib/ui";
+import { toDateInputValue, formatBrisbaneTime } from "@/lib/ui";
 import type { LineClearanceRow } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
@@ -96,10 +96,18 @@ export default function LineClearanceTab({
                 <td className="px-3 py-2">{r.labelPackagingCleared ? "✅" : "❌"}</td>
                 <td className="px-3 py-2">{r.equipmentCleared ? "✅" : "❌"}</td>
                 <td className="px-3 py-2">{r.documentationVerified ? "✅" : "❌"}</td>
-                <td className="px-3 py-2 text-muted-foreground">{r.submittedByName}</td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  {r.submittedByName}
+                  <br />
+                  <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
+                </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
                   {r.supervisorApprovedByName ? (
-                    `✓ ${r.supervisorApprovedByName}`
+                    <>
+                      ✓ {r.supervisorApprovedByName}
+                      <br />
+                      {r.supervisorApprovedAt && `Signed ${formatBrisbaneTime(r.supervisorApprovedAt)}`}
+                    </>
                   ) : canApproveSupervisor && !r.locked ? (
                     <button disabled={pending} onClick={() => approve(r.id, "SUPERVISOR")} className="text-info hover:opacity-80">
                       Approve
@@ -110,7 +118,11 @@ export default function LineClearanceTab({
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
                   {r.qaApprovedByName ? (
-                    `✓ ${r.qaApprovedByName}`
+                    <>
+                      ✓ {r.qaApprovedByName}
+                      <br />
+                      {r.qaApprovedAt && `Signed ${formatBrisbaneTime(r.qaApprovedAt)}`}
+                    </>
                   ) : canApproveQa && !r.locked ? (
                     <button disabled={pending} onClick={() => approve(r.id, "QA")} className="text-info hover:opacity-80">
                       Approve

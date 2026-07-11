@@ -18,7 +18,7 @@ import {
   updateEnvironmentalLimit,
   unlockCheckRecord,
 } from "@/lib/actions/checks-actions";
-import { toDateInputValue } from "@/lib/ui";
+import { toDateInputValue, formatBrisbaneTime } from "@/lib/ui";
 import type { EnvArea } from "@/generated/prisma";
 import type { EnvironmentalCheckRow, EnvLimit } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
@@ -204,10 +204,18 @@ export default function EnvironmentalTab({
                     <span className="rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">OOS</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-muted-foreground">{r.submittedByName}</td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  {r.submittedByName}
+                  <br />
+                  <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
+                </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
                   {r.supervisorApprovedByName ? (
-                    `✓ ${r.supervisorApprovedByName}`
+                    <>
+                      ✓ {r.supervisorApprovedByName}
+                      <br />
+                      {r.supervisorApprovedAt && `Signed ${formatBrisbaneTime(r.supervisorApprovedAt)}`}
+                    </>
                   ) : canApproveSupervisor && !r.locked ? (
                     <button disabled={pending} onClick={() => approve(r.id, "SUPERVISOR")} className="text-info hover:opacity-80">
                       Approve
@@ -218,7 +226,11 @@ export default function EnvironmentalTab({
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
                   {r.qaApprovedByName ? (
-                    `✓ ${r.qaApprovedByName}`
+                    <>
+                      ✓ {r.qaApprovedByName}
+                      <br />
+                      {r.qaApprovedAt && `Signed ${formatBrisbaneTime(r.qaApprovedAt)}`}
+                    </>
                   ) : canApproveQa && !r.locked ? (
                     <button disabled={pending} onClick={() => approve(r.id, "QA")} className="text-info hover:opacity-80">
                       Approve
