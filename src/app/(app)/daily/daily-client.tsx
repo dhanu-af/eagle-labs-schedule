@@ -44,6 +44,7 @@ export default function DailyPlannerClient({
   tasks,
   canManage,
   canUpdateProgress,
+  canDelete,
 }: {
   dateStr: string;
   teams: Team[];
@@ -51,6 +52,7 @@ export default function DailyPlannerClient({
   tasks: Task[];
   canManage: boolean;
   canUpdateProgress: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [teamFilter, setTeamFilter] = useState<string>("ALL");
@@ -163,6 +165,7 @@ export default function DailyPlannerClient({
           employees={employees}
           canManage={canManage}
           canUpdateProgress={canUpdateProgress}
+          canDelete={canDelete}
         />
       ) : (
         <div className="space-y-3">
@@ -178,6 +181,7 @@ export default function DailyPlannerClient({
               employees={employees}
               canManage={canManage}
               canUpdateProgress={canUpdateProgress}
+              canDelete={canDelete}
             />
           ))}
         </div>
@@ -223,11 +227,13 @@ function TaskRow({
   employees,
   canManage,
   canUpdateProgress,
+  canDelete,
 }: {
   task: Task;
   employees: Employee[];
   canManage: boolean;
   canUpdateProgress: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(task.status);
@@ -279,23 +285,23 @@ function TaskRow({
             {STATUS_LABEL[task.status]}
           </span>
           {canManage && (
-            <>
-              <button
-                onClick={() => setShowEdit(true)}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                aria-label="Edit task"
-              >
-                Edit
-              </button>
-              <button
-                onClick={remove}
-                disabled={pending}
-                className="text-xs font-medium text-muted-foreground hover:text-danger"
-                aria-label="Delete task"
-              >
-                Delete
-              </button>
-            </>
+            <button
+              onClick={() => setShowEdit(true)}
+              className="text-xs font-medium text-muted-foreground hover:text-foreground"
+              aria-label="Edit task"
+            >
+              Edit
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={remove}
+              disabled={pending}
+              className="text-xs font-medium text-muted-foreground hover:text-danger"
+              aria-label="Delete task"
+            >
+              Delete
+            </button>
           )}
         </div>
       </div>

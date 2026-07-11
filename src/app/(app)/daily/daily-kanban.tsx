@@ -10,7 +10,7 @@ import {
   type DraggableStateSnapshot,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { updateTaskStatus } from "@/lib/actions/daily-actions";
+import { updateTaskStatus, deleteDailyTask } from "@/lib/actions/daily-actions";
 import { PRIORITY_CLASS, PRIORITY_LABEL, STATUS_LABEL, initials } from "@/lib/ui";
 import type { Employee, Task } from "./daily-client";
 import EditTaskModal from "./task-edit-modal";
@@ -28,11 +28,13 @@ export default function DailyKanban({
   employees,
   canManage,
   canUpdateProgress,
+  canDelete,
 }: {
   tasks: Task[];
   employees: Employee[];
   canManage: boolean;
   canUpdateProgress: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
@@ -85,6 +87,16 @@ export default function DailyKanban({
     applyUpdate(taskId, { actualQty });
   }
 
+  function remove(taskId: string) {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    if (!confirm(`Delete "${task.product} · ${task.process}"? This cannot be undone.`)) return;
+    startTransition(async () => {
+      await deleteDailyTask(taskId);
+      router.refresh();
+    });
+  }
+
   function onDragEnd(result: DropResult) {
     if (!canUpdateProgress) return;
     const { destination, source, draggableId } = result;
@@ -128,9 +140,11 @@ export default function DailyKanban({
                             task={t}
                             canManage={canManage}
                             canUpdateProgress={canUpdateProgress}
+                            canDelete={canDelete}
                             dragProvided={dragProvided}
                             snapshot={snapshot}
                             onEdit={() => setEditingTask(t)}
+                            onDelete={() => remove(t.id)}
                             onChangeStatus={(s) => changeStatus(t.id, s)}
                             onUpdateActual={(v) => updateActual(t.id, v)}
                           />
@@ -162,18 +176,22 @@ function KanbanCard({
   task: t,
   canManage,
   canUpdateProgress,
+  canDelete,
   dragProvided,
   snapshot,
   onEdit,
+  onDelete,
   onChangeStatus,
   onUpdateActual,
 }: {
   task: Task;
   canManage: boolean;
   canUpdateProgress: boolean;
+  canDelete: boolean;
   dragProvided: DraggableProvided;
   snapshot: DraggableStateSnapshot;
   onEdit: () => void;
+  onDelete: () => void;
   onChangeStatus: (status: Task["status"]) => void;
   onUpdateActual: (value: number) => void;
 }) {
@@ -194,15 +212,29 @@ function KanbanCard({
         snapshot.isDragging ? "card-elevated ring-1 ring-primary/40" : ""
       }`}
     >
-      {canManage && (
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={onEdit}
-          className="absolute right-2 top-2 hidden text-xs text-muted-foreground hover:text-primary group-hover:block"
-          aria-label="Edit task"
-        >
-          ✎
-        </button>
+      {(canManage || canDelete) && (
+        <div className="absolute right-2 top-2 hidden items-center gap-2 group-hover:flex">
+          {canManage && (
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={onEdit}
+              className="text-xs text-muted-foreground hover:text-primary"
+              aria-label="Edit task"
+            >
+              ✎
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={onDelete}
+              className="text-xs text-muted-foreground hover:text-danger"
+              aria-label="Delete task"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       )}
       <div className="mb-1.5 flex items-center justify-between gap-2 pr-4">
         <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
