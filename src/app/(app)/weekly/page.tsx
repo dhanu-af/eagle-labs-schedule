@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canEdit } from "@/lib/auth";
-import { toDateInputValue } from "@/lib/ui";
+import { toDateInputValueUTC, todayInBrisbane } from "@/lib/ui";
 import WeeklyPlannerClient from "./weekly-client";
 
 function startOfWeek(d: Date) {
-  const day = d.getDay();
+  const day = d.getUTCDay();
   const diff = (day === 0 ? -6 : 1) - day;
   const monday = new Date(d);
-  monday.setDate(d.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
+  monday.setUTCDate(d.getUTCDate() + diff);
+  monday.setUTCHours(0, 0, 0, 0);
   return monday;
 }
 
@@ -20,8 +20,8 @@ export default async function WeeklyPlannerPage({
   const { week, team } = await searchParams;
   const session = await getSession();
 
-  const baseDate = week ? new Date(`${week}T00:00:00`) : new Date();
-  const weekStart = startOfWeek(isNaN(baseDate.getTime()) ? new Date() : baseDate);
+  const baseDate = week ? new Date(`${week}T00:00:00Z`) : todayInBrisbane();
+  const weekStart = startOfWeek(isNaN(baseDate.getTime()) ? todayInBrisbane() : baseDate);
 
   const teams = await prisma.team.findMany({ orderBy: { name: "asc" } });
   const activeTeamId = team && teams.some((t) => t.id === team) ? team : teams[0]?.id ?? "";
@@ -36,7 +36,7 @@ export default async function WeeklyPlannerPage({
 
   return (
     <WeeklyPlannerClient
-      weekStartStr={toDateInputValue(weekStart)}
+      weekStartStr={toDateInputValueUTC(weekStart)}
       teams={teams}
       activeTeamId={activeTeamId}
       employees={employees

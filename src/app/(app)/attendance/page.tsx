@@ -1,16 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canEdit } from "@/lib/auth";
-import { toDateInputValue } from "@/lib/ui";
+import { toDateInputValue, toDateInputValueUTC, todayInBrisbane } from "@/lib/ui";
 import AttendanceClient from "./attendance-client";
 
 function parseDate(input?: string) {
   if (input) {
-    const d = new Date(`${input}T00:00:00`);
+    const d = new Date(`${input}T00:00:00Z`);
     if (!isNaN(d.getTime())) return d;
   }
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return todayInBrisbane();
 }
 
 export default async function AttendancePage({
@@ -22,7 +20,7 @@ export default async function AttendancePage({
   const session = await getSession();
   const date = parseDate(dateParam);
   const nextDay = new Date(date);
-  nextDay.setDate(nextDay.getDate() + 1);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
   const [employees, attendance, leaveRequests] = await Promise.all([
     prisma.employee.findMany({
@@ -42,7 +40,7 @@ export default async function AttendancePage({
 
   return (
     <AttendanceClient
-      dateStr={toDateInputValue(date)}
+      dateStr={toDateInputValueUTC(date)}
       employees={employees.map((e) => {
         const a = attendanceByEmployee.get(e.id);
         return {

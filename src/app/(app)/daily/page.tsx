@@ -1,16 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canEdit } from "@/lib/auth";
-import { toDateInputValue } from "@/lib/ui";
+import { toDateInputValueUTC, todayInBrisbane } from "@/lib/ui";
 import DailyPlannerClient from "./daily-client";
 
 function parseDate(input?: string) {
   if (input) {
-    const d = new Date(`${input}T00:00:00`);
+    const d = new Date(`${input}T00:00:00Z`);
     if (!isNaN(d.getTime())) return d;
   }
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return todayInBrisbane();
 }
 
 export default async function DailyPlannerPage({
@@ -22,7 +20,7 @@ export default async function DailyPlannerPage({
   const session = await getSession();
   const date = parseDate(dateParam);
   const nextDay = new Date(date);
-  nextDay.setDate(nextDay.getDate() + 1);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
   const [teams, employees, tasks] = await Promise.all([
     prisma.team.findMany({ orderBy: { name: "asc" } }),
@@ -36,7 +34,7 @@ export default async function DailyPlannerPage({
 
   return (
     <DailyPlannerClient
-      dateStr={toDateInputValue(date)}
+      dateStr={toDateInputValueUTC(date)}
       teams={teams}
       employees={employees.map((e) => ({ id: e.id, name: e.name, teamId: e.teamId }))}
       tasks={tasks.map((t) => ({

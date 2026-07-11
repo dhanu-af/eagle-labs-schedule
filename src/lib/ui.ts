@@ -82,10 +82,55 @@ export function formatDate(d: Date) {
   }).format(d);
 }
 
+// Brisbane (AEST) has no daylight saving — it's always UTC+10, year-round.
+const BRISBANE_OFFSET_MS = 10 * 60 * 60 * 1000;
+
+/**
+ * The current instant, shifted so its UTC-based getters/setters read as
+ * Australia/Brisbane wall-clock time. Using Date.now() (a true, timezone-agnostic
+ * UTC epoch) plus a fixed offset means this gives the identical answer whether the
+ * process's local timezone is Brisbane (local dev) or UTC (Vercel production) —
+ * unlike `new Date()` + `.setHours()`, which depends on the runtime's local TZ and
+ * can be a day off in production.
+ */
+export function nowInBrisbane(): Date {
+  return new Date(Date.now() + BRISBANE_OFFSET_MS);
+}
+
+/** Midnight today in Brisbane, as a Date with zeroed UTC fields (safe for Prisma date-range queries). */
+export function todayInBrisbane(): Date {
+  const d = nowInBrisbane();
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * Formats a Date produced by nowInBrisbane()/todayInBrisbane(). Must read it back
+ * as UTC (timeZone: "UTC") rather than the runtime's local zone, or the value would
+ * get shifted a second time on a machine whose local TZ actually is Brisbane.
+ */
+export function formatBrisbaneDate(d: Date) {
+  return new Intl.DateTimeFormat("en-AU", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
 export function toDateInputValue(d: Date) {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Same as toDateInputValue, but for dates produced by nowInBrisbane()/todayInBrisbane() — reads UTC fields directly. */
+export function toDateInputValueUTC(d: Date) {
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 

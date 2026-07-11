@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canEdit } from "@/lib/auth";
-import { toDateInputValue } from "@/lib/ui";
+import { toDateInputValueUTC, todayInBrisbane } from "@/lib/ui";
 import KpiClient from "./kpi-client";
 
 function startOfWeek(d: Date) {
-  const day = d.getDay();
+  const day = d.getUTCDay();
   const diff = (day === 0 ? -6 : 1) - day;
   const monday = new Date(d);
-  monday.setDate(d.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
+  monday.setUTCDate(d.getUTCDate() + diff);
+  monday.setUTCHours(0, 0, 0, 0);
   return monday;
 }
 
@@ -19,10 +19,10 @@ export default async function KpiPage({
 }) {
   const { week } = await searchParams;
   const session = await getSession();
-  const baseDate = week ? new Date(`${week}T00:00:00`) : new Date();
-  const weekStart = startOfWeek(isNaN(baseDate.getTime()) ? new Date() : baseDate);
+  const baseDate = week ? new Date(`${week}T00:00:00Z`) : todayInBrisbane();
+  const weekStart = startOfWeek(isNaN(baseDate.getTime()) ? todayInBrisbane() : baseDate);
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
   const [teams, kpis, tasks, dailyTargets] = await Promise.all([
     prisma.team.findMany({ orderBy: { name: "asc" } }),
@@ -37,14 +37,14 @@ export default async function KpiPage({
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
+    d.setUTCDate(d.getUTCDate() + i);
     return d;
   });
 
   return (
     <KpiClient
-      weekStartStr={toDateInputValue(weekStart)}
-      todayStr={toDateInputValue(new Date())}
+      weekStartStr={toDateInputValueUTC(weekStart)}
+      todayStr={toDateInputValueUTC(todayInBrisbane())}
       teams={teams}
       kpis={kpis.map((k) => ({
         id: k.id,

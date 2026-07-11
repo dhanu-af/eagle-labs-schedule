@@ -2,21 +2,17 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canEdit } from "@/lib/auth";
 import PostAnnouncementCard from "@/components/post-announcement-card";
 import ProgressRing from "@/components/progress-ring";
+import BrisbaneClock from "@/components/brisbane-clock";
 import {
   STATUS_CLASS,
   STATUS_LABEL,
   PRIORITY_CLASS,
   PRIORITY_LABEL,
-  formatDate,
+  formatBrisbaneDate,
+  todayInBrisbane,
   pct,
   initials,
 } from "@/lib/ui";
-
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
 
 const STAT_ICONS = {
   tasks: (
@@ -46,9 +42,9 @@ const STAT_ICONS = {
 
 export default async function DashboardPage() {
   const session = await getSession();
-  const today = startOfDay(new Date());
+  const today = todayInBrisbane();
   const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
   const [tasks, teams, kpis, todaysKpiTargets, attendanceToday, pendingLeaves, employeeCount] =
     await Promise.all([
@@ -88,7 +84,11 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Welcome back, {session?.fullName.split(" ")[0]}
           </h1>
-          <p className="text-sm text-muted-foreground">{formatDate(today)}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{formatBrisbaneDate(today)}</span>
+            <span className="text-border">·</span>
+            <BrisbaneClock />
+          </div>
         </div>
         {(statusCounts.DELAYED > 0 || pendingLeaves > 0) && (
           <div className="flex gap-2">
