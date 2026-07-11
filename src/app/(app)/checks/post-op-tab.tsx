@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPostOpCheck, verifyPostOpCheck, unlockCheckRecord } from "@/lib/actions/checks-actions";
-import { toDateInputValue, formatBrisbaneTime } from "@/lib/ui";
+import { toDateInputValueUTC, todayInBrisbane, formatBrisbaneTime } from "@/lib/ui";
 import type { CleaningType, PostOpItem } from "@/generated/prisma";
 import type { PostOpRow } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
@@ -206,7 +206,7 @@ function PostOpForm({ onClose }: { onClose: () => void }) {
         </div>
         <form action={submit} className="space-y-3">
           <Field label="Date">
-            <input name="date" type="date" required defaultValue={toDateInputValue(new Date())} className="input" />
+            <input name="date" type="date" required defaultValue={toDateInputValueUTC(todayInBrisbane())} className="input" />
           </Field>
           <Field label="Item">
             <select name="item" required className="input">

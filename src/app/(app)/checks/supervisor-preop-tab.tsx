@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createSupervisorPreOpCheck, unlockCheckRecord } from "@/lib/actions/checks-actions";
-import { toDateInputValue, formatBrisbaneTime } from "@/lib/ui";
+import { toDateInputValueUTC, todayInBrisbane, formatBrisbaneTime } from "@/lib/ui";
 import type { SupervisorPreOp } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
@@ -164,7 +164,7 @@ function SupervisorPreOpForm({ onClose }: { onClose: () => void }) {
         <form action={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date">
-              <input name="date" type="date" required defaultValue={toDateInputValue(new Date())} className="input" />
+              <input name="date" type="date" required defaultValue={toDateInputValueUTC(todayInBrisbane())} className="input" />
             </Field>
             <Field label="Room">
               <input name="room" required placeholder="e.g. Blending Room" className="input" />

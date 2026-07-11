@@ -41,7 +41,7 @@ export async function createSupervisorPreOpCheck(data: {
 
   const check = await prisma.supervisorPreOpCheck.create({
     data: {
-      date: new Date(`${data.date}T00:00:00`),
+      date: new Date(`${data.date}T00:00:00Z`),
       room: data.room,
       roomCleanliness: data.roomCleanliness,
       equipmentReadiness: data.equipmentReadiness,
@@ -84,7 +84,7 @@ export async function createQaPreOpCheck(data: {
 
   const check = await prisma.qaPreOpCheck.create({
     data: {
-      date: new Date(`${data.date}T00:00:00`),
+      date: new Date(`${data.date}T00:00:00Z`),
       room: data.room,
       qaRoomInspection: data.qaRoomInspection,
       equipmentVerification: data.equipmentVerification,
@@ -133,7 +133,7 @@ export async function createEnvironmentalCheck(data: {
 
   const check = await prisma.environmentalCheck.create({
     data: {
-      date: new Date(`${data.date}T00:00:00`),
+      date: new Date(`${data.date}T00:00:00Z`),
       area: data.area,
       temperature: data.temperature,
       humidity: data.humidity,
@@ -255,7 +255,7 @@ export async function createLineClearance(data: {
 
   const check = await prisma.lineClearance.create({
     data: {
-      date: new Date(`${data.date}T00:00:00`),
+      date: new Date(`${data.date}T00:00:00Z`),
       line: data.line,
       previousBatchCleared: data.previousBatchCleared,
       materialCleared: data.materialCleared,
@@ -341,7 +341,7 @@ export async function createPostOpCheck(data: {
 
   const check = await prisma.postOpCheck.create({
     data: {
-      date: new Date(`${data.date}T00:00:00`),
+      date: new Date(`${data.date}T00:00:00Z`),
       item: data.item,
       cleaningType: data.cleaningType,
       comments: data.comments || null,

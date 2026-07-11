@@ -18,7 +18,7 @@ import {
   updateEnvironmentalLimit,
   unlockCheckRecord,
 } from "@/lib/actions/checks-actions";
-import { toDateInputValue, formatBrisbaneTime } from "@/lib/ui";
+import { toDateInputValueUTC, todayInBrisbane, formatBrisbaneTime } from "@/lib/ui";
 import type { EnvArea } from "@/generated/prisma";
 import type { EnvironmentalCheckRow, EnvLimit } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
@@ -310,7 +310,7 @@ function ReadingForm({ onClose }: { onClose: () => void }) {
         <form action={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date">
-              <input name="date" type="date" required defaultValue={toDateInputValue(new Date())} className="input" />
+              <input name="date" type="date" required defaultValue={toDateInputValueUTC(todayInBrisbane())} className="input" />
             </Field>
             <Field label="Area">
               <select name="area" required className="input">
