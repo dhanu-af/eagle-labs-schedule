@@ -146,8 +146,8 @@ export default function AppShell({
       label: "Operations",
       items: [
         { href: "/", label: "Dashboard", icon: icons.dashboard },
-        { href: "/daily", label: "Daily Planner", icon: icons.daily },
         { href: "/my-task", label: "My Task", icon: icons.myTask },
+        { href: "/daily", label: "Daily Planner", icon: icons.daily },
         { href: "/weekly", label: "Weekly Planner", icon: icons.weekly },
         { href: "/kpi", label: "KPI Tracking", icon: icons.kpi },
         { href: "/checks", label: "Checks", icon: icons.checks },
