@@ -43,6 +43,8 @@ export default function KpiClient({
   const [pending, startTransition] = useTransition();
 
   const weekStartDate = new Date(`${weekStartStr}T00:00:00`);
+  const weekEndDate = new Date(weekStartDate);
+  weekEndDate.setDate(weekEndDate.getDate() + 6);
 
   function goWeek(offset: number) {
     const d = new Date(weekStartDate);
@@ -64,6 +66,10 @@ export default function KpiClient({
         <div>
           <h1 className="text-xl font-semibold text-foreground">KPI Tracking</h1>
           <p className="text-sm text-muted-foreground">Target vs actual, daily and weekly completion.</p>
+          <p className="text-sm text-muted-foreground">
+            {weekStartDate.toLocaleDateString("en-AU", { day: "2-digit", month: "short" })} –{" "}
+            {weekEndDate.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" })}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => goWeek(-1)} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted">
