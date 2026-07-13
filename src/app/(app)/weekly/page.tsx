@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit } from "@/lib/auth";
+import { getSession, canManageRole } from "@/lib/auth";
 import { toDateInputValueUTC, todayInBrisbane } from "@/lib/ui";
 import WeeklyPlannerClient from "./weekly-client";
 
@@ -50,7 +50,7 @@ export default async function WeeklyPlannerPage({
         task: a.task,
         hours: a.hours,
       }))}
-      canManage={!!session && canEdit(session.role)}
+      canManage={!!session && canManageRole(session.role)}
     />
   );
 }

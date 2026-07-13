@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit } from "@/lib/auth";
+import { getSession, canManageRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 
 async function requireManager() {
   const session = await getSession();
-  if (!session || !canEdit(session.role)) throw new Error("Not authorized");
+  if (!session || !canManageRole(session.role)) throw new Error("Not authorized");
   return session;
 }
 
