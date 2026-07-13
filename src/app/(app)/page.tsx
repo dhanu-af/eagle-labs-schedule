@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import PostAnnouncementCard from "@/components/post-announcement-card";
 import ProgressRing from "@/components/progress-ring";
 import BrisbaneClock from "@/components/brisbane-clock";
@@ -9,6 +9,7 @@ import {
   PRIORITY_CLASS,
   PRIORITY_LABEL,
   formatBrisbaneDate,
+  formatBrisbaneDateTime,
   todayInBrisbane,
   pct,
   initials,
@@ -46,7 +47,7 @@ export default async function DashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
-  const [tasks, teams, kpis, todaysKpiTargets, attendanceToday, pendingLeaves, employeeCount] =
+  const [tasks, teams, kpis, todaysKpiTargets, pendingLeaves, latestAnnouncements] =
     await Promise.all([
       prisma.dailyTask.findMany({
         where: { date: { gte: today, lt: tomorrow } },
@@ -56,9 +57,8 @@ export default async function DashboardPage() {
       prisma.team.findMany({ orderBy: { name: "asc" } }),
       prisma.kpi.findMany({ include: { team: true } }),
       prisma.kpiDailyTarget.findMany({ where: { date: { gte: today, lt: tomorrow } } }),
-      prisma.attendance.findMany({ where: { date: { gte: today, lt: tomorrow } } }),
       prisma.leaveRequest.count({ where: { status: "PENDING" } }),
-      prisma.employee.count({ where: { active: true } }),
+      prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 2 }),
     ]);
 
   const statusCounts = {
@@ -70,12 +70,6 @@ export default async function DashboardPage() {
   const completionPct = tasks.length
     ? Math.round((statusCounts.COMPLETED / tasks.length) * 100)
     : 0;
-
-  const presentCount = attendanceToday.filter(
-    (a) => a.status === "PRESENT" || a.status === "HALF_DAY"
-  ).length;
-  const absentCount = attendanceToday.filter((a) => a.status === "ABSENT").length;
-  const leaveCount = attendanceToday.filter((a) => a.status === "LEAVE").length;
 
   return (
     <div className="animate-in space-y-6">
@@ -221,27 +215,28 @@ export default async function DashboardPage() {
           </div>
 
           <div className="card-shadow rounded-2xl border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Attendance Today</h2>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-xl font-bold text-success">{presentCount}</p>
-                <p className="text-xs text-muted-foreground">Present</p>
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span aria-hidden>📣</span> Latest Announcements
+            </h2>
+            {latestAnnouncements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No announcements yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {latestAnnouncements.map((a) => (
+                  <div key={a.id} className="rounded-xl border border-border bg-surface-muted/40 p-3">
+                    <p className="whitespace-pre-line text-sm text-foreground">{a.message}</p>
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                      {formatBrisbaneDateTime(a.createdAt)}
+                    </p>
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="text-xl font-bold text-danger">{absentCount}</p>
-                <p className="text-xs text-muted-foreground">Absent</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-info">{leaveCount}</p>
-                <p className="text-xs text-muted-foreground">Leave</p>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">{employeeCount} active employees</p>
+            )}
           </div>
         </div>
       </div>
 
-      {!!session && canEdit(session.role) && <PostAnnouncementCard />}
+      {!!session && <PostAnnouncementCard />}
     </div>
   );
 }

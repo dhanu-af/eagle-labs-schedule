@@ -534,3 +534,14 @@ model CheckAttachment {
 
   @@index([checkType, checkId])
 }
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  authorId   String?
+  authorName String
+  authorRole Role
+  message    String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}

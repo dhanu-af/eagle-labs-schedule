@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit } from "@/lib/auth";
+import { getSession, canEdit, canPostAnnouncement } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { notifyAllEmployees } from "@/lib/notify";
 
 export async function createAnnouncement(message: string) {
   const session = await getSession();
-  if (!session || !canEdit(session.role)) {
+  if (!session || !canPostAnnouncement(session.role)) {
     throw new Error("Not authorized");
   }
   if (!message.trim()) {

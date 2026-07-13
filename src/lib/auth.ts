@@ -75,6 +75,16 @@ export function canUpdateDailyProgress(_role: Role) {
   return true;
 }
 
+/** Dashboard: any authenticated employee may post an announcement for all staff. */
+export function canPostAnnouncement(_role: Role) {
+  return true;
+}
+
+/** Team Chat: open to every authenticated employee. */
+export function canUseTeamChat(_role: Role) {
+  return true;
+}
+
 /**
  * Daily Planner: Supervisors (and Admin/Super Admin) can create, edit
  * (including batch numbers) and duplicate tasks — a further intentional

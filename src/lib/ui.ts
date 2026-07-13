@@ -119,6 +119,20 @@ export function formatBrisbaneDate(d: Date) {
   }).format(d);
 }
 
+/** Formats a real timestamp (e.g. an announcement or chat message) as a Brisbane date + time, e.g. "12 July, 9:15 am". */
+export function formatBrisbaneDateTime(d: Date | string) {
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Australia/Brisbane",
+  })
+    .format(typeof d === "string" ? new Date(d) : d)
+    .toLowerCase();
+}
+
 /** Formats a real timestamp (e.g. a signature time) as Brisbane wall-clock time, e.g. "9:15 am". */
 export function formatBrisbaneTime(d: Date | string) {
   return new Intl.DateTimeFormat("en-AU", {
