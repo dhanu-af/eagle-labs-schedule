@@ -513,6 +513,8 @@ model LineClearance {
   id                    String      @id @default(cuid())
   date                  DateTime
   line                  String
+  previousProductName   String?
+  previousBatchNumber   String?
   previousBatchCleared  Boolean     @default(false)
   materialCleared       Boolean     @default(false)
   labelPackagingCleared Boolean     @default(false)
@@ -546,6 +548,8 @@ model PostOpCheck {
   id                         String       @id @default(cuid())
   date                       DateTime
   item                       PostOpItem
+  previousProductName        String?
+  previousBatchNumber        String?
   cleaningType               CleaningType
   cleaningVerificationStatus String?
   comments                   String?

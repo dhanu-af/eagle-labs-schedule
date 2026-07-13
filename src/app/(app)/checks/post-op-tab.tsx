@@ -109,11 +109,13 @@ export default function PostOpTab({
       </div>
 
       <Card padding="none" className="overflow-x-auto">
-        <table className="w-full min-w-[1150px] text-sm">
+        <table className="w-full min-w-[1400px] text-sm">
           <thead>
             <tr className={THEAD_ROW_CLASS}>
               <Th>Date</Th>
               <Th>Item</Th>
+              <Th>Previous Product</Th>
+              <Th>Previous Batch</Th>
               <Th>Cleaning Type</Th>
               <Th>Verification</Th>
               <Th>Submitted By</Th>
@@ -128,6 +130,8 @@ export default function PostOpTab({
               <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
                 <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
                 <td className="px-3 py-2.5 text-foreground">{ITEM_LABEL[r.item]}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">{r.previousProductName ?? "—"}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">{r.previousBatchNumber ?? "—"}</td>
                 <td className="px-3 py-2.5 text-muted-foreground">{CLEANING_LABEL[r.cleaningType]}</td>
                 <td className="px-3 py-2.5 text-muted-foreground">{r.cleaningVerificationStatus ?? "—"}</td>
                 <td className="px-3 py-2.5 text-muted-foreground">
@@ -170,7 +174,7 @@ export default function PostOpTab({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9}>
+                <td colSpan={11}>
                   <EmptyState title="No records match these filters." />
                 </td>
               </tr>
@@ -199,6 +203,8 @@ function PostOpForm({ onClose }: { onClose: () => void }) {
         await createPostOpCheck({
           date: String(formData.get("date")),
           item: formData.get("item") as PostOpItem,
+          previousProductName: String(formData.get("previousProductName") ?? ""),
+          previousBatchNumber: String(formData.get("previousBatchNumber") ?? ""),
           cleaningType: formData.get("cleaningType") as CleaningType,
           comments: String(formData.get("comments") ?? ""),
           signature: String(formData.get("signature") ?? ""),
@@ -242,6 +248,14 @@ function PostOpForm({ onClose }: { onClose: () => void }) {
               </optgroup>
             </select>
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Previous Product Name">
+              <input name="previousProductName" placeholder="e.g. Gut AU" className="input" />
+            </Field>
+            <Field label="Previous Batch Number">
+              <input name="previousBatchNumber" placeholder="e.g. B12345" className="input" />
+            </Field>
+          </div>
           <Field label="Cleaning Type">
             <select name="cleaningType" required className="input">
               <option value="FULL_CLEAN">Full Clean</option>

@@ -76,11 +76,13 @@ export default function LineClearanceTab({
       </div>
 
       <Card padding="none" className="overflow-x-auto">
-        <table className="w-full min-w-[1250px] text-sm">
+        <table className="w-full min-w-[1500px] text-sm">
           <thead>
             <tr className={THEAD_ROW_CLASS}>
               <Th>Date</Th>
               <Th>Line</Th>
+              <Th>Previous Product</Th>
+              <Th>Previous Batch</Th>
               <Th>Batch</Th>
               <Th>Material</Th>
               <Th>Label/Pkg</Th>
@@ -99,6 +101,8 @@ export default function LineClearanceTab({
               <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
                 <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
                 <td className="px-3 py-2.5 text-foreground">{r.line}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">{r.previousProductName ?? "—"}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">{r.previousBatchNumber ?? "—"}</td>
                 <td className="px-3 py-2.5">{r.previousBatchCleared ? "✅" : "❌"}</td>
                 <td className="px-3 py-2.5">{r.materialCleared ? "✅" : "❌"}</td>
                 <td className="px-3 py-2.5">{r.labelPackagingCleared ? "✅" : "❌"}</td>
@@ -159,7 +163,7 @@ export default function LineClearanceTab({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={13}>
+                <td colSpan={15}>
                   <EmptyState title="No records match these filters." />
                 </td>
               </tr>
@@ -185,6 +189,8 @@ function LineClearanceForm({ onClose }: { onClose: () => void }) {
         await createLineClearance({
           date: String(formData.get("date")),
           line: String(formData.get("line")),
+          previousProductName: String(formData.get("previousProductName") ?? ""),
+          previousBatchNumber: String(formData.get("previousBatchNumber") ?? ""),
           previousBatchCleared: formData.get("previousBatchCleared") === "on",
           materialCleared: formData.get("materialCleared") === "on",
           labelPackagingCleared: formData.get("labelPackagingCleared") === "on",
@@ -217,6 +223,14 @@ function LineClearanceForm({ onClose }: { onClose: () => void }) {
             </Field>
             <Field label="Line / Room">
               <input name="line" required placeholder="e.g. Blending Line 1" className="input" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Previous Product Name">
+              <input name="previousProductName" placeholder="e.g. Gut AU" className="input" />
+            </Field>
+            <Field label="Previous Batch Number">
+              <input name="previousBatchNumber" placeholder="e.g. B12345" className="input" />
             </Field>
           </div>
           <Checkbox name="previousBatchCleared" label="Previous batch cleared" />

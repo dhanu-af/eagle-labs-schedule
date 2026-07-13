@@ -82,6 +82,8 @@ export async function GET(request: NextRequest) {
     sheet.columns = [
       { header: "Date", key: "date", width: 12 },
       { header: "Line", key: "line", width: 20 },
+      { header: "Previous Product", key: "previousProductName", width: 20 },
+      { header: "Previous Batch", key: "previousBatchNumber", width: 18 },
       { header: "Prev Batch Cleared", key: "previousBatchCleared", width: 16 },
       { header: "Material Cleared", key: "materialCleared", width: 16 },
       { header: "Label/Pkg Cleared", key: "labelPackagingCleared", width: 16 },
@@ -103,6 +105,8 @@ export async function GET(request: NextRequest) {
     sheet.columns = [
       { header: "Date", key: "date", width: 12 },
       { header: "Item", key: "item", width: 20 },
+      { header: "Previous Product", key: "previousProductName", width: 20 },
+      { header: "Previous Batch", key: "previousBatchNumber", width: 18 },
       { header: "Cleaning Type", key: "cleaningType", width: 18 },
       { header: "Verification Status", key: "cleaningVerificationStatus", width: 22 },
       { header: "Comments", key: "comments", width: 30 },

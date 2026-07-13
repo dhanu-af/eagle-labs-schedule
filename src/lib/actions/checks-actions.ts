@@ -242,6 +242,8 @@ export async function updateEnvironmentalLimit(
 export async function createLineClearance(data: {
   date: string;
   line: string;
+  previousProductName?: string;
+  previousBatchNumber?: string;
   previousBatchCleared: boolean;
   materialCleared: boolean;
   labelPackagingCleared: boolean;
@@ -258,6 +260,8 @@ export async function createLineClearance(data: {
     data: {
       date: new Date(`${data.date}T00:00:00Z`),
       line: data.line,
+      previousProductName: data.previousProductName || null,
+      previousBatchNumber: data.previousBatchNumber || null,
       previousBatchCleared: data.previousBatchCleared,
       materialCleared: data.materialCleared,
       labelPackagingCleared: data.labelPackagingCleared,
@@ -332,6 +336,8 @@ export async function approveLineClearance(id: string, as: "SUPERVISOR" | "QA") 
 export async function createPostOpCheck(data: {
   date: string;
   item: PostOpItem;
+  previousProductName?: string;
+  previousBatchNumber?: string;
   cleaningType: CleaningType;
   comments?: string;
   signature: string;
@@ -344,6 +350,8 @@ export async function createPostOpCheck(data: {
     data: {
       date: new Date(`${data.date}T00:00:00Z`),
       item: data.item,
+      previousProductName: data.previousProductName || null,
+      previousBatchNumber: data.previousBatchNumber || null,
       cleaningType: data.cleaningType,
       comments: data.comments || null,
       signature: data.signature.trim(),

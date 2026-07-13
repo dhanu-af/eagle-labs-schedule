@@ -88,6 +88,8 @@ export type LineClearanceRow = {
   id: string;
   date: string;
   line: string;
+  previousProductName: string | null;
+  previousBatchNumber: string | null;
   previousBatchCleared: boolean;
   materialCleared: boolean;
   labelPackagingCleared: boolean;
@@ -110,6 +112,8 @@ export type PostOpRow = {
   id: string;
   date: string;
   item: PostOpItem;
+  previousProductName: string | null;
+  previousBatchNumber: string | null;
   cleaningType: CleaningType;
   cleaningVerificationStatus: string | null;
   comments: string | null;
