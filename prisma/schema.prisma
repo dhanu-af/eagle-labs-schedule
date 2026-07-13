@@ -548,3 +548,48 @@ model ChatMessage {
 
   @@index([createdAt])
 }
+
+model FormulationFolder {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  formulations Formulation[]
+}
+
+model Formulation {
+  id            String   @id @default(cuid())
+  folderId      String
+  productName   String
+  baseBatchSize Float
+  baseUnit      String   @default("kg")
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  folder      FormulationFolder       @relation(fields: [folderId], references: [id])
+  ingredients FormulationIngredient[]
+
+  @@index([folderId])
+}
+
+model FormulationIngredient {
+  id               String  @id @default(cuid())
+  formulationId    String
+  order            Int
+  rmNumber         String?
+  ingredientName   String
+  uin              String?
+  baseQty          Float
+  controlStatus    String?
+  changeControlRef String?
+  approvedBy       String?
+  comments         String?
+  tolerancePct     Float   @default(2)
+
+  formulation Formulation @relation(fields: [formulationId], references: [id], onDelete: Cascade)
+
+  @@index([formulationId])
+}
