@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession, canEdit } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { notifyManagers, notifyEmployee } from "@/lib/notify";
+import { notifyAllEmployees, notifyEmployee } from "@/lib/notify";
 import type { AttendanceStatus } from "@/generated/prisma";
 
 export async function markAttendance(
@@ -56,7 +56,7 @@ export async function requestLeave(formData: FormData) {
     summary: `${session.fullName} requested ${type} leave`,
   });
 
-  await notifyManagers({
+  await notifyAllEmployees({
     title: "New leave request",
     message: `${session.fullName} requested ${type} leave from ${startDate.toDateString()} to ${endDate.toDateString()}`,
     type: "LEAVE_REQUESTED",

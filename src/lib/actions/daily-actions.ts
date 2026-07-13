@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession, canUpdateDailyProgress, canManageDailyPlanner, isAdminRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { notifyManagers } from "@/lib/notify";
+import { notifyAllEmployees } from "@/lib/notify";
 import type { Priority, TaskStatus } from "@/generated/prisma";
 
 async function requireDailyPlannerManager() {
@@ -160,7 +160,7 @@ export async function updateTaskStatus(
   });
 
   if (status === "DELAYED") {
-    await notifyManagers({
+    await notifyAllEmployees({
       title: "Task delayed",
       message: `${task.product} · ${task.process} was marked delayed${delayReason ? `: ${delayReason}` : ""}`,
       type: "TASK_DELAYED",

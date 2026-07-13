@@ -11,7 +11,7 @@ import {
   canEdit,
 } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { notifyManagers } from "@/lib/notify";
+import { notifyAllEmployees } from "@/lib/notify";
 import type { EnvArea, PostOpItem, CleaningType } from "@/generated/prisma";
 
 const CHECKS_PATH = "/checks";
@@ -155,8 +155,8 @@ export async function createEnvironmentalCheck(data: {
   });
 
   if (!passFail) {
-    // OOS alert: notify managers via the existing announcement/notification pipeline.
-    await notifyManagers({
+    // OOS alert: notify all employees via the existing announcement/notification pipeline.
+    await notifyAllEmployees({
       title: "Out-of-Specification environmental reading",
       message: `${data.area.replace("_", " ")}: ${data.temperature}°C / ${data.humidity}% RH is out of spec (recorded by ${session.fullName}).`,
       type: "ENV_OOS",
