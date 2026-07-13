@@ -282,10 +282,13 @@ model LeaveRequest {
 }
 
 model Announcement {
-  id        String   @id @default(cuid())
-  title     String
-  message   String
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  title      String
+  message    String
+  authorId   String?
+  authorName String?
+  authorRole Role?
+  createdAt  DateTime @default(now())
 }
 
 model AuditLog {

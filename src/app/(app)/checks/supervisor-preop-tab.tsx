@@ -71,7 +71,7 @@ export default function SupervisorPreOpTab({
       </div>
 
       <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
-        <table className="w-full min-w-[900px] text-sm">
+        <table className="w-full min-w-[1050px] text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
               <th className="px-3 py-2">Date</th>
@@ -82,6 +82,7 @@ export default function SupervisorPreOpTab({
               <th className="px-3 py-2">Calibration</th>
               <th className="px-3 py-2">Submitted By</th>
               <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Comments</th>
               <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
@@ -100,6 +101,7 @@ export default function SupervisorPreOpTab({
                   <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
                 </td>
                 <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
+                <td className="max-w-[220px] px-3 py-2 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
                 <td className="px-3 py-2">
                   {r.locked && canUnlock && (
                     <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
@@ -111,7 +113,7 @@ export default function SupervisorPreOpTab({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={10} className="px-3 py-8 text-center text-sm text-muted-foreground">
                   No records match these filters.
                 </td>
               </tr>

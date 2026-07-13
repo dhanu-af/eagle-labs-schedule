@@ -69,7 +69,7 @@ export default function LineClearanceTab({
       </div>
 
       <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
-        <table className="w-full min-w-[1100px] text-sm">
+        <table className="w-full min-w-[1250px] text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
               <th className="px-3 py-2">Date</th>
@@ -83,6 +83,7 @@ export default function LineClearanceTab({
               <th className="px-3 py-2">Supervisor</th>
               <th className="px-3 py-2">QA</th>
               <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Comments</th>
               <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
@@ -132,6 +133,7 @@ export default function LineClearanceTab({
                   )}
                 </td>
                 <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
+                <td className="max-w-[200px] px-3 py-2 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
                 <td className="px-3 py-2">
                   {r.locked && canUnlock && (
                     <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
@@ -143,7 +145,7 @@ export default function LineClearanceTab({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={13} className="px-3 py-8 text-center text-sm text-muted-foreground">
                   No records match these filters.
                 </td>
               </tr>

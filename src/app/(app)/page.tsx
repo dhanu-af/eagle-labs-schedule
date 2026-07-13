@@ -226,7 +226,7 @@ export default async function DashboardPage() {
                   <div key={a.id} className="rounded-xl border border-border bg-surface-muted/40 p-3">
                     <p className="whitespace-pre-line text-sm text-foreground">{a.message}</p>
                     <p className="mt-1.5 text-[11px] text-muted-foreground">
-                      {formatBrisbaneDateTime(a.createdAt)}
+                      {a.authorName ?? "Unknown"} · {formatBrisbaneDateTime(a.createdAt)}
                     </p>
                   </div>
                 ))}

@@ -16,7 +16,13 @@ export async function createAnnouncement(message: string) {
   }
 
   const announcement = await prisma.announcement.create({
-    data: { title: "Announcement", message: message.trim() },
+    data: {
+      title: "Announcement",
+      message: message.trim(),
+      authorId: session.userId,
+      authorName: session.fullName,
+      authorRole: session.role,
+    },
   });
 
   await logAudit(session, {
