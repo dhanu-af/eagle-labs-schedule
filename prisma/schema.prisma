@@ -109,6 +109,27 @@ enum EnvArea {
   CAPSULE_ROOM
 }
 
+enum WorkLogRoom {
+  ENCAPSULATION_ROOM
+  BLENDING_ROOM
+}
+
+enum WorkLogActivity {
+  ENCAPSULATION
+  DISPENSING_MIXING
+  GUMMY_POLISHING
+  SORTING_REWORK
+  PACKING
+  GUMMY_COATING
+  POLISHING
+  SET_UP
+  TESTING
+  CLEANING_PROVISIONAL
+  CLEANING_FULL
+  OTHERS
+  BREAKDOWN
+}
+
 model Team {
   id          String   @id @default(cuid())
   name        String   @unique
@@ -546,6 +567,41 @@ model PostOpCheck {
 
   @@index([date])
   @@index([item])
+}
+
+model WorkLog {
+  id             String          @id @default(cuid())
+  room           WorkLogRoom
+  opName         String
+  startDate      DateTime
+  startTime      String
+  productName    String
+  productCode    String
+  batchNumber    String
+  activity       WorkLogActivity
+  activityOther  String?
+  endDate        DateTime?
+  endTime        String?
+  closingOpName  String?
+  comments       String?
+  status         CheckStatus     @default(PENDING)
+  locked         Boolean         @default(false)
+
+  submittedById   String
+  submittedByName String
+  submittedByRole Role
+  submittedAt     DateTime @default(now())
+  signature       String
+
+  supervisorApprovedById   String?
+  supervisorApprovedByName String?
+  supervisorApprovedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startDate])
+  @@index([room])
 }
 
 model CheckAttachment {

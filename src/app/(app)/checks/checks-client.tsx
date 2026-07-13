@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import type { CheckStatus, CleaningType, EnvArea, PostOpItem, Role } from "@/generated/prisma";
+import type { CheckStatus, CleaningType, EnvArea, PostOpItem, Role, WorkLogRoom, WorkLogActivity } from "@/generated/prisma";
 import SupervisorPreOpTab from "./supervisor-preop-tab";
 import QaPreOpTab from "./qa-preop-tab";
 import EnvironmentalTab from "./environmental-tab";
 import LineClearanceTab from "./line-clearance-tab";
 import PostOpTab from "./post-op-tab";
+import WorkLogTab from "./work-log-tab";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -15,6 +16,7 @@ export type Permissions = {
   canSupervisor: boolean;
   canQa: boolean;
   canOperator: boolean;
+  canApproveWorkLog: boolean;
   canUnlock: boolean;
   canDelete: boolean;
 };
@@ -121,6 +123,31 @@ export type PostOpRow = {
   verifiedAt: string | null;
 };
 
+export type WorkLogRow = {
+  id: string;
+  room: WorkLogRoom;
+  opName: string;
+  startDate: string;
+  startTime: string;
+  productName: string;
+  productCode: string;
+  batchNumber: string;
+  activity: WorkLogActivity;
+  activityOther: string | null;
+  endDate: string | null;
+  endTime: string | null;
+  closingOpName: string | null;
+  comments: string | null;
+  status: CheckStatus;
+  locked: boolean;
+  submittedByName: string;
+  submittedByRole: Role;
+  submittedAt: string;
+  signature: string;
+  supervisorApprovedByName: string | null;
+  supervisorApprovedAt: string | null;
+};
+
 const TABS = [
   { key: "dashboard", label: "Dashboard" },
   { key: "supervisor", label: "Supervisor Pre-Op" },
@@ -128,6 +155,7 @@ const TABS = [
   { key: "environmental", label: "RH & Temperature" },
   { key: "clearance", label: "Line Clearance" },
   { key: "postop", label: "Post-Op Checks" },
+  { key: "worklog", label: "Work Log" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -140,6 +168,7 @@ export default function ChecksClient({
   envLimits,
   lineClearance,
   postOp,
+  workLog,
 }: {
   permissions: Permissions;
   supervisorPreOp: SupervisorPreOp[];
@@ -148,6 +177,7 @@ export default function ChecksClient({
   envLimits: EnvLimit[];
   lineClearance: LineClearanceRow[];
   postOp: PostOpRow[];
+  workLog: WorkLogRow[];
 }) {
   const [tab, setTab] = useState<TabKey>("dashboard");
 
@@ -157,6 +187,7 @@ export default function ChecksClient({
     ...environmental.map((r) => r.status),
     ...lineClearance.map((r) => r.status),
     ...postOp.map((r) => r.status),
+    ...workLog.map((r) => r.status),
   ];
   const counts = {
     PENDING: allStatuses.filter((s) => s === "PENDING").length,
@@ -217,6 +248,7 @@ export default function ChecksClient({
               onClick={() => setTab("clearance")}
             />
             <SectionSummary title="Post-Op Checks" total={postOp.length} onClick={() => setTab("postop")} />
+            <SectionSummary title="Work Log" total={workLog.length} onClick={() => setTab("worklog")} />
           </div>
         </div>
       )}
@@ -259,6 +291,15 @@ export default function ChecksClient({
           rows={postOp}
           canSubmit={permissions.canOperator}
           canVerify={permissions.canSupervisor}
+          canUnlock={permissions.canUnlock}
+          canDelete={permissions.canDelete}
+        />
+      )}
+      {tab === "worklog" && (
+        <WorkLogTab
+          rows={workLog}
+          canSubmit={permissions.canOperator}
+          canApprove={permissions.canApproveWorkLog}
           canUnlock={permissions.canUnlock}
           canDelete={permissions.canDelete}
         />

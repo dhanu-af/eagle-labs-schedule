@@ -114,6 +114,34 @@ export async function GET(request: NextRequest) {
     for (const r of rows) {
       sheet.addRow({ ...r, date: r.date.toISOString().slice(0, 10) });
     }
+  } else if (type === "worklog") {
+    const rows = await prisma.workLog.findMany({ orderBy: { startDate: "desc" } });
+    const sheet = workbook.addWorksheet("Work Log");
+    sheet.columns = [
+      { header: "Room", key: "room", width: 20 },
+      { header: "OP Name", key: "opName", width: 18 },
+      { header: "Start Date", key: "startDate", width: 12 },
+      { header: "Start Time", key: "startTime", width: 12 },
+      { header: "Product Name", key: "productName", width: 20 },
+      { header: "Product Code", key: "productCode", width: 16 },
+      { header: "Batch Number", key: "batchNumber", width: 16 },
+      { header: "Activity", key: "activity", width: 20 },
+      { header: "End Date", key: "endDate", width: 12 },
+      { header: "End Time", key: "endTime", width: 12 },
+      { header: "OP Name (Closing)", key: "closingOpName", width: 18 },
+      { header: "Sign", key: "signature", width: 18 },
+      { header: "Supervisor Approved By", key: "supervisorApprovedByName", width: 20 },
+      { header: "Comments", key: "comments", width: 30 },
+      { header: "Status", key: "status", width: 12 },
+    ];
+    sheet.getRow(1).font = { bold: true };
+    for (const r of rows) {
+      sheet.addRow({
+        ...r,
+        startDate: r.startDate.toISOString().slice(0, 10),
+        endDate: r.endDate ? r.endDate.toISOString().slice(0, 10) : "",
+      });
+    }
   } else {
     return NextResponse.json({ error: "Unknown export type" }, { status: 400 });
   }

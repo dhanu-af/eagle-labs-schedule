@@ -8,11 +8,12 @@ import {
   canActAsQa,
   canActAsOperator,
   canUnlockChecks,
+  canApproveWorkLog,
   canEdit,
 } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { notifyAllEmployees } from "@/lib/notify";
-import type { EnvArea, PostOpItem, CleaningType } from "@/generated/prisma";
+import type { EnvArea, PostOpItem, CleaningType, WorkLogRoom, WorkLogActivity } from "@/generated/prisma";
 
 const CHECKS_PATH = "/checks";
 
@@ -393,6 +394,90 @@ export async function verifyPostOpCheck(id: string, verificationStatus: string) 
   revalidatePath(CHECKS_PATH);
 }
 
+// ───────────────────────────────────── Work Log ────────────────────────────────
+
+export async function createWorkLog(data: {
+  room: WorkLogRoom;
+  opName: string;
+  startDate: string;
+  startTime: string;
+  productName: string;
+  productCode: string;
+  batchNumber: string;
+  activity: WorkLogActivity;
+  activityOther?: string;
+  endDate?: string;
+  endTime?: string;
+  closingOpName?: string;
+  comments?: string;
+  signature: string;
+}) {
+  const session = await requireSession();
+  if (!canActAsOperator(session.role)) throw new Error("Not authorized");
+  if (!data.signature.trim()) throw new Error("Signature is required");
+
+  const check = await prisma.workLog.create({
+    data: {
+      room: data.room,
+      opName: data.opName.trim(),
+      startDate: new Date(`${data.startDate}T00:00:00Z`),
+      startTime: data.startTime,
+      productName: data.productName.trim(),
+      productCode: data.productCode.trim(),
+      batchNumber: data.batchNumber.trim(),
+      activity: data.activity,
+      activityOther: data.activityOther?.trim() || null,
+      endDate: data.endDate ? new Date(`${data.endDate}T00:00:00Z`) : null,
+      endTime: data.endTime || null,
+      closingOpName: data.closingOpName?.trim() || null,
+      comments: data.comments || null,
+      signature: data.signature.trim(),
+      submittedById: session.userId,
+      submittedByName: session.fullName,
+      submittedByRole: session.role,
+      status: "PENDING",
+    },
+  });
+
+  await logAudit(session, {
+    action: "CREATE_WORK_LOG",
+    entityType: "WorkLog",
+    entityId: check.id,
+    summary: `${session.fullName} submitted a Work Log entry for ${data.productName} (Batch ${data.batchNumber})`,
+  });
+
+  revalidatePath(CHECKS_PATH);
+}
+
+export async function approveWorkLog(id: string) {
+  const session = await requireSession();
+  if (!canApproveWorkLog(session.role)) throw new Error("Not authorized");
+
+  const existing = await prisma.workLog.findUnique({ where: { id } });
+  if (!existing) throw new Error("Record not found");
+  if (existing.locked) throw new Error("This record is locked and cannot be modified");
+
+  await prisma.workLog.update({
+    where: { id },
+    data: {
+      supervisorApprovedById: session.userId,
+      supervisorApprovedByName: session.fullName,
+      supervisorApprovedAt: new Date(),
+      status: "APPROVED",
+      locked: true,
+    },
+  });
+
+  await logAudit(session, {
+    action: "APPROVE_WORK_LOG",
+    entityType: "WorkLog",
+    entityId: id,
+    summary: `${session.fullName} approved a Work Log entry`,
+  });
+
+  revalidatePath(CHECKS_PATH);
+}
+
 // ─────────────────────────────────── Unlock ────────────────────────────────────
 
 const UNLOCK_MODELS = {
@@ -401,6 +486,7 @@ const UNLOCK_MODELS = {
   ENVIRONMENTAL: () => prisma.environmentalCheck,
   LINE_CLEARANCE: () => prisma.lineClearance,
   POST_OP: () => prisma.postOpCheck,
+  WORK_LOG: () => prisma.workLog,
 } as const;
 
 export async function unlockCheckRecord(type: keyof typeof UNLOCK_MODELS, id: string) {

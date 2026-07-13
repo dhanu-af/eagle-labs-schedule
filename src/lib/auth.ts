@@ -64,6 +64,11 @@ export function canEdit(role: Role) {
   return role === "SUPER_ADMIN";
 }
 
+/** Checks module — Work Log: any employee can fill it in, but only Supervisor or Super Admin (not plain Admin) can approve. */
+export function canApproveWorkLog(role: Role) {
+  return role === "SUPERVISOR" || role === "SUPER_ADMIN";
+}
+
 /**
  * Daily Planner: any authenticated employee may update a task's actual
  * production quantity and move its status (e.g. via "Move to..."), even
