@@ -23,112 +23,20 @@ const ROLE_DISPLAY: Record<string, string> = {
 };
 
 const icons = {
-  dashboard: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="7" height="9" rx="1" />
-      <rect x="14" y="3" width="7" height="5" rx="1" />
-      <rect x="14" y="12" width="7" height="9" rx="1" />
-      <rect x="3" y="16" width="7" height="5" rx="1" />
-    </svg>
-  ),
-  daily: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M3 9h18M8 2v4M16 2v4" />
-    </svg>
-  ),
-  myTask: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="7" r="3.5" />
-      <path d="M2.5 20c0-3.6 3-6.5 6.5-6.5.9 0 1.7.18 2.5.5" />
-      <path d="M14.5 15.5l2 2 4-4" />
-    </svg>
-  ),
-  teamChat: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-    </svg>
-  ),
-  formulationChecker: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M9 3h6l1 3h3v15H5V6h3z" />
-      <path d="M9 3v3h6V3" />
-      <path d="M8 12h8M8 16h5" />
-      <path d="M8.5 9.5l1 1 2-2" />
-    </svg>
-  ),
-  weekly: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M3 9h18M8 2v4M16 2v4M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01" />
-    </svg>
-  ),
-  kpi: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 3v18h18" />
-      <path d="M7 15l3-4 3 2 5-6" />
-    </svg>
-  ),
-  attendance: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-    </svg>
-  ),
-  payroll: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="2" y="6" width="20" height="12" rx="2" />
-      <circle cx="12" cy="12" r="3" />
-      <path d="M6 6v-.5A1.5 1.5 0 0 1 7.5 4h9A1.5 1.5 0 0 1 18 5.5V6" />
-    </svg>
-  ),
-  reports: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <path d="M9 13h6M9 17h6" />
-    </svg>
-  ),
-  team: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="8" r="3" />
-      <path d="M2 21c0-3.3 3.1-6 7-6s7 2.7 7 6" />
-      <circle cx="17" cy="8" r="2.5" />
-      <path d="M17 12.5c2.5.3 5 2 5 5.5" />
-    </svg>
-  ),
-  audit: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  ),
-  askDhanu: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 17.5v.01" />
-      <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-1.2 1.9-2 2.6-.6.5-.8 1-.8 1.65" />
-      <circle cx="12" cy="12" r="9.5" />
-    </svg>
-  ),
-  userManagement: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20c0-3.6 3-6.5 6.5-6.5s6.5 2.9 6.5 6.5" />
-      <path d="M17 8.5h4M19 6.5v4" />
-    </svg>
-  ),
-  loginHistory: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3.5 2" />
-    </svg>
-  ),
-  checks: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M8 8h8M8 12l2 2 4-4M8 17h5" />
-    </svg>
-  ),
+  dashboard: "🏠",
+  myTask: "✅",
+  daily: "📅",
+  weekly: "📆",
+  kpi: "📊",
+  checks: "✔️",
+  formulationChecker: "🧪",
+  askDhanu: "🤖",
+  teamChat: "💬",
+  reports: "📈",
+  team: "👥",
+  audit: "📋",
+  userManagement: "👤",
+  loginHistory: "🔐",
 };
 
 type Notification = {
@@ -160,14 +68,14 @@ export default function AppShell({
       label: "Operations",
       items: [
         { href: "/", label: "Dashboard", icon: icons.dashboard },
-        { href: "/my-task", label: "My Task", icon: icons.myTask },
-        { href: "/daily", label: "Daily Planner", icon: icons.daily },
-        { href: "/weekly", label: "Weekly Planner", icon: icons.weekly },
-        { href: "/kpi", label: "KPI Tracking", icon: icons.kpi },
-        { href: "/checks", label: "Checks", icon: icons.checks },
-        { href: "/formulation-checker", label: "Formulation Checker", icon: icons.formulationChecker },
-        { href: "/ask-dhanu", label: "Ask Dhanu", icon: icons.askDhanu },
-        { href: "/team-chat", label: "Team Chat", icon: icons.teamChat },
+        { href: "/my-task", label: "My Tasks", icon: icons.myTask },
+        { href: "/daily", label: "Daily Operations", icon: icons.daily },
+        { href: "/weekly", label: "Weekly Operations", icon: icons.weekly },
+        { href: "/kpi", label: "Performance Analytics", icon: icons.kpi },
+        { href: "/checks", label: "Quality Checks", icon: icons.checks },
+        { href: "/formulation-checker", label: "Formula Manager", icon: icons.formulationChecker },
+        { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
+        { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },
       ],
     },
     ...(isManager
@@ -175,13 +83,13 @@ export default function AppShell({
           {
             label: "Admin",
             items: [
-              { href: "/reports", label: "Reports", icon: icons.reports },
-              ...(isAdmin ? [{ href: "/team", label: "The Heart of Production", icon: icons.team }] : []),
-              ...(isAdmin ? [{ href: "/audit", label: "Audit Log", icon: icons.audit }] : []),
+              { href: "/reports", label: "Reports & Analytics", icon: icons.reports },
+              ...(isAdmin ? [{ href: "/team", label: "Production Team", icon: icons.team }] : []),
+              ...(isAdmin ? [{ href: "/audit", label: "Audit Trail", icon: icons.audit }] : []),
               ...(isSuperAdmin
                 ? [
                     { href: "/user-management", label: "User Management", icon: icons.userManagement },
-                    { href: "/login-history", label: "Login History", icon: icons.loginHistory },
+                    { href: "/login-history", label: "Access History", icon: icons.loginHistory },
                   ]
                 : []),
             ],
@@ -217,7 +125,7 @@ export default function AppShell({
                   )}
                   <span
                     className={clsx(
-                      "transition-transform duration-200",
+                      "inline-flex w-[18px] shrink-0 items-center justify-center text-base leading-none transition-transform duration-200",
                       active ? "" : "group-hover:scale-110"
                     )}
                   >
