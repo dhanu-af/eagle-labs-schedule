@@ -205,7 +205,8 @@ export default function FormulationDetailClient({
                 value={calcUnit}
                 onChange={(e) => setCalcUnit(e.target.value)}
                 disabled={!canConvertUnits}
-                className="input w-20 shrink-0"
+                className="input shrink-0"
+                style={{ width: "5.5rem" }}
               >
                 {unitOptions.map((u) => (
                   <option key={u} value={u}>
