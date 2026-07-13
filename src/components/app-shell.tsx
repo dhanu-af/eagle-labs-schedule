@@ -157,7 +157,7 @@ export default function AppShell({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold leading-tight text-foreground">Eagle Labs Australia</p>
             <p className="truncate text-[11px] leading-tight text-muted-foreground">
-              BlendCaps Dashboard
+              BlendCaps Operations Platform
             </p>
           </div>
         </div>
@@ -187,7 +187,7 @@ export default function AppShell({
               </div>
               <div>
                 <p className="text-sm font-semibold leading-tight text-foreground">Eagle Labs Australia</p>
-                <p className="text-[11px] leading-tight text-muted-foreground">BlendCaps Dashboard</p>
+                <p className="text-[11px] leading-tight text-muted-foreground">BlendCaps Operations Platform</p>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground" aria-label="Close menu">

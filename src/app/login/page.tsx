@@ -43,7 +43,7 @@ export default async function LoginPage({
             <div>
               <h1 className="text-lg font-semibold tracking-tight leading-tight text-white">Eagle Labs Australia</h1>
               <p className="text-xs leading-tight text-emerald-100/40">
-                BlendCaps Dashboard
+                BlendCaps Operations Platform
               </p>
             </div>
           </div>

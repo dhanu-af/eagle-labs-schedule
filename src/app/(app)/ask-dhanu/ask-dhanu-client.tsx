@@ -137,8 +137,8 @@ export default function AskDhanuClient({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ask Dhanu"
-        subtitle="Instant answers for blending SOP and capsule machine questions — no need to wait for Dhanu."
+        title="Dhanu AI"
+        subtitle="Powered by Dhanu's knowledge and expertise. Ask anything about SOPs, quality, production, equipment, formulations, or workplace procedures."
       />
 
       <div className="glass card-shadow rounded-xl border border-border p-5">
@@ -152,7 +152,7 @@ export default function AskDhanuClient({
           <input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="e.g. Why are the capsules not closing properly?"
+            placeholder="Ask Dhanu AI anything..."
             className="input flex-1"
           />
           <Button type="submit" disabled={pending || !question.trim()}>
