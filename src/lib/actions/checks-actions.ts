@@ -420,3 +420,22 @@ export async function unlockCheckRecord(type: keyof typeof UNLOCK_MODELS, id: st
 
   revalidatePath(CHECKS_PATH);
 }
+
+/** Super Admin only: permanently delete a check record of any type, once submitted. */
+export async function deleteCheckRecord(type: keyof typeof UNLOCK_MODELS, id: string) {
+  const session = await requireSession();
+  if (!canEdit(session.role)) throw new Error("Not authorized");
+
+  const model = UNLOCK_MODELS[type]();
+  // @ts-expect-error -- shared shape across the five check models
+  await model.delete({ where: { id } });
+
+  await logAudit(session, {
+    action: "DELETE_CHECK_RECORD",
+    entityType: type,
+    entityId: id,
+    summary: `${session.fullName} deleted a ${type} record`,
+  });
+
+  revalidatePath(CHECKS_PATH);
+}

@@ -6,6 +6,7 @@ import {
   canActAsQa,
   canActAsOperator,
   canUnlockChecks,
+  canEdit,
 } from "@/lib/auth";
 import ChecksClient from "./checks-client";
 
@@ -34,6 +35,7 @@ export default async function ChecksPage() {
         canQa: canActAsQa(session.role),
         canOperator: canActAsOperator(session.role),
         canUnlock: canUnlockChecks(session.role),
+        canDelete: canEdit(session.role),
       }}
       supervisorPreOp={supervisorPreOp.map((r) => ({
         ...r,

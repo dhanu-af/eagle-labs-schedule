@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createSupervisorPreOpCheck, unlockCheckRecord } from "@/lib/actions/checks-actions";
+import { createSupervisorPreOpCheck, unlockCheckRecord, deleteCheckRecord } from "@/lib/actions/checks-actions";
 import { toDateInputValueUTC, todayInBrisbane, formatBrisbaneTime } from "@/lib/ui";
 import type { SupervisorPreOp } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
@@ -12,10 +12,12 @@ export default function SupervisorPreOpTab({
   rows,
   canSubmit,
   canUnlock,
+  canDelete,
 }: {
   rows: SupervisorPreOp[];
   canSubmit: boolean;
   canUnlock: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -36,6 +38,14 @@ export default function SupervisorPreOpTab({
   function unlock(id: string) {
     startTransition(async () => {
       await unlockCheckRecord("SUPERVISOR_PREOP", id);
+      router.refresh();
+    });
+  }
+
+  function remove(id: string) {
+    if (!confirm("Delete this check record? This cannot be undone.")) return;
+    startTransition(async () => {
+      await deleteCheckRecord("SUPERVISOR_PREOP", id);
       router.refresh();
     });
   }
@@ -103,11 +113,18 @@ export default function SupervisorPreOpTab({
                 <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
                 <td className="max-w-[220px] px-3 py-2 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
                 <td className="px-3 py-2">
-                  {r.locked && canUnlock && (
-                    <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
-                      Unlock
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {r.locked && canUnlock && (
+                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
+                        Unlock
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs text-danger hover:opacity-80">
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

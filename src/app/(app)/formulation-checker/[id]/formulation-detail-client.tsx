@@ -27,6 +27,9 @@ type Formulation = {
   ingredients: Ingredient[];
 };
 
+/** Mass units the Batch Calculator can auto-convert between, expressed relative to 1 mg. */
+const UNIT_TO_MG: Record<string, number> = { mg: 1, g: 1000, kg: 1_000_000 };
+
 export default function FormulationDetailClient({
   canManage,
   enteredByDefault,
@@ -41,24 +44,34 @@ export default function FormulationDetailClient({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  const baseUnitKey = formulation.baseUnit.trim().toLowerCase();
+  const canConvertUnits = baseUnitKey in UNIT_TO_MG;
+  const unitOptions = canConvertUnits ? ["mg", "g", "kg"] : [formulation.baseUnit];
+
   const [requiredBatchSize, setRequiredBatchSize] = useState(formulation.baseBatchSize);
+  const [calcUnit, setCalcUnit] = useState(canConvertUnits ? baseUnitKey : formulation.baseUnit);
   const [enteredBy, setEnteredBy] = useState(enteredByDefault);
   const [checkedBy, setCheckedBy] = useState("");
   const [calcDate, setCalcDate] = useState(todayStr);
 
   const totalQty = formulation.ingredients.reduce((s, i) => s + i.baseQty, 0);
 
+  // Ratio of "1 unit of calcUnit" to "1 unit of the formulation's base unit" — 1 when they match.
+  const unitFactor = canConvertUnits ? UNIT_TO_MG[calcUnit] / UNIT_TO_MG[baseUnitKey] : 1;
+
   const batchRows = useMemo(() => {
+    const requiredBatchSizeInBaseUnit = requiredBatchSize * unitFactor;
     return formulation.ingredients.map((ing) => {
       const pctWw = totalQty > 0 ? ing.baseQty / totalQty : 0;
-      const calculatedQtyRaw = pctWw * requiredBatchSize;
+      const calculatedQtyRawInBaseUnit = pctWw * requiredBatchSizeInBaseUnit;
+      const calculatedQtyRaw = unitFactor > 0 ? calculatedQtyRawInBaseUnit / unitFactor : calculatedQtyRawInBaseUnit;
       const calculatedQty = Math.round(calculatedQtyRaw * 1000) / 1000;
       const roundedQty = Math.round(calculatedQty * 100) / 100;
       const minQty = calculatedQty * (1 - ing.tolerancePct / 100);
       const maxQty = calculatedQty * (1 + ing.tolerancePct / 100);
       return { ...ing, pctWw, calculatedQty, roundedQty, minQty, maxQty };
     });
-  }, [formulation.ingredients, totalQty, requiredBatchSize]);
+  }, [formulation.ingredients, totalQty, requiredBatchSize, unitFactor]);
 
   const batchTotal = batchRows.reduce((s, r) => s + r.roundedQty, 0);
 
@@ -73,6 +86,7 @@ export default function FormulationDetailClient({
   function downloadPdf() {
     const params = new URLSearchParams({
       batchSize: String(requiredBatchSize),
+      unit: calcUnit,
       enteredBy,
       checkedBy,
       calcDate,
@@ -176,14 +190,33 @@ export default function FormulationDetailClient({
         <h2 className="mb-3 text-sm font-semibold text-foreground">Batch Calculator</h2>
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-muted-foreground">Required Batch Size ({formulation.baseUnit})</span>
-            <input
-              type="number"
-              step="0.001"
-              value={requiredBatchSize}
-              onChange={(e) => setRequiredBatchSize(Number(e.target.value))}
-              className="input"
-            />
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">Required Batch Size</span>
+            <div className="flex gap-1.5">
+              <input
+                type="number"
+                step="0.001"
+                value={requiredBatchSize}
+                onChange={(e) => setRequiredBatchSize(Number(e.target.value))}
+                className="input"
+              />
+              <select
+                value={calcUnit}
+                onChange={(e) => setCalcUnit(e.target.value)}
+                disabled={!canConvertUnits}
+                className="input w-20 shrink-0"
+              >
+                {unitOptions.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {canConvertUnits && calcUnit !== baseUnitKey && (
+              <span className="mt-1 block text-[11px] text-muted-foreground">
+                Formulation is authored in {formulation.baseUnit} — auto-converted to {calcUnit}.
+              </span>
+            )}
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Entered By</span>
@@ -206,8 +239,8 @@ export default function FormulationDetailClient({
                 <th className="px-2 py-2">No.</th>
                 <th className="px-2 py-2">Ingredient</th>
                 <th className="px-2 py-2">Controlled % w/w</th>
-                <th className="px-2 py-2">Calculated Qty ({formulation.baseUnit})</th>
-                <th className="px-2 py-2">Rounded Qty ({formulation.baseUnit})</th>
+                <th className="px-2 py-2">Calculated Qty ({calcUnit})</th>
+                <th className="px-2 py-2">Rounded Qty ({calcUnit})</th>
                 <th className="px-2 py-2">Tolerance %</th>
                 <th className="px-2 py-2">Min Qty</th>
                 <th className="px-2 py-2">Max Qty</th>

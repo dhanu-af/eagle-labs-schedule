@@ -17,6 +17,7 @@ import {
   approveEnvironmentalCheck,
   updateEnvironmentalLimit,
   unlockCheckRecord,
+  deleteCheckRecord,
 } from "@/lib/actions/checks-actions";
 import { toDateInputValueUTC, todayInBrisbane, formatBrisbaneTime } from "@/lib/ui";
 import type { EnvArea } from "@/generated/prisma";
@@ -50,6 +51,7 @@ export default function EnvironmentalTab({
   canApproveQa,
   canConfigureLimits,
   canUnlock,
+  canDelete,
 }: {
   rows: EnvironmentalCheckRow[];
   limits: EnvLimit[];
@@ -58,6 +60,7 @@ export default function EnvironmentalTab({
   canApproveQa: boolean;
   canConfigureLimits: boolean;
   canUnlock: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -98,6 +101,14 @@ export default function EnvironmentalTab({
   function unlock(id: string) {
     startTransition(async () => {
       await unlockCheckRecord("ENVIRONMENTAL", id);
+      router.refresh();
+    });
+  }
+
+  function remove(id: string) {
+    if (!confirm("Delete this check record? This cannot be undone.")) return;
+    startTransition(async () => {
+      await deleteCheckRecord("ENVIRONMENTAL", id);
       router.refresh();
     });
   }
@@ -243,11 +254,18 @@ export default function EnvironmentalTab({
                 <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
                 <td className="max-w-[200px] px-3 py-2 text-xs text-muted-foreground">{r.remarks ?? "—"}</td>
                 <td className="px-3 py-2">
-                  {r.locked && canUnlock && (
-                    <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
-                      Unlock
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {r.locked && canUnlock && (
+                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
+                        Unlock
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs text-danger hover:opacity-80">
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

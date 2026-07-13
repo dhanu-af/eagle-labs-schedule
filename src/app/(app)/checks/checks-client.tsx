@@ -13,6 +13,7 @@ export type Permissions = {
   canQa: boolean;
   canOperator: boolean;
   canUnlock: boolean;
+  canDelete: boolean;
 };
 
 export type SupervisorPreOp = {
@@ -220,10 +221,15 @@ export default function ChecksClient({
       )}
 
       {tab === "supervisor" && (
-        <SupervisorPreOpTab rows={supervisorPreOp} canSubmit={permissions.canSupervisor} canUnlock={permissions.canUnlock} />
+        <SupervisorPreOpTab
+          rows={supervisorPreOp}
+          canSubmit={permissions.canSupervisor}
+          canUnlock={permissions.canUnlock}
+          canDelete={permissions.canDelete}
+        />
       )}
       {tab === "qa" && (
-        <QaPreOpTab rows={qaPreOp} canSubmit={permissions.canQa} canUnlock={permissions.canUnlock} />
+        <QaPreOpTab rows={qaPreOp} canSubmit={permissions.canQa} canUnlock={permissions.canUnlock} canDelete={permissions.canDelete} />
       )}
       {tab === "environmental" && (
         <EnvironmentalTab
@@ -234,6 +240,7 @@ export default function ChecksClient({
           canApproveQa={permissions.canQa}
           canConfigureLimits={permissions.canUnlock}
           canUnlock={permissions.canUnlock}
+          canDelete={permissions.canDelete}
         />
       )}
       {tab === "clearance" && (
@@ -243,6 +250,7 @@ export default function ChecksClient({
           canApproveSupervisor={permissions.canSupervisor}
           canApproveQa={permissions.canQa}
           canUnlock={permissions.canUnlock}
+          canDelete={permissions.canDelete}
         />
       )}
       {tab === "postop" && (
@@ -251,6 +259,7 @@ export default function ChecksClient({
           canSubmit={permissions.canOperator}
           canVerify={permissions.canSupervisor}
           canUnlock={permissions.canUnlock}
+          canDelete={permissions.canDelete}
         />
       )}
     </div>

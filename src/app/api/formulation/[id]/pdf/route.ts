@@ -62,6 +62,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const checkedBy = search.get("checkedBy") ?? "";
   const calcDate = search.get("calcDate") ?? "";
 
+  const UNIT_TO_MG: Record<string, number> = { mg: 1, g: 1000, kg: 1_000_000 };
+  const baseUnitKey = formulation.baseUnit.trim().toLowerCase();
+  const canConvertUnits = baseUnitKey in UNIT_TO_MG;
+  const requestedUnit = (search.get("unit") ?? formulation.baseUnit).trim().toLowerCase();
+  const calcUnit = canConvertUnits && requestedUnit in UNIT_TO_MG ? requestedUnit : formulation.baseUnit;
+  const unitFactor = canConvertUnits && calcUnit in UNIT_TO_MG ? UNIT_TO_MG[calcUnit] / UNIT_TO_MG[baseUnitKey] : 1;
+
   const totalQty = formulation.ingredients.reduce((s, i) => s + i.baseQty, 0);
 
   const doc = new PDFDocument({ layout: "landscape", size: "A4", margin: 30 });
@@ -118,14 +125,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     .font("Helvetica")
     .fontSize(9)
     .text(
-      `Required Batch Size: ${batchSize} ${formulation.baseUnit}    Entered By: ${enteredBy || "—"}    Checked By: ${checkedBy || "—"}    Date: ${calcDate || "—"}`
+      `Required Batch Size: ${batchSize} ${calcUnit}    Entered By: ${enteredBy || "—"}    Checked By: ${checkedBy || "—"}    Date: ${calcDate || "—"}`
     );
   doc.moveDown(0.5);
 
+  const requiredBatchSizeInBaseUnit = batchSize * unitFactor;
   let batchTotal = 0;
   const batchRows = formulation.ingredients.map((ing, i) => {
     const pctWw = totalQty > 0 ? ing.baseQty / totalQty : 0;
-    const calculatedQtyRaw = pctWw * batchSize;
+    const calculatedQtyRawInBaseUnit = pctWw * requiredBatchSizeInBaseUnit;
+    const calculatedQtyRaw = unitFactor > 0 ? calculatedQtyRawInBaseUnit / unitFactor : calculatedQtyRawInBaseUnit;
     const calculatedQty = Math.round(calculatedQtyRaw * 1000) / 1000;
     const roundedQty = Math.round(calculatedQty * 100) / 100;
     const minQty = calculatedQty * (1 - ing.tolerancePct / 100);
@@ -151,8 +160,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       { header: "No.", width: 30 },
       { header: "Ingredient", width: 140 },
       { header: "Controlled % w/w", width: 90 },
-      { header: `Calculated Qty (${formulation.baseUnit})`, width: 90 },
-      { header: `Rounded Qty (${formulation.baseUnit})`, width: 85 },
+      { header: `Calculated Qty (${calcUnit})`, width: 90 },
+      { header: `Rounded Qty (${calcUnit})`, width: 85 },
       { header: "Tolerance %", width: 70 },
       { header: "Min Qty", width: 75 },
       { header: "Max Qty", width: 75 },
@@ -160,7 +169,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     batchRows
   );
 
-  doc.font("Helvetica-Bold").fontSize(8).text(`TOTAL: ${batchTotal.toFixed(2)} ${formulation.baseUnit}`, 30, y2 + 6);
+  doc.font("Helvetica-Bold").fontSize(8).text(`TOTAL: ${batchTotal.toFixed(2)} ${calcUnit}`, 30, y2 + 6);
 
   doc.end();
   const buffer = await done;
