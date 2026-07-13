@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit, canUpdateDailyProgress, isAdminRole } from "@/lib/auth";
+import { getSession, canManageDailyPlanner, canUpdateDailyProgress, isAdminRole } from "@/lib/auth";
 import { toDateInputValueUTC, todayInBrisbane } from "@/lib/ui";
 import DailyPlannerClient from "./daily-client";
 
@@ -56,7 +56,7 @@ export default async function DailyPlannerPage({
         delayReason: t.delayReason,
         notes: t.notes,
       }))}
-      canManage={!!session && canEdit(session.role)}
+      canManage={!!session && canManageDailyPlanner(session.role)}
       canUpdateProgress={!!session && canUpdateDailyProgress(session.role)}
       canDelete={!!session && isAdminRole(session.role)}
     />

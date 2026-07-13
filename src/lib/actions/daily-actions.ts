@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit, canUpdateDailyProgress, isAdminRole } from "@/lib/auth";
+import { getSession, canUpdateDailyProgress, canManageDailyPlanner, isAdminRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { notifyManagers } from "@/lib/notify";
 import type { Priority, TaskStatus } from "@/generated/prisma";
 
-async function requireManager() {
+async function requireDailyPlannerManager() {
   const session = await getSession();
-  if (!session || !canEdit(session.role)) throw new Error("Not authorized");
+  if (!session || !canManageDailyPlanner(session.role)) throw new Error("Not authorized");
   return session;
 }
 
@@ -26,7 +26,7 @@ async function requireAdmin() {
 }
 
 export async function createDailyTask(formData: FormData) {
-  const session = await requireManager();
+  const session = await requireDailyPlannerManager();
 
   const date = new Date(String(formData.get("date")));
   const teamId = String(formData.get("teamId"));
@@ -75,7 +75,7 @@ export async function createDailyTask(formData: FormData) {
 }
 
 export async function updateDailyTask(id: string, formData: FormData) {
-  const session = await requireManager();
+  const session = await requireDailyPlannerManager();
 
   const employeeId = String(formData.get("employeeId") || "") || null;
   const product = String(formData.get("product") || "");
@@ -173,7 +173,7 @@ export async function updateTaskStatus(
 }
 
 export async function duplicatePreviousDay(dateStr: string) {
-  const session = await requireManager();
+  const session = await requireDailyPlannerManager();
 
   const date = new Date(dateStr);
   const prevDay = new Date(date);

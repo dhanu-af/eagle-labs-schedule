@@ -75,6 +75,16 @@ export function canUpdateDailyProgress(_role: Role) {
   return true;
 }
 
+/**
+ * Daily Planner: Supervisors (and Admin/Super Admin) can create, edit
+ * (including batch numbers) and duplicate tasks — a further intentional
+ * exception to the Super-Admin-only rule, since Supervisors are the ones
+ * actually scheduling and re-batching daily production.
+ */
+export function canManageDailyPlanner(role: Role) {
+  return role === "SUPERVISOR" || role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }

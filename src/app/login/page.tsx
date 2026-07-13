@@ -53,7 +53,7 @@ export default async function LoginPage({
           <LoginForm next={next ?? "/"} />
 
           <p className="mt-5 text-center text-xs text-emerald-100/40">
-            Need an account? Contact your Super Admin.
+            Need an account? Contact Dhanu.
           </p>
         </div>
       </div>
