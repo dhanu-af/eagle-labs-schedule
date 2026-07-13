@@ -153,6 +153,7 @@ export default function KpiClient({
                 kpiId={k.id}
                 weekStartStr={weekStartStr}
                 targets={dailyTargets}
+                actuals={dailyActuals}
                 unit={k.unit}
                 canManage={canManage}
               />
@@ -182,12 +183,14 @@ function DailyTargetsRow({
   kpiId,
   weekStartStr,
   targets,
+  actuals,
   unit,
   canManage,
 }: {
   kpiId: string;
   weekStartStr: string;
   targets: number[];
+  actuals: number[];
   unit: string;
   canManage: boolean;
 }) {
@@ -223,26 +226,37 @@ function DailyTargetsRow({
         Daily targets ({unit})
       </p>
       <div className="grid grid-cols-7 gap-1">
-        {DAY_LABELS.map((label, i) => (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <span className="text-[9px] text-muted-foreground">{label}</span>
-            {canManage ? (
-              <input
-                type="number"
-                value={values[i]}
-                onChange={(e) => {
-                  const next = [...values];
-                  next[i] = Number(e.target.value);
-                  setValues(next);
-                  setDirtyDays((prev) => new Set(prev).add(i));
-                }}
-                className="w-full rounded-md border border-border bg-surface px-1 py-1 text-center text-[10px] text-foreground"
-              />
-            ) : (
-              <span className="text-[10px] text-foreground">{values[i]}</span>
-            )}
-          </div>
-        ))}
+        {DAY_LABELS.map((label, i) => {
+          const d = new Date(`${weekStartStr}T00:00:00`);
+          d.setDate(d.getDate() + i);
+          const actual = actuals[i] ?? 0;
+          const met = values[i] > 0 && actual >= values[i];
+          return (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <span className="text-[9px] text-muted-foreground">
+                {label} - {d.getDate()}
+              </span>
+              {canManage ? (
+                <input
+                  type="number"
+                  value={values[i]}
+                  onChange={(e) => {
+                    const next = [...values];
+                    next[i] = Number(e.target.value);
+                    setValues(next);
+                    setDirtyDays((prev) => new Set(prev).add(i));
+                  }}
+                  className="w-full rounded-md border border-border bg-surface px-1 py-1 text-center text-[10px] text-foreground"
+                />
+              ) : (
+                <span className="text-[10px] text-foreground">{values[i]}</span>
+              )}
+              <span className={`text-[9px] tabular-nums ${met ? "text-success" : "text-muted-foreground"}`}>
+                {actual} done
+              </span>
+            </div>
+          );
+        })}
       </div>
       {dirtyDays.size > 0 && (
         <Button size="sm" className="mt-2 w-full" onClick={save} disabled={pending}>
