@@ -58,6 +58,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const search = request.nextUrl.searchParams;
   const batchSize = Number(search.get("batchSize") ?? formulation.baseBatchSize);
+  const batchNumber = search.get("batchNumber") ?? "";
   const enteredBy = search.get("enteredBy") ?? "";
   const checkedBy = search.get("checkedBy") ?? "";
   const calcDate = search.get("calcDate") ?? "";
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     .font("Helvetica")
     .fontSize(9)
     .text(
-      `Required Batch Size: ${batchSize} ${calcUnit}    Entered By: ${enteredBy || "—"}    Checked By: ${checkedBy || "—"}    Date: ${calcDate || "—"}`
+      `Required Batch Size: ${batchSize} ${calcUnit}    Batch Number: ${batchNumber || "—"}    Entered By: ${enteredBy || "—"}    Checked By: ${checkedBy || "—"}    Date: ${calcDate || "—"}`
     );
   doc.moveDown(0.5);
 

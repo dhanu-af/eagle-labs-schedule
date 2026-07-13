@@ -50,6 +50,7 @@ export default function FormulationDetailClient({
 
   const [requiredBatchSize, setRequiredBatchSize] = useState(formulation.baseBatchSize);
   const [calcUnit, setCalcUnit] = useState(canConvertUnits ? baseUnitKey : formulation.baseUnit);
+  const [batchNumber, setBatchNumber] = useState("");
   const [enteredBy, setEnteredBy] = useState(enteredByDefault);
   const [checkedBy, setCheckedBy] = useState("");
   const [calcDate, setCalcDate] = useState(todayStr);
@@ -87,6 +88,7 @@ export default function FormulationDetailClient({
     const params = new URLSearchParams({
       batchSize: String(requiredBatchSize),
       unit: calcUnit,
+      batchNumber,
       enteredBy,
       checkedBy,
       calcDate,
@@ -197,7 +199,7 @@ export default function FormulationDetailClient({
                 step="0.001"
                 value={requiredBatchSize}
                 onChange={(e) => setRequiredBatchSize(Number(e.target.value))}
-                className="input"
+                className="input min-w-0 flex-1"
               />
               <select
                 value={calcUnit}
@@ -217,6 +219,10 @@ export default function FormulationDetailClient({
                 Formulation is authored in {formulation.baseUnit} — auto-converted to {calcUnit}.
               </span>
             )}
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">Batch Number</span>
+            <input value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} className="input" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Entered By</span>
