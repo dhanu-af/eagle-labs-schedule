@@ -4,6 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deleteFormulation } from "@/lib/actions/formulation-actions";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 type Ingredient = {
   id: string;
@@ -106,27 +109,22 @@ export default function FormulationDetailClient({
             </Link>{" "}
             / {formulation.folderName}
           </p>
-          <h1 className="text-xl font-semibold text-foreground">{formulation.productName}</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">{formulation.productName}</h1>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={downloadPdf}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-          >
-            Download PDF
-          </button>
+          <Button onClick={downloadPdf}>Download PDF</Button>
           {canManage && (
             <>
               <Link
                 href={`/formulation-checker/${formulation.id}/edit`}
-                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-sm font-medium text-foreground transition-colors duration-150 ease-out hover:bg-surface-muted active:scale-[0.98]"
               >
                 Edit
               </Link>
               <button
                 onClick={remove}
                 disabled={pending}
-                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-danger hover:bg-surface-muted"
+                className="rounded-lg border border-border bg-surface px-3.5 py-2 text-sm font-medium text-danger transition-colors duration-150 ease-out hover:bg-surface-muted active:scale-[0.98] disabled:opacity-60"
               >
                 Delete
               </button>
@@ -135,30 +133,30 @@ export default function FormulationDetailClient({
         </div>
       </div>
 
-      <div className="card-shadow rounded-2xl border border-border bg-surface p-5">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Master Formulation — Controlled Percentage Basis</h2>
+      <Card>
+        <h2 className="mb-3 text-[15px] font-semibold text-foreground">Master Formulation — Controlled Percentage Basis</h2>
         <p className="mb-3 text-sm text-muted-foreground">
           Base Batch Size: <span className="font-medium text-foreground">{formulation.baseBatchSize} {formulation.baseUnit}</span>
         </p>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-                <th className="px-2 py-2">No.</th>
-                <th className="px-2 py-2">RM Number</th>
-                <th className="px-2 py-2">Ingredient / AAN</th>
-                <th className="px-2 py-2">UIN</th>
-                <th className="px-2 py-2">Base Qty ({formulation.baseUnit})</th>
-                <th className="px-2 py-2">% w/w</th>
-                <th className="px-2 py-2">Control Status</th>
-                <th className="px-2 py-2">Change Control Ref</th>
-                <th className="px-2 py-2">Approved By</th>
-                <th className="px-2 py-2">Comments</th>
+              <tr className={THEAD_ROW_CLASS}>
+                <Th>No.</Th>
+                <Th>RM Number</Th>
+                <Th>Ingredient / AAN</Th>
+                <Th>UIN</Th>
+                <Th>Base Qty ({formulation.baseUnit})</Th>
+                <Th>% w/w</Th>
+                <Th>Control Status</Th>
+                <Th>Change Control Ref</Th>
+                <Th>Approved By</Th>
+                <Th>Comments</Th>
               </tr>
             </thead>
             <tbody>
               {formulation.ingredients.map((ing, i) => (
-                <tr key={ing.id} className="border-b border-border last:border-0">
+                <tr key={ing.id} className="border-b border-border last:border-0 even:bg-surface-muted/30">
                   <td className="px-2 py-1.5 text-muted-foreground">{i + 1}</td>
                   <td className="px-2 py-1.5 text-muted-foreground">{ing.rmNumber ?? "—"}</td>
                   <td className="px-2 py-1.5 text-foreground">{ing.ingredientName}</td>
@@ -186,10 +184,10 @@ export default function FormulationDetailClient({
             </tfoot>
           </table>
         </div>
-      </div>
+      </Card>
 
-      <div className="card-shadow rounded-2xl border border-border bg-surface p-5">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Batch Calculator</h2>
+      <Card>
+        <h2 className="mb-3 text-[15px] font-semibold text-foreground">Batch Calculator</h2>
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Required Batch Size</span>
@@ -242,20 +240,20 @@ export default function FormulationDetailClient({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-                <th className="px-2 py-2">No.</th>
-                <th className="px-2 py-2">Ingredient</th>
-                <th className="px-2 py-2">Controlled % w/w</th>
-                <th className="px-2 py-2">Calculated Qty ({calcUnit})</th>
-                <th className="px-2 py-2">Rounded Qty ({calcUnit})</th>
-                <th className="px-2 py-2">Tolerance %</th>
-                <th className="px-2 py-2">Min Qty</th>
-                <th className="px-2 py-2">Max Qty</th>
+              <tr className={THEAD_ROW_CLASS}>
+                <Th>No.</Th>
+                <Th>Ingredient</Th>
+                <Th>Controlled % w/w</Th>
+                <Th>Calculated Qty ({calcUnit})</Th>
+                <Th>Rounded Qty ({calcUnit})</Th>
+                <Th>Tolerance %</Th>
+                <Th>Min Qty</Th>
+                <Th>Max Qty</Th>
               </tr>
             </thead>
             <tbody>
               {batchRows.map((r, i) => (
-                <tr key={r.id} className="border-b border-border last:border-0">
+                <tr key={r.id} className="border-b border-border last:border-0 even:bg-surface-muted/30">
                   <td className="px-2 py-1.5 text-muted-foreground">{i + 1}</td>
                   <td className="px-2 py-1.5 text-foreground">{r.ingredientName}</td>
                   <td className="px-2 py-1.5 text-muted-foreground">{(r.pctWw * 100).toFixed(4)}%</td>
@@ -278,7 +276,7 @@ export default function FormulationDetailClient({
             </tfoot>
           </table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

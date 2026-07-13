@@ -110,7 +110,7 @@ export default function DailyKanban({
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.key);
           return (
-            <div key={col.key} className="card-shadow rounded-2xl border border-border bg-surface p-3">
+            <div key={col.key} className="card-shadow rounded-xl border border-border bg-surface p-3">
               <div className="mb-3 flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                   <span
@@ -208,7 +208,7 @@ function KanbanCard({
       ref={dragProvided.innerRef}
       {...dragProvided.draggableProps}
       {...dragProvided.dragHandleProps}
-      className={`group relative rounded-xl border border-border bg-surface-muted p-3 transition ${
+      className={`group relative rounded-xl border border-border bg-surface-muted p-3 transition-shadow duration-150 ease-out ${
         snapshot.isDragging ? "card-elevated ring-1 ring-primary/40" : ""
       }`}
     >
@@ -218,7 +218,7 @@ function KanbanCard({
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={onEdit}
-              className="text-xs text-muted-foreground hover:text-primary"
+              className="text-xs text-muted-foreground transition-colors duration-150 ease-out hover:text-primary"
               aria-label="Edit task"
             >
               ✎
@@ -228,7 +228,7 @@ function KanbanCard({
             <button
               onMouseDown={(e) => e.stopPropagation()}
               onClick={onDelete}
-              className="text-xs text-muted-foreground hover:text-danger"
+              className="text-xs text-muted-foreground transition-colors duration-150 ease-out hover:text-danger"
               aria-label="Delete task"
             >
               ✕

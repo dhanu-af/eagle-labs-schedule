@@ -8,6 +8,10 @@ import type { QaPreOp } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
 import { Field, Checkbox, SignatureField } from "./supervisor-preop-tab";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 export default function QaPreOpTab({
   rows,
@@ -70,58 +74,51 @@ export default function QaPreOpTab({
         </div>
         <div className="flex gap-2">
           <ExportButton type="qa" />
-          {canSubmit && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              + New Check
-            </button>
-          )}
+          {canSubmit && <Button onClick={() => setShowForm(true)}>+ New Check</Button>}
         </div>
       </div>
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[1050px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Room</th>
-              <th className="px-3 py-2">Room Inspection</th>
-              <th className="px-3 py-2">Equipment</th>
-              <th className="px-3 py-2">GMP Compliance</th>
-              <th className="px-3 py-2">Environmental</th>
-              <th className="px-3 py-2">Submitted By</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Comments</th>
-              <th className="px-3 py-2">Actions</th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>Date</Th>
+              <Th>Room</Th>
+              <Th>Room Inspection</Th>
+              <Th>Equipment</Th>
+              <Th>GMP Compliance</Th>
+              <Th>Environmental</Th>
+              <Th>Submitted By</Th>
+              <Th>Status</Th>
+              <Th>Comments</Th>
+              <Th>Actions</Th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((r) => (
-              <tr key={r.id} className="border-b border-border last:border-0 hover:bg-surface-muted/50">
-                <td className="px-3 py-2 text-muted-foreground">{r.date.slice(0, 10)}</td>
-                <td className="px-3 py-2 text-foreground">{r.room}</td>
-                <td className="px-3 py-2">{r.qaRoomInspection ? "✅" : "❌"}</td>
-                <td className="px-3 py-2">{r.equipmentVerification ? "✅" : "❌"}</td>
-                <td className="px-3 py-2">{r.gmpCompliance ? "✅" : "❌"}</td>
-                <td className="px-3 py-2">{r.environmentalCondition ? "✅" : "❌"}</td>
-                <td className="px-3 py-2 text-muted-foreground">
+              <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
+                <td className="px-3 py-2.5 text-foreground">{r.room}</td>
+                <td className="px-3 py-2.5">{r.qaRoomInspection ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5">{r.equipmentVerification ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5">{r.gmpCompliance ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5">{r.environmentalCondition ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">
                   {r.submittedByName} <span className="text-xs">({r.submittedByRole.replace("_", " ")})</span>
                   <br />
                   <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
                 </td>
-                <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
-                <td className="max-w-[220px] px-3 py-2 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
+                <td className="max-w-[220px] px-3 py-2.5 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
+                <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     {r.locked && canUnlock && (
-                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
+                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                         Unlock
                       </button>
                     )}
                     {canDelete && (
-                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs text-danger hover:opacity-80">
+                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
                         Delete
                       </button>
                     )}
@@ -131,14 +128,14 @@ export default function QaPreOpTab({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  No records match these filters.
+                <td colSpan={10}>
+                  <EmptyState title="No records match these filters." />
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {showForm && <QaPreOpForm onClose={() => setShowForm(false)} />}
     </div>
@@ -174,10 +171,10 @@ function QaPreOpForm({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">QA Pre-Operational Check</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -200,16 +197,12 @@ function QaPreOpForm({ onClose }: { onClose: () => void }) {
           <SignatureField />
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Signing & Submitting..." : "Sign & Submit"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

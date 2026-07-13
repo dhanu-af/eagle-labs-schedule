@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { changeOwnPassword } from "@/lib/actions/account-actions";
+import { Button } from "@/components/ui/Button";
 
 export default function ChangePasswordForm({ forced }: { forced: boolean }) {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function ChangePasswordForm({ forced }: { forced: boolean }) {
           type="password"
           required
           autoFocus
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+          className="input"
         />
       </label>
       <label className="block">
@@ -48,7 +49,7 @@ export default function ChangePasswordForm({ forced }: { forced: boolean }) {
           required
           minLength={6}
           placeholder="At least 6 characters"
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+          className="input"
         />
       </label>
       <label className="block">
@@ -58,17 +59,13 @@ export default function ChangePasswordForm({ forced }: { forced: boolean }) {
           type="password"
           required
           minLength={6}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+          className="input"
         />
       </label>
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Updating..." : "Update Password"}
-      </button>
+      </Button>
     </form>
   );
 }

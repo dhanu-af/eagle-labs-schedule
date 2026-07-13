@@ -25,6 +25,11 @@ import type { EnvironmentalCheckRow, EnvLimit } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
 import { Field, SignatureField } from "./supervisor-preop-tab";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 const AREA_LABEL: Record<EnvArea, string> = {
   BLENDING_ROOM: "Blending Room",
@@ -130,27 +135,17 @@ export default function EnvironmentalTab({
         <div className="flex gap-2">
           <ExportButton type="environmental" />
           {canConfigureLimits && (
-            <button
-              onClick={() => setShowLimits(true)}
-              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted"
-            >
+            <Button variant="secondary" onClick={() => setShowLimits(true)}>
               Configure Limits
-            </button>
+            </Button>
           )}
-          {canRecord && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              + Record Reading
-            </button>
-          )}
+          {canRecord && <Button onClick={() => setShowForm(true)}>+ Record Reading</Button>}
         </div>
       </div>
 
-      <div className="card-shadow rounded-2xl border border-border bg-surface p-4">
+      <Card padding="sm">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-[15px] font-semibold text-foreground">
             Trend — {AREA_LABEL[(filterArea || "BLENDING_ROOM") as EnvArea]}
           </h3>
           <div className="flex gap-1">
@@ -158,7 +153,7 @@ export default function EnvironmentalTab({
               <button
                 key={g}
                 onClick={() => setGrouping(g)}
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
                   grouping === g ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground"
                 }`}
               >
@@ -183,45 +178,41 @@ export default function EnvironmentalTab({
             </ComposedChart>
           </ResponsiveContainer>
         )}
-      </div>
+      </Card>
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[1150px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Area</th>
-              <th className="px-3 py-2">Temp °C</th>
-              <th className="px-3 py-2">RH %</th>
-              <th className="px-3 py-2">Result</th>
-              <th className="px-3 py-2">Submitted By</th>
-              <th className="px-3 py-2">Supervisor</th>
-              <th className="px-3 py-2">QA</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Comments</th>
-              <th className="px-3 py-2">Actions</th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>Date</Th>
+              <Th>Area</Th>
+              <Th>Temp °C</Th>
+              <Th>RH %</Th>
+              <Th>Result</Th>
+              <Th>Submitted By</Th>
+              <Th>Supervisor</Th>
+              <Th>QA</Th>
+              <Th>Status</Th>
+              <Th>Comments</Th>
+              <Th>Actions</Th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((r) => (
-              <tr key={r.id} className="border-b border-border last:border-0 hover:bg-surface-muted/50">
-                <td className="px-3 py-2 text-muted-foreground">{r.date.slice(0, 10)}</td>
-                <td className="px-3 py-2 text-foreground">{AREA_LABEL[r.area]}</td>
-                <td className="px-3 py-2">{r.temperature}</td>
-                <td className="px-3 py-2">{r.humidity}</td>
-                <td className="px-3 py-2">
-                  {r.passFail ? (
-                    <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">Pass</span>
-                  ) : (
-                    <span className="rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">OOS</span>
-                  )}
+              <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
+                <td className="px-3 py-2.5 text-foreground">{AREA_LABEL[r.area]}</td>
+                <td className="px-3 py-2.5 tabular-nums">{r.temperature}</td>
+                <td className="px-3 py-2.5 tabular-nums">{r.humidity}</td>
+                <td className="px-3 py-2.5">
+                  {r.passFail ? <Badge tone="success">Pass</Badge> : <Badge tone="danger">OOS</Badge>}
                 </td>
-                <td className="px-3 py-2 text-muted-foreground">
+                <td className="px-3 py-2.5 text-muted-foreground">
                   {r.submittedByName}
                   <br />
                   <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
                 </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
+                <td className="px-3 py-2.5 text-xs text-muted-foreground">
                   {r.supervisorApprovedByName ? (
                     <>
                       ✓ {r.supervisorApprovedByName}
@@ -229,14 +220,14 @@ export default function EnvironmentalTab({
                       {r.supervisorApprovedAt && `Signed ${formatBrisbaneTime(r.supervisorApprovedAt)}`}
                     </>
                   ) : canApproveSupervisor && !r.locked ? (
-                    <button disabled={pending} onClick={() => approve(r.id, "SUPERVISOR")} className="text-info hover:opacity-80">
+                    <button disabled={pending} onClick={() => approve(r.id, "SUPERVISOR")} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                       Approve
                     </button>
                   ) : (
                     "—"
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
+                <td className="px-3 py-2.5 text-xs text-muted-foreground">
                   {r.qaApprovedByName ? (
                     <>
                       ✓ {r.qaApprovedByName}
@@ -244,24 +235,24 @@ export default function EnvironmentalTab({
                       {r.qaApprovedAt && `Signed ${formatBrisbaneTime(r.qaApprovedAt)}`}
                     </>
                   ) : canApproveQa && !r.locked ? (
-                    <button disabled={pending} onClick={() => approve(r.id, "QA")} className="text-info hover:opacity-80">
+                    <button disabled={pending} onClick={() => approve(r.id, "QA")} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                       Approve
                     </button>
                   ) : (
                     "—"
                   )}
                 </td>
-                <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
-                <td className="max-w-[200px] px-3 py-2 text-xs text-muted-foreground">{r.remarks ?? "—"}</td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
+                <td className="max-w-[200px] px-3 py-2.5 text-xs text-muted-foreground">{r.remarks ?? "—"}</td>
+                <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     {r.locked && canUnlock && (
-                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
+                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                         Unlock
                       </button>
                     )}
                     {canDelete && (
-                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs text-danger hover:opacity-80">
+                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
                         Delete
                       </button>
                     )}
@@ -271,14 +262,14 @@ export default function EnvironmentalTab({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  No records match these filters.
+                <td colSpan={11}>
+                  <EmptyState title="No records match these filters." />
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {showForm && <ReadingForm onClose={() => setShowForm(false)} />}
       {showLimits && <LimitsModal limits={limits} onClose={() => setShowLimits(false)} />}
@@ -315,10 +306,10 @@ function ReadingForm({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Record Environmental Reading</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -353,16 +344,12 @@ function ReadingForm({ onClose }: { onClose: () => void }) {
           <SignatureField />
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Signing & Submitting..." : "Sign & Submit"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -389,10 +376,10 @@ function LimitsModal({ limits, onClose }: { limits: EnvLimit[]; onClose: () => v
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Configure Temperature & RH Limits</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -416,21 +403,17 @@ function LimitsModal({ limits, onClose }: { limits: EnvLimit[]; onClose: () => v
                     <input name="maxRH" type="number" step="0.1" defaultValue={l?.maxRH ?? 40} className="input" />
                   </Field>
                 </div>
-                <button
-                  type="submit"
-                  disabled={pending}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-                >
+                <Button type="submit" size="sm" disabled={pending}>
                   Save {AREA_LABEL[area]} Limits
-                </button>
+                </Button>
               </form>
             );
           })}
         </div>
         <div className="mt-4 flex justify-end">
-          <button onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+          <Button variant="secondary" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

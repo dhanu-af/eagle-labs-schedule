@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import ChangePasswordForm from "./change-password-form";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default async function ChangePasswordPage() {
   const session = await getSession();
@@ -8,17 +10,17 @@ export default async function ChangePasswordPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Change Password</h1>
-        <p className="text-sm text-muted-foreground">
-          {session.mustChangePassword
+      <PageHeader
+        title="Change Password"
+        subtitle={
+          session.mustChangePassword
             ? "You're using a temporary password — set a new one to continue."
-            : "Update the password for your account."}
-        </p>
-      </div>
-      <div className="card-shadow rounded-2xl border border-border bg-surface p-5">
+            : "Update the password for your account."
+        }
+      />
+      <Card>
         <ChangePasswordForm forced={session.mustChangePassword} />
-      </div>
+      </Card>
     </div>
   );
 }

@@ -11,6 +11,10 @@ import {
 import { PRIORITY_CLASS, PRIORITY_LABEL, STATUS_CLASS, STATUS_LABEL, toDateInputValue } from "@/lib/ui";
 import DailyKanban from "./daily-kanban";
 import EditTaskModal, { Field } from "./task-edit-modal";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export type Team = { id: string; name: string };
 export type Employee = { id: string; name: string; teamId: string };
@@ -77,56 +81,43 @@ export default function DailyPlannerClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Daily Production Planner</h1>
-          <p className="text-sm text-muted-foreground">
-            Assign products, batches, targets and track live status.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => shiftDate(-1)}
-            className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted"
-          >
-            ←
-          </button>
-          <input
-            type="date"
-            value={dateStr}
-            onChange={(e) => changeDate(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
-          />
-          <button
-            onClick={() => shiftDate(1)}
-            className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted"
-          >
-            →
-          </button>
-          {canManage && (
-            <>
-              <button
-                disabled={pending}
-                onClick={() =>
-                  startTransition(async () => {
-                    await duplicatePreviousDay(dateStr);
-                    router.refresh();
-                  })
-                }
-                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted disabled:opacity-60"
-              >
-                Duplicate previous day
-              </button>
-              <button
-                onClick={() => setShowModal(true)}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-              >
-                + Add Task
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Daily Production Planner"
+        subtitle="Assign products, batches, targets and track live status."
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => shiftDate(-1)}>
+              ←
+            </Button>
+            <input
+              type="date"
+              value={dateStr}
+              onChange={(e) => changeDate(e.target.value)}
+              className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+            />
+            <Button variant="secondary" size="sm" onClick={() => shiftDate(1)}>
+              →
+            </Button>
+            {canManage && (
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      await duplicatePreviousDay(dateStr);
+                      router.refresh();
+                    })
+                  }
+                >
+                  Duplicate previous day
+                </Button>
+                <Button onClick={() => setShowModal(true)}>+ Add Task</Button>
+              </>
+            )}
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
@@ -142,7 +133,7 @@ export default function DailyPlannerClient({
         <div className="flex rounded-lg border border-border bg-surface p-0.5">
           <button
             onClick={() => setView("kanban")}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
               view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -150,7 +141,7 @@ export default function DailyPlannerClient({
           </button>
           <button
             onClick={() => setView("list")}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
               view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -170,8 +161,8 @@ export default function DailyPlannerClient({
       ) : (
         <div className="space-y-3">
           {filteredTasks.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
-              No tasks scheduled for this date.
+            <div className="rounded-xl border border-dashed border-border bg-surface">
+              <EmptyState title="No tasks scheduled for this date." />
             </div>
           )}
           {filteredTasks.map((t) => (
@@ -211,7 +202,7 @@ function FilterPill({
   return (
     <button
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
         active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-surface text-muted-foreground hover:text-foreground"
@@ -259,7 +250,7 @@ function TaskRow({
   }
 
   return (
-    <div className="card-shadow rounded-2xl border border-border bg-surface p-4">
+    <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -287,7 +278,7 @@ function TaskRow({
           {canManage && (
             <button
               onClick={() => setShowEdit(true)}
-              className="text-xs font-medium text-muted-foreground hover:text-foreground"
+              className="text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
               aria-label="Edit task"
             >
               Edit
@@ -297,7 +288,7 @@ function TaskRow({
             <button
               onClick={remove}
               disabled={pending}
-              className="text-xs font-medium text-muted-foreground hover:text-danger"
+              className="text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-danger"
               aria-label="Delete task"
             >
               Delete
@@ -364,13 +355,9 @@ function TaskRow({
             />
           )}
           {dirty && (
-            <button
-              onClick={save}
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            <Button size="sm" onClick={save} disabled={pending}>
               {pending ? "Saving..." : "Save"}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -378,7 +365,7 @@ function TaskRow({
       {showEdit && (
         <EditTaskModal task={task} employees={employees} onClose={() => setShowEdit(false)} />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -408,10 +395,10 @@ function AddTaskModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Add Daily Task</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -486,16 +473,12 @@ function AddTaskModal({
             <textarea name="notes" rows={2} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
           </Field>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Saving..." : "Add Task"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

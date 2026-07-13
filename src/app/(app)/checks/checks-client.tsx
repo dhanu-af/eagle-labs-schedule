@@ -7,6 +7,9 @@ import QaPreOpTab from "./qa-preop-tab";
 import EnvironmentalTab from "./environmental-tab";
 import LineClearanceTab from "./line-clearance-tab";
 import PostOpTab from "./post-op-tab";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export type Permissions = {
   canSupervisor: boolean;
@@ -165,19 +168,17 @@ export default function ChecksClient({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Checks</h1>
-        <p className="text-sm text-muted-foreground">
-          Supervisor &amp; QA pre-operational checks, environmental monitoring, line clearance, and post-op cleaning verification.
-        </p>
-      </div>
+      <PageHeader
+        title="Checks"
+        subtitle="Supervisor & QA pre-operational checks, environmental monitoring, line clearance, and post-op cleaning verification."
+      />
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-2">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors duration-150 ease-out ${
               tab === t.key
                 ? "border-primary/40 bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:text-foreground"
@@ -268,12 +269,12 @@ export default function ChecksClient({
 
 function StatCard({ label, value, tint }: { label: string; value: number; tint: string }) {
   return (
-    <div className="card-shadow rounded-2xl border border-border bg-surface p-4">
-      <p className="text-2xl font-bold" style={{ color: tint }}>
+    <Card padding="sm">
+      <p className="text-2xl font-semibold tabular-nums" style={{ color: tint }}>
         {value}
       </p>
       <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
+    </Card>
   );
 }
 
@@ -291,17 +292,13 @@ function SectionSummary({
   return (
     <button
       onClick={onClick}
-      className="card-shadow flex items-center justify-between rounded-2xl border border-border bg-surface p-4 text-left transition hover:-translate-y-0.5"
+      className="card-shadow card-hover flex items-center justify-between rounded-xl border border-border bg-surface p-4 text-left"
     >
       <div>
-        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-[15px] font-semibold text-foreground">{title}</p>
         <p className="text-xs text-muted-foreground">{total} records</p>
       </div>
-      {badge && (
-        <span className="rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
-          {badge}
-        </span>
-      )}
+      {badge && <Badge tone="danger">{badge}</Badge>}
     </button>
   );
 }

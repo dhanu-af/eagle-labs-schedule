@@ -1,10 +1,10 @@
 import type { CheckStatus } from "@/generated/prisma";
 
 const CLASS: Record<CheckStatus, string> = {
-  PENDING: "bg-warning/10 text-warning border-warning/30",
-  IN_PROGRESS: "bg-info/10 text-info border-info/30",
-  COMPLETED: "bg-success/10 text-success border-success/30",
-  APPROVED: "bg-primary/10 text-primary border-primary/30",
+  PENDING: "bg-warning/10 text-warning border-warning/40",
+  IN_PROGRESS: "bg-info/10 text-info border-info/40",
+  COMPLETED: "bg-success/10 text-success border-success/40",
+  APPROVED: "bg-primary/10 text-primary border-primary/40",
 };
 
 const LABEL: Record<CheckStatus, string> = {

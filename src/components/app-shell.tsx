@@ -8,6 +8,7 @@ import ThemeToggle from "@/components/theme-toggle";
 import NotificationBell from "@/components/notification-bell";
 import { logoutAction } from "@/lib/actions/auth-actions";
 import { initials } from "@/lib/ui";
+import { Button } from "@/components/ui/Button";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode };
 type NavGroup = { label: string; items: NavItem[] };
@@ -205,7 +206,7 @@ export default function AppShell({
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={clsx(
-                    "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
+                    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out",
                     active
                       ? "bg-primary/12 text-primary shadow-[inset_0_0_0_1px_rgba(52,211,153,0.18)]"
                       : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
@@ -333,21 +334,18 @@ export default function AppShell({
             </div>
             <Link
               href="/change-password"
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors duration-150 ease-out hover:bg-surface-muted active:scale-[0.98]"
             >
               Change Password
             </Link>
             <form action={logoutAction}>
-              <button
-                type="submit"
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
-              >
+              <Button type="submit" variant="secondary" size="sm">
                 Log out
-              </button>
+              </Button>
             </form>
           </div>
         </header>
-        <main className="animate-in flex-1 p-4 md:p-6 bg-background">{children}</main>
+        <main className="animate-in flex-1 bg-background px-4 py-4 md:px-6 md:py-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

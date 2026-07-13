@@ -8,6 +8,10 @@ import type { LineClearanceRow } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
 import { Field, Checkbox, SignatureField } from "./supervisor-preop-tab";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 export default function LineClearanceTab({
   rows,
@@ -67,52 +71,45 @@ export default function LineClearanceTab({
         />
         <div className="flex gap-2">
           <ExportButton type="clearance" />
-          {canSubmit && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              + New Clearance
-            </button>
-          )}
+          {canSubmit && <Button onClick={() => setShowForm(true)}>+ New Clearance</Button>}
         </div>
       </div>
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[1250px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Line</th>
-              <th className="px-3 py-2">Batch</th>
-              <th className="px-3 py-2">Material</th>
-              <th className="px-3 py-2">Label/Pkg</th>
-              <th className="px-3 py-2">Equipment</th>
-              <th className="px-3 py-2">Docs</th>
-              <th className="px-3 py-2">Submitted By</th>
-              <th className="px-3 py-2">Supervisor</th>
-              <th className="px-3 py-2">QA</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Comments</th>
-              <th className="px-3 py-2">Actions</th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>Date</Th>
+              <Th>Line</Th>
+              <Th>Batch</Th>
+              <Th>Material</Th>
+              <Th>Label/Pkg</Th>
+              <Th>Equipment</Th>
+              <Th>Docs</Th>
+              <Th>Submitted By</Th>
+              <Th>Supervisor</Th>
+              <Th>QA</Th>
+              <Th>Status</Th>
+              <Th>Comments</Th>
+              <Th>Actions</Th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((r) => (
-              <tr key={r.id} className="border-b border-border last:border-0 hover:bg-surface-muted/50">
-                <td className="px-3 py-2 text-muted-foreground">{r.date.slice(0, 10)}</td>
-                <td className="px-3 py-2 text-foreground">{r.line}</td>
-                <td className="px-3 py-2">{r.previousBatchCleared ? "✅" : "❌"}</td>
-                <td className="px-3 py-2">{r.materialCleared ? "✅" : "❌"}</td>
-                <td className="px-3 py-2">{r.labelPackagingCleared ? "✅" : "❌"}</td>
-                <td className="px-3 py-2">{r.equipmentCleared ? "✅" : "❌"}</td>
-                <td className="px-3 py-2">{r.documentationVerified ? "✅" : "❌"}</td>
-                <td className="px-3 py-2 text-muted-foreground">
+              <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
+                <td className="px-3 py-2.5 text-foreground">{r.line}</td>
+                <td className="px-3 py-2.5">{r.previousBatchCleared ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5">{r.materialCleared ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5">{r.labelPackagingCleared ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5">{r.equipmentCleared ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5">{r.documentationVerified ? "✅" : "❌"}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">
                   {r.submittedByName}
                   <br />
                   <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
                 </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
+                <td className="px-3 py-2.5 text-xs text-muted-foreground">
                   {r.supervisorApprovedByName ? (
                     <>
                       ✓ {r.supervisorApprovedByName}
@@ -120,14 +117,14 @@ export default function LineClearanceTab({
                       {r.supervisorApprovedAt && `Signed ${formatBrisbaneTime(r.supervisorApprovedAt)}`}
                     </>
                   ) : canApproveSupervisor && !r.locked ? (
-                    <button disabled={pending} onClick={() => approve(r.id, "SUPERVISOR")} className="text-info hover:opacity-80">
+                    <button disabled={pending} onClick={() => approve(r.id, "SUPERVISOR")} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                       Approve
                     </button>
                   ) : (
                     "—"
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
+                <td className="px-3 py-2.5 text-xs text-muted-foreground">
                   {r.qaApprovedByName ? (
                     <>
                       ✓ {r.qaApprovedByName}
@@ -135,24 +132,24 @@ export default function LineClearanceTab({
                       {r.qaApprovedAt && `Signed ${formatBrisbaneTime(r.qaApprovedAt)}`}
                     </>
                   ) : canApproveQa && !r.locked ? (
-                    <button disabled={pending} onClick={() => approve(r.id, "QA")} className="text-info hover:opacity-80">
+                    <button disabled={pending} onClick={() => approve(r.id, "QA")} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                       Approve
                     </button>
                   ) : (
                     "—"
                   )}
                 </td>
-                <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
-                <td className="max-w-[200px] px-3 py-2 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
+                <td className="max-w-[200px] px-3 py-2.5 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
+                <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     {r.locked && canUnlock && (
-                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
+                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                         Unlock
                       </button>
                     )}
                     {canDelete && (
-                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs text-danger hover:opacity-80">
+                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
                         Delete
                       </button>
                     )}
@@ -162,14 +159,14 @@ export default function LineClearanceTab({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={13} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  No records match these filters.
+                <td colSpan={13}>
+                  <EmptyState title="No records match these filters." />
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {showForm && <LineClearanceForm onClose={() => setShowForm(false)} />}
     </div>
@@ -206,10 +203,10 @@ function LineClearanceForm({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Line Clearance</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -233,16 +230,12 @@ function LineClearanceForm({ onClose }: { onClose: () => void }) {
           <SignatureField />
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Signing & Submitting..." : "Sign & Submit"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

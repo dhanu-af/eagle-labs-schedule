@@ -6,6 +6,10 @@ import Link from "next/link";
 import { createKpi, deleteKpi, setDailyTarget, updateKpi } from "@/lib/actions/kpi-actions";
 import { pct, toDateInputValue } from "@/lib/ui";
 import KpiChart from "./kpi-chart";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Team = { id: string; name: string };
 type Kpi = {
@@ -62,37 +66,33 @@ export default function KpiClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">KPI Tracking</h1>
-          <p className="text-sm text-muted-foreground">Target vs actual, daily and weekly completion.</p>
-          <p className="text-sm text-muted-foreground">
+      <PageHeader
+        title="KPI Tracking"
+        subtitle={
+          <>
+            Target vs actual, daily and weekly completion.
+            <br />
             {weekStartDate.toLocaleDateString("en-AU", { day: "2-digit", month: "short" })} –{" "}
             {weekEndDate.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => goWeek(-1)} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted">
-            ← Prev week
-          </button>
-          <button onClick={() => goWeek(1)} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted">
-            Next week →
-          </button>
-          {canManage && (
-            <button
-              onClick={() => setShowAdd(true)}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              + New KPI
-            </button>
-          )}
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => goWeek(-1)}>
+              ← Prev week
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => goWeek(1)}>
+              Next week →
+            </Button>
+            {canManage && <Button onClick={() => setShowAdd(true)}>+ New KPI</Button>}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {kpis.length === 0 && (
-          <div className="rounded-xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground lg:col-span-2">
-            No KPIs defined yet.{canManage ? " Click “+ New KPI” to add one." : ""}
+          <div className="rounded-xl border border-dashed border-border bg-surface lg:col-span-2">
+            <EmptyState title="No KPIs defined yet." description={canManage ? "Click “+ New KPI” to add one." : undefined} />
           </div>
         )}
         {kpis.map((k) => {
@@ -114,7 +114,7 @@ export default function KpiClient({
           const chartColor = weeklyPct >= 100 ? "#4ade80" : weeklyPct >= 50 ? "#34d399" : "#e0aa4e";
 
           return (
-            <div className="card-shadow rounded-2xl border border-border bg-surface p-5 transition hover:-translate-y-0.5" key={k.id}>
+            <Card interactive key={k.id}>
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
@@ -129,17 +129,17 @@ export default function KpiClient({
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="text-right">
-                    <p className="text-lg font-bold text-foreground">{weeklyPct}%</p>
+                    <p className="text-lg font-semibold tabular-nums text-foreground">{weeklyPct}%</p>
                     <p className="text-xs text-muted-foreground">
                       {weeklyActual}/{weeklyTarget} {k.unit} wk
                     </p>
                   </div>
                   {canManage && (
                     <div className="flex flex-col gap-1 text-xs">
-                      <button onClick={() => setEditKpi(k)} className="text-muted-foreground hover:text-primary">
+                      <button onClick={() => setEditKpi(k)} className="font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-primary">
                         Edit
                       </button>
-                      <button onClick={() => remove(k.id)} className="text-muted-foreground hover:text-danger">
+                      <button onClick={() => remove(k.id)} className="font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-danger">
                         Delete
                       </button>
                     </div>
@@ -165,7 +165,7 @@ export default function KpiClient({
                   Update in Daily Planner →
                 </Link>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
@@ -245,13 +245,9 @@ function DailyTargetsRow({
         ))}
       </div>
       {dirtyDays.size > 0 && (
-        <button
-          onClick={save}
-          disabled={pending}
-          className="mt-2 w-full rounded-lg bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-        >
+        <Button size="sm" className="mt-2 w-full" onClick={save} disabled={pending}>
           {pending ? "Saving..." : "Save daily targets"}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -283,10 +279,10 @@ function KpiFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">{existing ? "Edit KPI" : "New KPI"}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -294,7 +290,7 @@ function KpiFormModal({
           {!existing && (
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Team</span>
-              <select name="teamId" required className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
+              <select name="teamId" required className="input">
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -305,7 +301,7 @@ function KpiFormModal({
           )}
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Name</span>
-            <input name="name" required defaultValue={existing?.name} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            <input name="name" required defaultValue={existing?.name} className="input" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -315,7 +311,7 @@ function KpiFormModal({
               name="product"
               placeholder="e.g. Detox US — leave blank to track the whole room"
               defaultValue={existing?.product ?? ""}
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
             />
             <span className="mt-1 block text-[11px] text-muted-foreground">
               Must match the product name used in the Daily Planner exactly.
@@ -324,24 +320,20 @@ function KpiFormModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Daily Target</span>
-              <input name="target" type="number" step="0.1" required defaultValue={existing?.target} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+              <input name="target" type="number" step="0.1" required defaultValue={existing?.target} className="input" />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Unit</span>
-              <input name="unit" defaultValue={existing?.unit ?? "kg"} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+              <input name="unit" defaultValue={existing?.unit ?? "kg"} className="input" />
             </label>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Saving..." : existing ? "Save Changes" : "Create KPI"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

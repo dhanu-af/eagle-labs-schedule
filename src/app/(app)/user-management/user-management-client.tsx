@@ -7,6 +7,11 @@ import { deleteUser, setUserDisabled, unlockUser } from "@/lib/actions/user-mana
 import type { Role } from "@/generated/prisma";
 import UserFormModal from "./user-form-modal";
 import ResetPasswordModal from "./reset-password-modal";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 export type ManagedUser = {
   id: string;
@@ -70,98 +75,87 @@ export default function UserManagementClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">User Management</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
+      <PageHeader
+        title="User Management"
+        subtitle={
+          <span className="max-w-2xl">
             Create and manage login accounts. Only the Super Admin can create, edit, reset
             passwords for, enable/disable, or delete users.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/login-history"
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted"
-          >
-            Login History
-          </Link>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-          >
-            + Add User
-          </button>
-        </div>
-      </div>
+          </span>
+        }
+        actions={
+          <>
+            <Link
+              href="/login-history"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-sm font-medium text-foreground transition-colors duration-150 ease-out hover:bg-surface-muted active:scale-[0.98]"
+            >
+              Login History
+            </Link>
+            <Button onClick={() => setShowAdd(true)}>+ Add User</Button>
+          </>
+        }
+      />
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-4 py-2">Username</th>
-              <th className="px-4 py-2">Role</th>
-              <th className="px-4 py-2">Department</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Created</th>
-              <th className="px-4 py-2">Actions</th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>Username</Th>
+              <Th>Role</Th>
+              <Th>Department</Th>
+              <Th>Status</Th>
+              <Th>Created</Th>
+              <Th>Actions</Th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => {
               const isSelf = u.id === currentUserId;
               return (
-                <tr key={u.id} className="border-b border-border last:border-0 transition-colors hover:bg-surface-muted/50">
-                  <td className="px-4 py-2">
+                <tr key={u.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                  <td className="px-4 py-2.5">
                     <p className="font-medium text-foreground">
                       {u.username}
                       {isSelf && <span className="ml-1 text-xs text-muted-foreground">(you)</span>}
                     </p>
                     <p className="text-xs text-muted-foreground">{u.fullName}</p>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2.5">
                     {u.isPermanent ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                      <Badge tone="primary" className="gap-1">
                         🔒 Super Admin (System Owner)
-                      </span>
+                      </Badge>
                     ) : (
-                      <span className="rounded-full border border-border bg-surface-muted px-2 py-0.5 text-xs text-foreground">
-                        {ROLE_LABEL[u.role]}
-                      </span>
+                      <Badge tone="muted">{ROLE_LABEL[u.role]}</Badge>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground">{u.department ?? "—"}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2.5 text-muted-foreground">{u.department ?? "—"}</td>
+                  <td className="px-4 py-2.5">
                     {u.locked ? (
-                      <span className="rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
-                        Locked
-                      </span>
+                      <Badge tone="danger">Locked</Badge>
                     ) : u.disabled ? (
-                      <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                        Disabled
-                      </span>
+                      <Badge tone="warning">Disabled</Badge>
                     ) : (
-                      <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                        Active
-                      </span>
+                      <Badge tone="success">Active</Badge>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                  <td className="px-4 py-2.5 text-muted-foreground">
                     {new Date(u.createdAt).toLocaleString("en-AU")}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2.5">
                     {u.isPermanent ? (
                       <span className="text-xs text-muted-foreground">Protected system account — cannot be edited</span>
                     ) : (
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-3">
                         <button
                           onClick={() => setEditUser(u)}
-                          className="text-xs text-muted-foreground hover:text-foreground"
+                          className="text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => setResetUser(u)}
-                          className="text-xs text-muted-foreground hover:text-foreground"
+                          className="text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
                         >
                           Reset Password
                         </button>
@@ -169,7 +163,7 @@ export default function UserManagementClient({
                           <button
                             disabled={pending}
                             onClick={() => unlock(u)}
-                            className="text-xs text-info hover:opacity-80 disabled:opacity-60"
+                            className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80 disabled:opacity-60"
                           >
                             Unlock
                           </button>
@@ -177,14 +171,14 @@ export default function UserManagementClient({
                         <button
                           disabled={pending}
                           onClick={() => toggleDisabled(u)}
-                          className="text-xs text-warning hover:opacity-80 disabled:opacity-60"
+                          className="text-xs font-medium text-warning transition-colors duration-150 ease-out hover:opacity-80 disabled:opacity-60"
                         >
                           {u.disabled ? "Enable" : "Disable"}
                         </button>
                         <button
                           disabled={pending}
                           onClick={() => remove(u)}
-                          className="text-xs text-danger hover:opacity-80 disabled:opacity-60"
+                          className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80 disabled:opacity-60"
                         >
                           Delete
                         </button>
@@ -196,7 +190,7 @@ export default function UserManagementClient({
             })}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {showAdd && <UserFormModal onClose={() => setShowAdd(false)} />}
       {editUser && <UserFormModal user={editUser} onClose={() => setEditUser(null)} />}

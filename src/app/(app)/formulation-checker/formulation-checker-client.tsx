@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createFolder, deleteFolder } from "@/lib/actions/formulation-actions";
 import { formatBrisbaneDateTime } from "@/lib/ui";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 type Folder = { id: string; name: string; count: number };
 type FormulationRow = {
@@ -67,30 +72,27 @@ export default function FormulationCheckerClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Formulation Checker</h1>
-          <p className="text-sm text-muted-foreground">
-            Master formulations, auto batch calculations, and PDF export — organized by product folder.
-          </p>
-        </div>
-        {canManage && !activeFolder && (
-          <button
-            onClick={() => setShowNewFolder(true)}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted"
-          >
-            + New Folder
-          </button>
-        )}
-        {canManage && activeFolder && (
-          <Link
-            href={`/formulation-checker/new?folder=${activeFolder.id}`}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-          >
-            + New Formulation
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        title="Formulation Checker"
+        subtitle="Master formulations, auto batch calculations, and PDF export — organized by product folder."
+        actions={
+          <>
+            {canManage && !activeFolder && (
+              <Button variant="secondary" onClick={() => setShowNewFolder(true)}>
+                + New Folder
+              </Button>
+            )}
+            {canManage && activeFolder && (
+              <Link
+                href={`/formulation-checker/new?folder=${activeFolder.id}`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground transition-colors duration-150 ease-out hover:opacity-90 active:scale-[0.98]"
+              >
+                + New Formulation
+              </Link>
+            )}
+          </>
+        }
+      />
 
       <div className="flex items-center gap-2 text-sm">
         <Link href="/formulation-checker" className="font-medium text-primary hover:underline">
@@ -110,7 +112,7 @@ export default function FormulationCheckerClient({
             <div key={f.id} className="group relative">
               <Link
                 href={`/formulation-checker?folder=${f.id}`}
-                className="card-shadow flex flex-col items-center gap-2 rounded-2xl border border-border bg-surface p-5 text-center transition hover:-translate-y-0.5 hover:border-primary/40"
+                className="card-shadow card-hover flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-5 text-center hover:border-primary/40"
               >
                 <span className="text-3xl" aria-hidden>
                   📁
@@ -122,7 +124,7 @@ export default function FormulationCheckerClient({
                 <button
                   onClick={() => removeFolder(f.id)}
                   disabled={pending}
-                  className="absolute right-2 top-2 hidden rounded-md bg-surface px-1.5 py-0.5 text-xs text-muted-foreground hover:text-danger group-hover:block"
+                  className="absolute right-2 top-2 hidden rounded-md bg-surface px-1.5 py-0.5 text-xs text-muted-foreground transition-colors duration-150 ease-out hover:text-danger group-hover:block"
                   aria-label="Delete folder"
                 >
                   ✕
@@ -131,8 +133,8 @@ export default function FormulationCheckerClient({
             </div>
           ))}
           {folders.length === 0 && (
-            <div className="col-span-full rounded-xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
-              No folders yet.
+            <div className="col-span-full rounded-xl border border-dashed border-border bg-surface">
+              <EmptyState title="No folders yet." />
             </div>
           )}
         </div>
@@ -143,38 +145,38 @@ export default function FormulationCheckerClient({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search formulations in this folder..."
-              className="w-full max-w-sm rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
+              className="input max-w-sm"
             />
-            <button type="submit" className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="submit" variant="secondary">
               Search
-            </button>
+            </Button>
           </form>
 
-          <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+          <Card padding="none" className="overflow-x-auto">
             <table className="w-full min-w-[700px] text-sm">
               <thead>
-                <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-                  <th className="px-3 py-2">Product Name</th>
-                  <th className="px-3 py-2">Base Batch Size</th>
-                  <th className="px-3 py-2">Ingredients</th>
-                  <th className="px-3 py-2">Last Updated</th>
-                  <th className="px-3 py-2"></th>
+                <tr className={THEAD_ROW_CLASS}>
+                  <Th>Product Name</Th>
+                  <Th>Base Batch Size</Th>
+                  <Th>Ingredients</Th>
+                  <Th>Last Updated</Th>
+                  <Th></Th>
                 </tr>
               </thead>
               <tbody>
                 {formulations.map((f) => (
-                  <tr key={f.id} className="border-b border-border last:border-0 hover:bg-surface-muted/50">
-                    <td className="px-3 py-2 font-medium text-foreground">
+                  <tr key={f.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                    <td className="px-3 py-2.5 font-medium text-foreground">
                       <Link href={`/formulation-checker/${f.id}`} className="hover:underline">
                         {f.productName}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 text-muted-foreground">
+                    <td className="px-3 py-2.5 text-muted-foreground">
                       {f.baseBatchSize} {f.baseUnit}
                     </td>
-                    <td className="px-3 py-2 text-muted-foreground">{f.ingredientCount}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{formatBrisbaneDateTime(f.updatedAt)}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2.5 text-muted-foreground">{f.ingredientCount}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{formatBrisbaneDateTime(f.updatedAt)}</td>
+                    <td className="px-3 py-2.5">
                       <Link href={`/formulation-checker/${f.id}`} className="text-xs font-medium text-primary hover:underline">
                         Open →
                       </Link>
@@ -183,42 +185,35 @@ export default function FormulationCheckerClient({
                 ))}
                 {formulations.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                      No formulations in this folder yet.
+                    <td colSpan={5}>
+                      <EmptyState title="No formulations in this folder yet." />
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-          </div>
+          </Card>
         </div>
       )}
 
       {showNewFolder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+          <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
             <h2 className="mb-3 text-base font-semibold text-foreground">New Folder</h2>
             <input
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="e.g. NZ Products"
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
               autoFocus
             />
             <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => setShowNewFolder(false)}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted"
-              >
+              <Button variant="secondary" onClick={() => setShowNewFolder(false)}>
                 Cancel
-              </button>
-              <button
-                onClick={addFolder}
-                disabled={pending || !newFolderName.trim()}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-              >
+              </Button>
+              <Button onClick={addFolder} disabled={pending || !newFolderName.trim()}>
                 {pending ? "Creating..." : "Create"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

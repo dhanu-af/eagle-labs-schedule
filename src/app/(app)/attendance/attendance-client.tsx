@@ -8,6 +8,10 @@ import {
   updateLeaveStatus,
 } from "@/lib/actions/attendance-actions";
 import { ATTENDANCE_CLASS, ATTENDANCE_LABEL, LEAVE_STATUS_CLASS, initials } from "@/lib/ui";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 type EmployeeRow = {
   id: string;
@@ -52,39 +56,32 @@ export default function AttendanceClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Attendance &amp; Leave</h1>
-          <p className="text-sm text-muted-foreground">Daily attendance, overtime and leave balances.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={dateStr}
-            onChange={(e) => changeDate(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
-          />
-          {currentEmployeeId && (
-            <button
-              onClick={() => setShowLeaveForm(true)}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              Request Leave
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Attendance & Leave"
+        subtitle="Daily attendance, overtime and leave balances."
+        actions={
+          <>
+            <input
+              type="date"
+              value={dateStr}
+              onChange={(e) => changeDate(e.target.value)}
+              className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+            />
+            {currentEmployeeId && <Button onClick={() => setShowLeaveForm(true)}>Request Leave</Button>}
+          </>
+        }
+      />
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-4 py-2">Employee</th>
-              <th className="px-4 py-2">Team</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Hours</th>
-              <th className="px-4 py-2">Overtime</th>
-              <th className="px-4 py-2">Leave Balance</th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>Employee</Th>
+              <Th>Team</Th>
+              <Th>Status</Th>
+              <Th>Hours</Th>
+              <Th>Overtime</Th>
+              <Th>Leave Balance</Th>
             </tr>
           </thead>
           <tbody>
@@ -93,10 +90,10 @@ export default function AttendanceClient({
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
 
-      <div className="card-shadow rounded-2xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Leave Requests</h2>
+      <Card padding="sm">
+        <h2 className="mb-3 text-[15px] font-semibold text-foreground">Leave Requests</h2>
         <div className="space-y-2">
           {leaveRequests.length === 0 && (
             <p className="text-sm text-muted-foreground">No leave requests yet.</p>
@@ -105,7 +102,7 @@ export default function AttendanceClient({
             <LeaveRowItem key={l.id} leave={l} canManage={canManage} />
           ))}
         </div>
-      </div>
+      </Card>
 
       {showLeaveForm && (
         <LeaveModal onClose={() => setShowLeaveForm(false)} />
@@ -137,8 +134,8 @@ function AttendanceRow({
   }
 
   return (
-    <tr className="border-b border-border last:border-0 transition-colors hover:bg-surface-muted/50">
-      <td className="px-4 py-2">
+    <tr className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+      <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
             {initials(employee.name)}
@@ -146,8 +143,8 @@ function AttendanceRow({
           <span className="text-foreground">{employee.name}</span>
         </div>
       </td>
-      <td className="px-4 py-2 text-muted-foreground">{employee.teamName}</td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5 text-muted-foreground">{employee.teamName}</td>
+      <td className="px-4 py-2.5">
         {canManage ? (
           <select
             value={status}
@@ -169,7 +166,7 @@ function AttendanceRow({
           </span>
         )}
       </td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5">
         {canManage ? (
           <input
             type="number"
@@ -182,10 +179,10 @@ function AttendanceRow({
             className="w-16 rounded-lg border border-border bg-surface px-2 py-1 text-xs text-foreground"
           />
         ) : (
-          <span className="text-foreground">{hours}h</span>
+          <span className="tabular-nums text-foreground">{hours}h</span>
         )}
       </td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5">
         {canManage ? (
           <input
             type="number"
@@ -198,19 +195,15 @@ function AttendanceRow({
             className="w-16 rounded-lg border border-border bg-surface px-2 py-1 text-xs text-foreground"
           />
         ) : (
-          <span className="text-foreground">{overtime}h</span>
+          <span className="tabular-nums text-foreground">{overtime}h</span>
         )}
       </td>
-      <td className="px-4 py-2">
-        <span className="text-foreground">{employee.leaveBalance} days</span>
+      <td className="px-4 py-2.5">
+        <span className="tabular-nums text-foreground">{employee.leaveBalance} days</span>
         {dirty && canManage && (
-          <button
-            onClick={save}
-            disabled={pending}
-            className="ml-2 rounded-lg bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-          >
+          <Button onClick={save} disabled={pending} size="sm" className="ml-2">
             {pending ? "..." : "Save"}
-          </button>
+          </Button>
         )}
       </td>
     </tr>
@@ -245,20 +238,12 @@ function LeaveRowItem({ leave, canManage }: { leave: LeaveRow; canManage: boolea
         </span>
         {canManage && leave.status === "PENDING" && (
           <>
-            <button
-              disabled={pending}
-              onClick={() => act("APPROVED")}
-              className="rounded-lg bg-success/10 px-2 py-1 text-xs font-medium text-success hover:bg-success/20 disabled:opacity-60"
-            >
+            <Button variant="success" size="sm" disabled={pending} onClick={() => act("APPROVED")}>
               Approve
-            </button>
-            <button
-              disabled={pending}
-              onClick={() => act("REJECTED")}
-              className="rounded-lg bg-danger/10 px-2 py-1 text-xs font-medium text-danger hover:bg-danger/20 disabled:opacity-60"
-            >
+            </Button>
+            <Button variant="danger" size="sm" disabled={pending} onClick={() => act("REJECTED")}>
               Reject
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -280,10 +265,10 @@ function LeaveModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Request Leave</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -291,16 +276,16 @@ function LeaveModal({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Start Date</span>
-              <input name="startDate" type="date" required className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+              <input name="startDate" type="date" required className="input" />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">End Date</span>
-              <input name="endDate" type="date" required className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+              <input name="endDate" type="date" required className="input" />
             </label>
           </div>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Type</span>
-            <select name="type" defaultValue="Annual" className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
+            <select name="type" defaultValue="Annual" className="input">
               <option>Annual</option>
               <option>Sick</option>
               <option>Unpaid</option>
@@ -309,19 +294,15 @@ function LeaveModal({ onClose }: { onClose: () => void }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Reason</span>
-            <textarea name="reason" rows={2} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            <textarea name="reason" rows={2} className="input" />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Submitting..." : "Submit"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

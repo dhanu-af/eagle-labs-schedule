@@ -41,7 +41,7 @@ export default async function LoginPage({
               EL
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight text-white">Eagle Labs Australia</h1>
+              <h1 className="text-lg font-semibold tracking-tight leading-tight text-white">Eagle Labs Australia</h1>
               <p className="text-xs leading-tight text-emerald-100/40">
                 BlendCaps Dashboard
               </p>

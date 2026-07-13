@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { resetPassword } from "@/lib/actions/user-management-actions";
 import type { ManagedUser } from "./user-management-client";
+import { Button } from "@/components/ui/Button";
 
 export default function ResetPasswordModal({
   user,
@@ -30,10 +31,10 @@ export default function ResetPasswordModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Reset Password</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -50,20 +51,16 @@ export default function ResetPasswordModal({
               required
               minLength={6}
               placeholder="At least 6 characters"
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
             />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Resetting..." : "Reset Password"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

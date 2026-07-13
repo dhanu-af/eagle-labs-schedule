@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PRIORITY_CLASS, PRIORITY_LABEL, STATUS_CLASS, STATUS_LABEL, formatBrisbaneDate, initials, pct } from "@/lib/ui";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "TEAM_LEAD" | "QA" | "EMPLOYEE";
 
@@ -121,16 +124,19 @@ export default function MyTaskClient({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">My Task</h1>
-        <p className="text-sm text-muted-foreground">
-          Today&apos;s assignments by employee, synced live from the Daily Planner.
-        </p>
-        <p className="text-sm text-muted-foreground">{formatBrisbaneDate(new Date(`${dateStr}T00:00:00Z`))}</p>
-      </div>
+      <PageHeader
+        title="My Task"
+        subtitle={
+          <>
+            Today&apos;s assignments by employee, synced live from the Daily Planner.
+            <br />
+            {formatBrisbaneDate(new Date(`${dateStr}T00:00:00Z`))}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
-        <div className="card-shadow space-y-4 rounded-2xl border border-border bg-surface p-4">
+        <Card padding="sm" className="space-y-4">
           {grouped.map((g) => (
             <div key={g.category}>
               <p className="mb-1.5 px-1 text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground/60">
@@ -144,7 +150,7 @@ export default function MyTaskClient({
                     <button
                       key={e.id}
                       onClick={() => setSelectedId(e.id)}
-                      className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm transition ${
+                      className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm transition-colors duration-150 ease-out ${
                         selected?.id === e.id
                           ? "bg-primary/12 text-primary shadow-[inset_0_0_0_1px_rgba(52,211,153,0.18)]"
                           : "text-foreground hover:bg-surface-muted"
@@ -169,16 +175,16 @@ export default function MyTaskClient({
           {employees.length === 0 && (
             <p className="px-1 text-sm text-muted-foreground">No active employees yet.</p>
           )}
-        </div>
+        </Card>
 
         <div className="space-y-4">
           {!selected ? (
-            <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
-              Select an employee to see their tasks.
+            <div className="rounded-xl border border-dashed border-border bg-surface">
+              <EmptyState title="Select an employee to see their tasks." />
             </div>
           ) : (
             <>
-              <div className="card-shadow rounded-2xl border border-border bg-surface p-4">
+              <Card>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-base font-semibold text-foreground">{selected.name}</p>
@@ -190,16 +196,16 @@ export default function MyTaskClient({
                     Update in Daily Planner →
                   </Link>
                 </div>
-              </div>
+              </Card>
 
               <div className="space-y-3">
                 {selectedTasks.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
-                    No tasks assigned today.
+                  <div className="rounded-xl border border-dashed border-border bg-surface">
+                    <EmptyState title="No tasks assigned today." />
                   </div>
                 )}
                 {selectedTasks.map((t) => (
-                  <div key={t.id} className="card-shadow rounded-2xl border border-border bg-surface p-4">
+                  <Card key={t.id}>
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <p className="font-medium text-foreground">
@@ -240,12 +246,12 @@ export default function MyTaskClient({
                         Due: {t.plannedStart}–{t.plannedFinish ?? "?"}
                       </p>
                     )}
-                  </div>
+                  </Card>
                 ))}
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="card-shadow rounded-2xl border border-border bg-surface p-4">
+                <Card>
                   <p className="mb-2 text-sm font-semibold text-foreground">Team KPI Target</p>
                   {teamKpis.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No KPI configured for {selected.teamName}.</p>
@@ -258,9 +264,9 @@ export default function MyTaskClient({
                       ))}
                     </ul>
                   )}
-                </div>
+                </Card>
 
-                <div className="card-shadow rounded-2xl border border-border bg-surface p-4">
+                <Card>
                   <p className="mb-2 text-sm font-semibold text-foreground">Relevant SOPs</p>
                   {relevantSops.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
@@ -280,7 +286,7 @@ export default function MyTaskClient({
                       ))}
                     </ul>
                   )}
-                </div>
+                </Card>
               </div>
             </>
           )}

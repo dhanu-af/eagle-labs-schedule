@@ -12,6 +12,8 @@ import {
 } from "@/lib/actions/weekly-actions";
 import { suggestWeeklyBalance } from "@/lib/actions/ai-actions";
 import { toDateInputValue } from "@/lib/ui";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type Team = { id: string; name: string };
 type Employee = { id: string; name: string };
@@ -90,57 +92,54 @@ export default function WeeklyPlannerClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Weekly Production Planner</h1>
-          <p className="text-sm text-muted-foreground">
-            {days[0].toLocaleDateString("en-AU", { day: "2-digit", month: "short" })} –{" "}
-            {weekEndDate.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" })}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => goWeek(-1)} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted">
-            ← Prev
-          </button>
-          <button onClick={() => goWeek(1)} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground hover:bg-surface-muted">
-            Next →
-          </button>
-          {canManage && (
-            <>
-              <button
-                disabled={pending}
-                onClick={() =>
-                  startTransition(async () => {
-                    await copyPreviousWeek(weekStartStr, activeTeamId);
-                    router.refresh();
-                  })
-                }
-                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted disabled:opacity-60"
-              >
-                Copy previous week
-              </button>
-              <button
-                disabled={pending}
-                onClick={() =>
-                  startTransition(async () => {
-                    const result = await suggestWeeklyBalance(weekStartStr, activeTeamId);
-                    setSuggestion(result);
-                  })
-                }
-                className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
-              >
-                ✨ AI Balance Suggestion
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Weekly Production Planner"
+        subtitle={`${days[0].toLocaleDateString("en-AU", { day: "2-digit", month: "short" })} – ${weekEndDate.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" })}`}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => goWeek(-1)}>
+              ← Prev
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => goWeek(1)}>
+              Next →
+            </Button>
+            {canManage && (
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      await copyPreviousWeek(weekStartStr, activeTeamId);
+                      router.refresh();
+                    })
+                  }
+                >
+                  Copy previous week
+                </Button>
+                <button
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      const result = await suggestWeeklyBalance(weekStartStr, activeTeamId);
+                      setSuggestion(result);
+                    })
+                  }
+                  className="rounded-lg border border-primary/30 bg-primary/10 px-3.5 py-2 text-sm font-medium text-primary transition-colors duration-150 ease-out hover:bg-primary/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  ✨ AI Balance Suggestion
+                </button>
+              </>
+            )}
+          </>
+        }
+      />
 
       {suggestion && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm text-foreground">
           <div className="mb-1 flex items-center justify-between">
             <p className="font-semibold">✨ AI Balance Suggestion</p>
-            <button onClick={() => setSuggestion(null)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => setSuggestion(null)} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
               ✕
             </button>
           </div>
@@ -153,7 +152,7 @@ export default function WeeklyPlannerClient({
           <button
             key={t.id}
             onClick={() => switchTeam(t.id)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
               t.id === activeTeamId
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-surface text-muted-foreground hover:text-foreground"
@@ -211,7 +210,7 @@ export default function WeeklyPlannerClient({
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
-                              className={`group relative rounded-lg border border-border bg-surface-muted p-2 text-xs ${
+                              className={`group relative rounded-lg border border-border bg-surface-muted p-2 text-xs transition-shadow duration-150 ease-out ${
                                 snapshot.isDragging ? "shadow-lg ring-2 ring-primary" : ""
                               }`}
                             >
@@ -223,7 +222,7 @@ export default function WeeklyPlannerClient({
                                   <button
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onClick={() => setEditAssignment(a)}
-                                    className="text-muted-foreground hover:text-primary"
+                                    className="text-muted-foreground transition-colors duration-150 ease-out hover:text-primary"
                                     aria-label="Edit assignment"
                                   >
                                     ✎
@@ -231,7 +230,7 @@ export default function WeeklyPlannerClient({
                                   <button
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onClick={() => removeAssignment(a.id)}
-                                    className="text-muted-foreground hover:text-danger"
+                                    className="text-muted-foreground transition-colors duration-150 ease-out hover:text-danger"
                                     aria-label="Remove assignment"
                                   >
                                     ✕
@@ -250,7 +249,7 @@ export default function WeeklyPlannerClient({
                 {canManage && (
                   <button
                     onClick={() => setModalDay(dayIndex)}
-                    className="mt-2 w-full rounded-lg border border-dashed border-border py-1.5 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary"
+                    className="mt-2 w-full rounded-lg border border-dashed border-border py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
                   >
                     + Assign
                   </button>
@@ -304,10 +303,10 @@ function EditAssignmentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Edit Assignment — {assignment.employeeName}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -331,16 +330,12 @@ function EditAssignmentModal({
             />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              onClick={submit}
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button onClick={submit} disabled={pending}>
               {pending ? "Saving..." : "Save Changes"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -376,10 +371,10 @@ function AssignModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Assign — {dayLabel}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -406,16 +401,12 @@ function AssignModal({
             <input name="hours" type="number" step="0.5" defaultValue={8} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Saving..." : "Assign"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

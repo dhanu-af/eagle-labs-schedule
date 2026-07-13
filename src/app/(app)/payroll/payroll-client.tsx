@@ -4,6 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deletePayRun, finalizePayRun, generatePayRun } from "@/lib/actions/payroll-actions";
 import { toDateInputValue } from "@/lib/ui";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Payslip = {
   id: string;
@@ -35,22 +40,11 @@ export default function PayrollClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Payroll</h1>
-          <p className="text-sm text-muted-foreground">
-            Pay runs generated from recorded attendance hours and overtime.
-          </p>
-        </div>
-        {canGenerate && (
-          <button
-            onClick={() => setShowGenerate(true)}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-          >
-            + Generate Pay Run
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Payroll"
+        subtitle="Pay runs generated from recorded attendance hours and overtime."
+        actions={canGenerate && <Button onClick={() => setShowGenerate(true)}>+ Generate Pay Run</Button>}
+      />
 
       <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm text-foreground">
         <p className="font-semibold">⚠ Not yet compliance-reviewed</p>
@@ -63,15 +57,15 @@ export default function PayrollClient({
 
       <div className="space-y-3">
         {payRuns.length === 0 && (
-          <div className="rounded-xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted-foreground">
-            No pay runs yet.
+          <div className="rounded-xl border border-dashed border-border bg-surface">
+            <EmptyState title="No pay runs yet." />
           </div>
         )}
         {payRuns.map((run) => {
           const total = run.payslips.reduce((s, p) => s + p.grossPay, 0);
           const isOpen = expanded === run.id;
           return (
-            <div key={run.id} className="card-shadow rounded-2xl border border-border bg-surface p-4">
+            <Card key={run.id} padding="sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   onClick={() => setExpanded(isOpen ? null : run.id)}
@@ -85,24 +79,17 @@ export default function PayrollClient({
                   </p>
                 </button>
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-                      run.status === "FINALIZED"
-                        ? "border-success/30 bg-success/10 text-success"
-                        : "border-warning/30 bg-warning/10 text-warning"
-                    }`}
-                  >
-                    {run.status}
-                  </span>
+                  <Badge tone={run.status === "FINALIZED" ? "success" : "warning"}>{run.status}</Badge>
                   <a
                     href={`/api/reports/payroll?payRunId=${run.id}`}
-                    className="rounded-lg border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-surface-muted"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-2 py-1 text-xs font-medium text-foreground transition-colors duration-150 ease-out hover:bg-surface-muted"
                   >
                     Export Excel
                   </a>
                   {canGenerate && run.status === "DRAFT" && (
                     <>
-                      <button
+                      <Button
+                        size="sm"
                         disabled={pending}
                         onClick={() =>
                           startTransition(async () => {
@@ -110,10 +97,9 @@ export default function PayrollClient({
                             router.refresh();
                           })
                         }
-                        className="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
                       >
                         Finalize
-                      </button>
+                      </Button>
                       <button
                         disabled={pending}
                         onClick={() => {
@@ -123,7 +109,7 @@ export default function PayrollClient({
                             router.refresh();
                           });
                         }}
-                        className="rounded-lg border border-danger/30 px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-60"
+                        className="rounded-lg border border-danger/30 px-2 py-1 text-xs font-medium text-danger transition-colors duration-150 ease-out hover:bg-danger/10 disabled:opacity-60"
                       >
                         Delete
                       </button>
@@ -158,7 +144,7 @@ export default function PayrollClient({
                   </table>
                 </div>
               )}
-            </div>
+            </Card>
           );
         })}
       </div>
@@ -186,10 +172,10 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Generate Pay Run</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -208,16 +194,12 @@ function GenerateModal({ onClose }: { onClose: () => void }) {
             Pulls recorded attendance hours and overtime for all active employees within this range.
           </p>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Generating..." : "Generate"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

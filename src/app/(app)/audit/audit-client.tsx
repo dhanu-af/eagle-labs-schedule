@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 type LogEntry = {
   id: string;
@@ -67,32 +72,30 @@ export default function AuditClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Audit Log</h1>
-          <p className="text-sm text-muted-foreground">
-            Full trail of who changed what, across every module. Showing latest 200 entries.
-          </p>
-        </div>
-        <div className="flex rounded-lg border border-border bg-surface p-0.5">
-          <button
-            onClick={() => setView("timeline")}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-              view === "timeline" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Timeline
-          </button>
-          <button
-            onClick={() => setView("table")}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-              view === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Table
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Audit Log"
+        subtitle="Full trail of who changed what, across every module. Showing latest 200 entries."
+        actions={
+          <div className="flex rounded-lg border border-border bg-surface p-0.5">
+            <button
+              onClick={() => setView("timeline")}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
+                view === "timeline" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Timeline
+            </button>
+            <button
+              onClick={() => setView("table")}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
+                view === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Table
+            </button>
+          </div>
+        }
+      />
 
       <div className="flex flex-wrap gap-2">
         <input
@@ -117,19 +120,10 @@ export default function AuditClient({
             </option>
           ))}
         </select>
-        <button
-          onClick={() => applyFilters(q, entityType)}
-          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          Search
-        </button>
+        <Button onClick={() => applyFilters(q, entityType)}>Search</Button>
       </div>
 
-      {logs.length === 0 && (
-        <div className="card-shadow rounded-2xl border border-dashed border-border bg-surface p-10 text-center text-sm text-muted-foreground">
-          No audit entries match this filter.
-        </div>
-      )}
+      {logs.length === 0 && <EmptyState title="No audit entries match this filter." />}
 
       {view === "timeline" ? (
         <div className="space-y-6">
@@ -138,7 +132,7 @@ export default function AuditClient({
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
                 {day}
               </p>
-              <div className="card-shadow relative rounded-2xl border border-border bg-surface p-5">
+              <Card className="relative">
                 <div className="absolute bottom-5 left-[27px] top-5 w-px bg-border" />
                 <div className="space-y-4">
                   {entries.map((l) => {
@@ -175,40 +169,40 @@ export default function AuditClient({
                     );
                   })}
                 </div>
-              </div>
+              </Card>
             </div>
           ))}
         </div>
       ) : (
-        <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+        <Card padding="none" className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-                <th className="px-4 py-2">When</th>
-                <th className="px-4 py-2">Actor</th>
-                <th className="px-4 py-2">Action</th>
-                <th className="px-4 py-2">Entity</th>
-                <th className="px-4 py-2">Summary</th>
+              <tr className={THEAD_ROW_CLASS}>
+                <Th>When</Th>
+                <Th>Actor</Th>
+                <Th>Action</Th>
+                <Th>Entity</Th>
+                <Th>Summary</Th>
               </tr>
             </thead>
             <tbody>
               {logs.map((l) => (
-                <tr key={l.id} className="border-b border-border last:border-0 align-top transition-colors hover:bg-surface-muted/50">
-                  <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
+                <tr key={l.id} className="border-b border-border last:border-0 align-top transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                  <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
                     {new Date(l.createdAt).toLocaleString()}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-foreground">
+                  <td className="whitespace-nowrap px-4 py-2.5 text-foreground">
                     {l.actorName}
                     <span className="ml-1 text-xs text-muted-foreground">({l.actorRole.replace("_", " ")})</span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-foreground">{l.action}</td>
-                  <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{l.entityType}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{l.summary}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-foreground">{l.action}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">{l.entityType}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{l.summary}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
     </div>
   );

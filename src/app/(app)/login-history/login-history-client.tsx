@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/ui";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 type LoginEventRow = {
   id: string;
@@ -80,28 +86,25 @@ export default function LoginHistoryClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Login History</h1>
-          <p className="text-sm text-muted-foreground">Audit trail of every login attempt across the app.</p>
-        </div>
-        <div className="flex gap-2 print:hidden">
-          <a
-            href={`/api/reports/login-history?${exportParams.toString()}`}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted"
-          >
-            Export to Excel
-          </a>
-          <button
-            onClick={() => window.print()}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted"
-          >
-            Print / Save as PDF
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Login History"
+        subtitle="Audit trail of every login attempt across the app."
+        actions={
+          <div className="flex gap-2 print:hidden">
+            <a
+              href={`/api/reports/login-history?${exportParams.toString()}`}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-sm font-medium text-foreground transition-colors duration-150 ease-out hover:bg-surface-muted active:scale-[0.98]"
+            >
+              Export to Excel
+            </a>
+            <Button variant="secondary" onClick={() => window.print()}>
+              Print / Save as PDF
+            </Button>
+          </div>
+        }
+      />
 
-      <form onSubmit={applyFilters} className="card-shadow flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-surface p-4 print:hidden">
+      <form onSubmit={applyFilters} className="card-shadow flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4 print:hidden">
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-muted-foreground">Search</span>
           <input
@@ -144,74 +147,63 @@ export default function LoginHistoryClient({
             ))}
           </select>
         </label>
-        <button
-          type="submit"
-          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          Apply
-        </button>
+        <Button type="submit">Apply</Button>
       </form>
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[1100px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-3 py-2">User ID</th>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Role</th>
-              <th className="px-3 py-2">Login Date</th>
-              <th className="px-3 py-2">Login Time</th>
-              <th className="px-3 py-2">Logout Time</th>
-              <th className="px-3 py-2">Duration</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">IP Address</th>
-              <th className="px-3 py-2">Device</th>
-              <th className="px-3 py-2">Browser</th>
-              <th className="px-3 py-2">OS</th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>User ID</Th>
+              <Th>Name</Th>
+              <Th>Role</Th>
+              <Th>Login Date</Th>
+              <Th>Login Time</Th>
+              <Th>Logout Time</Th>
+              <Th>Duration</Th>
+              <Th>Status</Th>
+              <Th>IP Address</Th>
+              <Th>Device</Th>
+              <Th>Browser</Th>
+              <Th>OS</Th>
             </tr>
           </thead>
           <tbody>
             {events.map((e) => {
               const loginDate = new Date(e.loginAt);
               return (
-                <tr key={e.id} className="border-b border-border last:border-0 transition-colors hover:bg-surface-muted/50">
-                  <td className="px-3 py-2 font-medium text-foreground">{e.username}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{e.fullName ?? "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{e.role ?? "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatDate(loginDate)}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{loginDate.toLocaleTimeString("en-AU")}</td>
-                  <td className="px-3 py-2 text-muted-foreground">
+                <tr key={e.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                  <td className="px-3 py-2.5 font-medium text-foreground">{e.username}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{e.fullName ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{e.role ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{formatDate(loginDate)}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{loginDate.toLocaleTimeString("en-AU")}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">
                     {e.logoutAt ? new Date(e.logoutAt).toLocaleTimeString("en-AU") : "—"}
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatDuration(e.durationSeconds)}</td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
-                        e.status === "SUCCESS"
-                          ? "border-success/30 bg-success/10 text-success"
-                          : "border-danger/30 bg-danger/10 text-danger"
-                      }`}
-                    >
+                  <td className="px-3 py-2.5 text-muted-foreground">{formatDuration(e.durationSeconds)}</td>
+                  <td className="px-3 py-2.5">
+                    <Badge tone={e.status === "SUCCESS" ? "success" : "danger"}>
                       {e.status === "SUCCESS" ? "Success" : "Failed"}
-                    </span>
+                    </Badge>
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">{e.ipAddress ?? "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{e.device}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{e.browser}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{e.os}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{e.ipAddress ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{e.device}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{e.browser}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{e.os}</td>
                 </tr>
               );
             })}
             {events.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  No login events match these filters.
+                <td colSpan={12}>
+                  <EmptyState title="No login events match these filters." />
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between print:hidden">
@@ -219,20 +211,12 @@ export default function LoginHistoryClient({
             Page {page} of {totalPages} · {total} total events
           </p>
           <div className="flex gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => goToPage(page - 1)}
-              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground disabled:opacity-40"
-            >
+            <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
               ← Prev
-            </button>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => goToPage(page + 1)}
-              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground disabled:opacity-40"
-            >
+            </Button>
+            <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>
               Next →
-            </button>
+            </Button>
           </div>
         </div>
       )}

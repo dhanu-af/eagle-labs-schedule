@@ -67,7 +67,7 @@ export default function LoginForm({ next }: { next: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-full py-2.5 text-sm font-bold text-emerald-950 transition hover:brightness-110 disabled:opacity-60"
+        className="w-full rounded-full py-2.5 text-sm font-semibold text-emerald-950 transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:active:scale-100"
         style={{
           background: "linear-gradient(90deg, #34d399 0%, #2dd4bf 100%)",
           boxShadow: "0 0 24px rgba(45,212,191,0.35)",

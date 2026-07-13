@@ -6,6 +6,7 @@ import { createKbEntry, updateKbEntry, extractPdfText } from "@/lib/actions/kb-a
 import { KB_CATEGORY_LABEL } from "@/lib/ui";
 import type { KbCategory } from "@/generated/prisma";
 import type { KbEntry } from "./ask-dhanu-client";
+import { Button } from "@/components/ui/Button";
 
 const CATEGORY_OPTIONS = Object.keys(KB_CATEGORY_LABEL) as KbCategory[];
 
@@ -89,12 +90,12 @@ export default function KbEntryModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">
             {entry ? "Edit Knowledge Entry" : "Add Knowledge Entry"}
           </h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -107,7 +108,7 @@ export default function KbEntryModal({
               accept="application/pdf"
               onChange={handlePdfChange}
               disabled={extracting}
-              className="w-full text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
+              className="w-full text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground file:transition-colors file:duration-150 file:ease-out"
             />
           </Field>
           {extracting && <p className="mt-1.5 text-xs text-muted-foreground">Extracting text…</p>}
@@ -119,7 +120,7 @@ export default function KbEntryModal({
             <select
               name="category"
               defaultValue={entry?.category ?? "MACHINE_TROUBLESHOOTING"}
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
             >
               {CATEGORY_OPTIONS.map((c) => (
                 <option key={c} value={c}>
@@ -135,7 +136,7 @@ export default function KbEntryModal({
               value={titleValue}
               onChange={(e) => setTitleValue(e.target.value)}
               placeholder="e.g. Capsules are not closing properly"
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
             />
           </Field>
           <Field label="Keywords (comma-separated, helps search match this entry)">
@@ -144,7 +145,7 @@ export default function KbEntryModal({
               required
               defaultValue={entry?.keywords ?? ""}
               placeholder="e.g. capsules not closing, closing plate gap"
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
             />
           </Field>
           <Field label="Cause (optional)">
@@ -152,7 +153,7 @@ export default function KbEntryModal({
               name="cause"
               rows={2}
               defaultValue={entry?.cause ?? ""}
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
             />
           </Field>
           <Field label="Answer / Solution">
@@ -162,7 +163,7 @@ export default function KbEntryModal({
               rows={8}
               value={answerValue}
               onChange={(e) => setAnswerValue(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
             />
           </Field>
           <Field label="Source (optional)">
@@ -171,20 +172,16 @@ export default function KbEntryModal({
               value={sourceValue}
               onChange={(e) => setSourceValue(e.target.value)}
               placeholder="e.g. NJP-800C manual, Section 8"
-              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
+              className="input"
             />
           </Field>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Saving..." : "Save"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

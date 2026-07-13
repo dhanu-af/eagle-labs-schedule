@@ -6,6 +6,10 @@ import { askDhanu, deleteKbEntry, type KbMatch } from "@/lib/actions/kb-actions"
 import { KB_CATEGORY_CLASS, KB_CATEGORY_LABEL } from "@/lib/ui";
 import type { KbCategory } from "@/generated/prisma";
 import KbEntryModal from "./kb-entry-modal";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export type KbEntry = {
   id: string;
@@ -44,7 +48,7 @@ const SAMPLE_QUESTIONS = [
 function AnswerCard({ match, highlight }: { match: KbMatch; highlight?: boolean }) {
   return (
     <div
-      className={`card-shadow rounded-2xl border p-5 ${
+      className={`card-shadow rounded-xl border p-5 ${
         highlight ? "border-primary/40 bg-primary/5" : "border-border bg-surface"
       }`}
     >
@@ -132,14 +136,12 @@ export default function AskDhanuClient({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Ask Dhanu</h1>
-        <p className="text-sm text-muted-foreground">
-          Instant answers for blending SOP and capsule machine questions — no need to wait for Dhanu.
-        </p>
-      </div>
+      <PageHeader
+        title="Ask Dhanu"
+        subtitle="Instant answers for blending SOP and capsule machine questions — no need to wait for Dhanu."
+      />
 
-      <div className="glass card-shadow rounded-2xl border border-border p-5">
+      <div className="glass card-shadow rounded-xl border border-border p-5">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -151,15 +153,11 @@ export default function AskDhanuClient({
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="e.g. Why are the capsules not closing properly?"
-            className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-foreground"
+            className="input flex-1"
           />
-          <button
-            type="submit"
-            disabled={pending || !question.trim()}
-            className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={pending || !question.trim()}>
             {pending ? "Searching..." : "Ask"}
-          </button>
+          </Button>
         </form>
         <div className="mt-3 flex flex-wrap gap-2">
           {SAMPLE_QUESTIONS.map((s) => (
@@ -169,7 +167,7 @@ export default function AskDhanuClient({
                 setQuestion(s);
                 ask(s);
               }}
-              className="rounded-full border border-border bg-surface-muted px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
+              className="rounded-full border border-border bg-surface-muted px-3 py-1 text-xs text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
             >
               {s}
             </button>
@@ -180,8 +178,8 @@ export default function AskDhanuClient({
       {result && (
         <div className="space-y-3">
           {result.matches.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-border bg-surface p-6 text-center text-sm text-muted-foreground">
-              No matching answer found yet. Your question has been logged — ask your supervisor or Dhanu directly for now, and this will help expand the knowledge base.
+            <div className="rounded-xl border border-dashed border-border bg-surface">
+              <EmptyState title="No matching answer found yet." description="Your question has been logged — ask your supervisor or Dhanu directly for now, and this will help expand the knowledge base." />
             </div>
           )}
           {result.matches.length > 0 && !result.confident && (
@@ -197,35 +195,24 @@ export default function AskDhanuClient({
 
       {canEdit && (
         <div className="space-y-3">
-          <button
-            onClick={() => setShowManage((v) => !v)}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted"
-          >
+          <Button variant="secondary" onClick={() => setShowManage((v) => !v)}>
             {showManage ? "Hide" : "Manage"} knowledge base
-          </button>
+          </Button>
 
           {showManage && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-base font-semibold text-foreground">Browse knowledge base</h2>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setShowLog((v) => !v)}
-                    className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted"
-                  >
+                  <Button variant="secondary" onClick={() => setShowLog((v) => !v)}>
                     {showLog ? "Hide" : "View"} recent questions
-                  </button>
-                  <button
-                    onClick={() => setShowAdd(true)}
-                    className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-                  >
-                    + Add Entry
-                  </button>
+                  </Button>
+                  <Button onClick={() => setShowAdd(true)}>+ Add Entry</Button>
                 </div>
               </div>
 
               {showLog && (
-                <div className="rounded-2xl border border-border bg-surface p-4">
+                <Card padding="sm">
                   <h3 className="mb-2 text-sm font-semibold text-foreground">Recent questions asked</h3>
                   {recentQuestions.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No questions asked yet.</p>
@@ -242,13 +229,13 @@ export default function AskDhanuClient({
                       ))}
                     </div>
                   )}
-                </div>
+                </Card>
               )}
 
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveCategory("ALL")}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
                     activeCategory === "ALL" ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -258,7 +245,7 @@ export default function AskDhanuClient({
                   <button
                     key={c}
                     onClick={() => setActiveCategory(c)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150 ease-out ${
                       activeCategory === c ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -271,7 +258,7 @@ export default function AskDhanuClient({
                 value={browseFilter}
                 onChange={(e) => setBrowseFilter(e.target.value)}
                 placeholder="Filter entries..."
-                className="w-full rounded-xl border border-border bg-surface px-4 py-2 text-sm text-foreground sm:max-w-xs"
+                className="input sm:max-w-xs"
               />
 
               {CATEGORY_ORDER.filter((c) => grouped.has(c)).map((c) => (
@@ -288,7 +275,7 @@ export default function AskDhanuClient({
                                 ev.preventDefault();
                                 setEditEntry(e);
                               }}
-                              className="text-xs text-muted-foreground hover:text-foreground"
+                              className="text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
                             >
                               Edit
                             </button>
@@ -297,11 +284,11 @@ export default function AskDhanuClient({
                                 ev.preventDefault();
                                 remove(e.id);
                               }}
-                              className="text-xs text-danger hover:opacity-80"
+                              className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80"
                             >
                               Delete
                             </button>
-                            <span className="text-muted-foreground transition group-open:rotate-180">▾</span>
+                            <span className="text-muted-foreground transition-transform duration-200 group-open:rotate-180">▾</span>
                           </div>
                         </summary>
                         <div className="mt-3 space-y-1.5 border-t border-border pt-3">

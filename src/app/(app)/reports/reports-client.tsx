@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { toDateInputValue } from "@/lib/ui";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type ReportDef = { key: string; label: string; description: string };
 
@@ -19,12 +21,9 @@ export default function ReportsClient() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Reports</h1>
-        <p className="text-sm text-muted-foreground">Export data as Excel (.xlsx) for a date range.</p>
-      </div>
+      <PageHeader title="Reports" subtitle="Export data as Excel (.xlsx) for a date range." />
 
-      <div className="flex flex-wrap items-center gap-3 card-shadow rounded-2xl border border-border bg-surface p-4">
+      <Card padding="sm" className="flex flex-wrap items-center gap-3">
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-muted-foreground">From</span>
           <input
@@ -43,20 +42,20 @@ export default function ReportsClient() {
             className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
           />
         </label>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {REPORTS.map((r) => (
-          <div key={r.key} className="card-shadow rounded-2xl border border-border bg-surface p-4">
+          <Card key={r.key} padding="sm">
             <p className="text-sm font-semibold text-foreground">{r.label}</p>
             <p className="mt-1 text-xs text-muted-foreground">{r.description}</p>
             <a
               href={`/api/reports/${r.key}?start=${start}&end=${end}`}
-              className="mt-3 inline-block rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+              className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors duration-150 ease-out hover:opacity-90 active:scale-[0.98]"
             >
               Download Excel
             </a>
-          </div>
+          </Card>
         ))}
       </div>
 

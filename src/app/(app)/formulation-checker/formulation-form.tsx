@@ -3,6 +3,9 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createFormulation, updateFormulation, type IngredientInput } from "@/lib/actions/formulation-actions";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 type Folder = { id: string; name: string };
 
@@ -103,8 +106,8 @@ export default function FormulationForm({
 
   return (
     <div className="space-y-4">
-      <div className="card-shadow rounded-2xl border border-border bg-surface p-5">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Master Formulation — Controlled Percentage Basis</h2>
+      <Card>
+        <h2 className="mb-3 text-[15px] font-semibold text-foreground">Master Formulation — Controlled Percentage Basis</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Product Name</span>
@@ -130,24 +133,24 @@ export default function FormulationForm({
             <input value={baseUnit} onChange={(e) => setBaseUnit(e.target.value)} className="input" />
           </label>
         </div>
-      </div>
+      </Card>
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[1100px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-2 py-2">No.</th>
-              <th className="px-2 py-2">RM Number</th>
-              <th className="px-2 py-2">Ingredient / AAN</th>
-              <th className="px-2 py-2">UIN</th>
-              <th className="px-2 py-2">Base Qty ({baseUnit})</th>
-              <th className="px-2 py-2">% w/w</th>
-              <th className="px-2 py-2">Tolerance %</th>
-              <th className="px-2 py-2">Control Status</th>
-              <th className="px-2 py-2">Change Control Ref</th>
-              <th className="px-2 py-2">Approved By</th>
-              <th className="px-2 py-2">Comments</th>
-              <th className="px-2 py-2"></th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>No.</Th>
+              <Th>RM Number</Th>
+              <Th>Ingredient / AAN</Th>
+              <Th>UIN</Th>
+              <Th>Base Qty ({baseUnit})</Th>
+              <Th>% w/w</Th>
+              <Th>Tolerance %</Th>
+              <Th>Control Status</Th>
+              <Th>Change Control Ref</Th>
+              <Th>Approved By</Th>
+              <Th>Comments</Th>
+              <Th></Th>
             </tr>
           </thead>
           <tbody>
@@ -155,16 +158,16 @@ export default function FormulationForm({
               const qty = Number(r.baseQty) || 0;
               const pctWw = totalQty > 0 ? (qty / totalQty) * 100 : 0;
               return (
-                <tr key={r.key} className="border-b border-border last:border-0">
+                <tr key={r.key} className="border-b border-border last:border-0 even:bg-surface-muted/30">
                   <td className="px-2 py-1.5 text-muted-foreground">{i + 1}</td>
                   <td className="px-2 py-1.5">
-                    <input value={r.rmNumber ?? ""} onChange={(e) => updateRow(r.key, { rmNumber: e.target.value })} className="input w-24" />
+                    <input value={r.rmNumber ?? ""} onChange={(e) => updateRow(r.key, { rmNumber: e.target.value })} className="input" style={{ width: "6rem" }} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input value={r.ingredientName} onChange={(e) => updateRow(r.key, { ingredientName: e.target.value })} className="input w-40" />
+                    <input value={r.ingredientName} onChange={(e) => updateRow(r.key, { ingredientName: e.target.value })} className="input" style={{ width: "10rem" }} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input value={r.uin ?? ""} onChange={(e) => updateRow(r.key, { uin: e.target.value })} className="input w-20" />
+                    <input value={r.uin ?? ""} onChange={(e) => updateRow(r.key, { uin: e.target.value })} className="input" style={{ width: "5rem" }} />
                   </td>
                   <td className="px-2 py-1.5">
                     <input
@@ -172,7 +175,8 @@ export default function FormulationForm({
                       step="0.001"
                       value={r.baseQty}
                       onChange={(e) => updateRow(r.key, { baseQty: Number(e.target.value) })}
-                      className="input w-24"
+                      className="input"
+                      style={{ width: "6rem" }}
                     />
                   </td>
                   <td className="px-2 py-1.5 text-muted-foreground">{pctWw.toFixed(4)}%</td>
@@ -182,23 +186,24 @@ export default function FormulationForm({
                       step="0.1"
                       value={r.tolerancePct}
                       onChange={(e) => updateRow(r.key, { tolerancePct: Number(e.target.value) })}
-                      className="input w-16"
+                      className="input"
+                      style={{ width: "4rem" }}
                     />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input value={r.controlStatus ?? ""} onChange={(e) => updateRow(r.key, { controlStatus: e.target.value })} className="input w-24" />
+                    <input value={r.controlStatus ?? ""} onChange={(e) => updateRow(r.key, { controlStatus: e.target.value })} className="input" style={{ width: "6rem" }} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input value={r.changeControlRef ?? ""} onChange={(e) => updateRow(r.key, { changeControlRef: e.target.value })} className="input w-24" />
+                    <input value={r.changeControlRef ?? ""} onChange={(e) => updateRow(r.key, { changeControlRef: e.target.value })} className="input" style={{ width: "6rem" }} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input value={r.approvedBy ?? ""} onChange={(e) => updateRow(r.key, { approvedBy: e.target.value })} className="input w-24" />
+                    <input value={r.approvedBy ?? ""} onChange={(e) => updateRow(r.key, { approvedBy: e.target.value })} className="input" style={{ width: "6rem" }} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input value={r.comments ?? ""} onChange={(e) => updateRow(r.key, { comments: e.target.value })} className="input w-32" />
+                    <input value={r.comments ?? ""} onChange={(e) => updateRow(r.key, { comments: e.target.value })} className="input" style={{ width: "8rem" }} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <button onClick={() => removeRow(r.key)} className="text-xs text-danger hover:opacity-80">
+                    <button onClick={() => removeRow(r.key)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
                       Remove
                     </button>
                   </td>
@@ -217,29 +222,21 @@ export default function FormulationForm({
             </tr>
           </tfoot>
         </table>
-      </div>
+      </Card>
 
-      <button onClick={addRow} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+      <Button variant="secondary" onClick={addRow}>
         + Add Ingredient
-      </button>
+      </Button>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-surface-muted"
-        >
+        <Button type="button" variant="secondary" onClick={() => router.back()}>
           Cancel
-        </button>
-        <button
-          onClick={submit}
-          disabled={pending}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-        >
+        </Button>
+        <Button onClick={submit} disabled={pending}>
           {pending ? "Saving..." : "Save Formulation"}
-        </button>
+        </Button>
       </div>
     </div>
   );

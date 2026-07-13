@@ -6,6 +6,8 @@ import { sendChatMessage } from "@/lib/actions/chat-actions";
 import { formatBrisbaneDateTime, initials } from "@/lib/ui";
 import { ROLE_LABEL } from "@/app/(app)/team/team-client";
 import type { Role } from "@/generated/prisma";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export type ChatMessage = {
   id: string;
@@ -52,20 +54,13 @@ export default function TeamChatClient({
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Team Chat</h1>
-        <p className="text-sm text-muted-foreground">One shared room — every team member can post here.</p>
-      </div>
+      <PageHeader title="Team Chat" subtitle="One shared room — every team member can post here." />
 
       <div
         ref={listRef}
-        className="card-shadow mt-4 flex-1 space-y-3 overflow-y-auto rounded-2xl border border-border bg-surface p-4"
+        className="card-shadow mt-4 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border bg-surface p-4"
       >
-        {messages.length === 0 && (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            No messages yet. Say hello 👋
-          </p>
-        )}
+        {messages.length === 0 && <EmptyState title="No messages yet. Say hello 👋" />}
         {messages.map((m) => {
           const isMe = !!currentUserId && m.authorId === currentUserId;
           return (
@@ -111,12 +106,12 @@ export default function TeamChatClient({
             }
           }}
           placeholder="Type a message..."
-          className="flex-1 rounded-full border border-border bg-surface px-4 py-2.5 text-sm text-foreground"
+          className="flex-1 rounded-full border border-border bg-surface px-4 py-2.5 text-sm text-foreground transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:border-primary"
         />
         <button
           type="submit"
           disabled={pending || !value.trim()}
-          className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors duration-150 ease-out hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
         >
           Send
         </button>

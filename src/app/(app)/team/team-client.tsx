@@ -4,6 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createEmployee, createTeam, deleteEmployee, deleteTeam, updateEmployee, updateTeam } from "@/lib/actions/team-actions";
 import { initials } from "@/lib/ui";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "TEAM_LEAD" | "QA" | "EMPLOYEE";
 type Team = { id: string; name: string; description: string | null };
@@ -49,28 +54,20 @@ export default function TeamClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">The Heart of Production</h1>
-          <p className="text-sm text-muted-foreground">Manage teams, roles, shifts and employee records.</p>
-        </div>
-        {canEdit && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowAddTeam(true)}
-              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted"
-            >
-              + Add Team
-            </button>
-            <button
-              onClick={() => setShowAddEmployee(true)}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              + Add Employee
-            </button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="The Heart of Production"
+        subtitle="Manage teams, roles, shifts and employee records."
+        actions={
+          canEdit && (
+            <>
+              <Button variant="secondary" onClick={() => setShowAddTeam(true)}>
+                + Add Team
+              </Button>
+              <Button onClick={() => setShowAddEmployee(true)}>+ Add Employee</Button>
+            </>
+          )
+        }
+      />
 
       {!canEdit && (
         <div className="rounded-xl border border-border bg-surface-muted px-4 py-2 text-xs text-muted-foreground">
@@ -80,7 +77,7 @@ export default function TeamClient({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {teams.map((t) => (
-          <div key={t.id} className="group relative card-shadow rounded-2xl border border-border bg-surface p-4">
+          <div key={t.id} className="group relative card-shadow card-hover rounded-xl border border-border bg-surface p-4">
             <p className="text-sm font-semibold text-foreground">{t.name}</p>
             <p className="text-xs text-muted-foreground">
               {employees.filter((e) => e.teamId === t.id).length} members
@@ -88,7 +85,7 @@ export default function TeamClient({
             {canEdit && (
               <button
                 onClick={() => setEditTeam(t)}
-                className="absolute right-2 top-2 hidden text-xs text-muted-foreground hover:text-primary group-hover:block"
+                className="absolute right-2 top-2 hidden text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-primary group-hover:block"
               >
                 Edit
               </button>
@@ -97,16 +94,16 @@ export default function TeamClient({
         ))}
       </div>
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[820px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-4 py-2">Employee</th>
-              <th className="px-4 py-2">Team</th>
-              <th className="px-4 py-2">Role</th>
-              <th className="px-4 py-2">Shift</th>
-              <th className="px-4 py-2">Active</th>
-              <th className="px-4 py-2">Actions</th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>Employee</Th>
+              <Th>Team</Th>
+              <Th>Role</Th>
+              <Th>Shift</Th>
+              <Th>Active</Th>
+              <Th>Actions</Th>
             </tr>
           </thead>
           <tbody>
@@ -124,7 +121,7 @@ export default function TeamClient({
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {canEdit && showAddTeam && <AddTeamModal onClose={() => setShowAddTeam(false)} />}
       {canEdit && editTeam && <EditTeamModal team={editTeam} onClose={() => setEditTeam(null)} />}
@@ -185,21 +182,17 @@ function EmployeeRow({
   }
 
   return (
-    <tr className="border-b border-border last:border-0 transition-colors hover:bg-surface-muted/50">
-      <td className="px-4 py-2">
+    <tr className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+      <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
             {initials(employee.name)}
           </div>
           <span className="text-foreground">{employee.name}</span>
-          {locked && (
-            <span className="rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-              Protected
-            </span>
-          )}
+          {locked && <Badge tone="primary">Protected</Badge>}
         </div>
       </td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5">
         <select
           value={teamId}
           disabled={disabled}
@@ -216,7 +209,7 @@ function EmployeeRow({
           ))}
         </select>
       </td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5">
         <select
           value={role}
           disabled={disabled}
@@ -233,7 +226,7 @@ function EmployeeRow({
           ))}
         </select>
       </td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5">
         <select
           value={shift}
           disabled={disabled}
@@ -247,7 +240,7 @@ function EmployeeRow({
           <option>Night</option>
         </select>
       </td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5">
         <label className="inline-flex items-center gap-2">
           <input
             type="checkbox"
@@ -261,22 +254,18 @@ function EmployeeRow({
           <span className="text-xs text-muted-foreground">{active ? "Active" : "Inactive"}</span>
         </label>
       </td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
           {dirty && !disabled && (
-            <button
-              onClick={save}
-              disabled={pending}
-              className="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            <Button size="sm" onClick={save} disabled={pending}>
               {pending ? "..." : "Save"}
-            </button>
+            </Button>
           )}
           {!locked && canEdit && (
             <button
               onClick={remove}
               disabled={pending}
-              className="text-xs text-danger hover:opacity-80 disabled:opacity-60"
+              className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80 disabled:opacity-60"
             >
               Delete
             </button>
@@ -301,33 +290,29 @@ function AddTeamModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Add Team</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
         <form action={submit} className="space-y-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Name</span>
-            <input name="name" required className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            <input name="name" required className="input" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Description</span>
-            <input name="description" className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            <input name="description" className="input" />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Saving..." : "Add Team"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -365,37 +350,33 @@ function EditTeamModal({ team, onClose }: { team: Team; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Edit Team</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
         <form action={submit} className="space-y-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Name</span>
-            <input name="name" required defaultValue={team.name} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            <input name="name" required defaultValue={team.name} className="input" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Description</span>
-            <input name="description" defaultValue={team.description ?? ""} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            <input name="description" defaultValue={team.description ?? ""} className="input" />
           </label>
           <div className="flex justify-between gap-2 pt-2">
-            <button type="button" onClick={remove} className="rounded-lg border border-danger/30 px-3 py-1.5 text-sm text-danger hover:bg-danger/10">
+            <button type="button" onClick={remove} className="rounded-lg border border-danger/30 px-3 py-1.5 text-sm font-medium text-danger transition-colors duration-150 ease-out hover:bg-danger/10">
               Delete
             </button>
             <div className="flex gap-2">
-              <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+              <Button type="button" variant="secondary" onClick={onClose}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={pending}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-              >
+              </Button>
+              <Button type="submit" disabled={pending}>
                 {pending ? "Saving..." : "Save Changes"}
-              </button>
+              </Button>
             </div>
           </div>
         </form>
@@ -426,22 +407,22 @@ function AddEmployeeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Add Employee</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
         <form action={submit} className="space-y-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Name</span>
-            <input name="name" required className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            <input name="name" required className="input" />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Team</span>
-              <select name="teamId" required className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
+              <select name="teamId" required className="input">
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -451,7 +432,7 @@ function AddEmployeeModal({
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Role</span>
-              <select name="role" defaultValue="EMPLOYEE" className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
+              <select name="role" defaultValue="EMPLOYEE" className="input">
                 {assignableRoles.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABEL[r]}
@@ -462,22 +443,18 @@ function AddEmployeeModal({
           </div>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Shift</span>
-            <select name="shift" defaultValue="Day" className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
+            <select name="shift" defaultValue="Day" className="input">
               <option>Day</option>
               <option>Night</option>
             </select>
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Saving..." : "Add Employee"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

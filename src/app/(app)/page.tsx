@@ -3,6 +3,9 @@ import { getSession } from "@/lib/auth";
 import PostAnnouncementCard from "@/components/post-announcement-card";
 import ProgressRing from "@/components/progress-ring";
 import BrisbaneClock from "@/components/brisbane-clock";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   STATUS_CLASS,
   STATUS_LABEL,
@@ -73,50 +76,50 @@ export default async function DashboardPage() {
 
   return (
     <div className="animate-in space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Welcome back, {session?.fullName.split(" ")[0]}
-          </h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <PageHeader
+        title={`Welcome back, ${session?.fullName.split(" ")[0]}`}
+        subtitle={
+          <span className="flex items-center gap-2">
             <span>{formatBrisbaneDate(today)}</span>
             <span className="text-border">·</span>
             <BrisbaneClock />
-          </div>
-        </div>
-        {(statusCounts.DELAYED > 0 || pendingLeaves > 0) && (
-          <div className="flex gap-2">
-            {statusCounts.DELAYED > 0 && (
-              <span className="rounded-full border border-danger/30 bg-danger/10 px-3 py-1 text-xs font-medium text-danger">
-                {statusCounts.DELAYED} task{statusCounts.DELAYED > 1 ? "s" : ""} delayed
-              </span>
-            )}
-            {pendingLeaves > 0 && (
-              <span className="rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-medium text-warning">
-                {pendingLeaves} leave request{pendingLeaves > 1 ? "s" : ""} pending
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+          </span>
+        }
+        actions={
+          (statusCounts.DELAYED > 0 || pendingLeaves > 0) && (
+            <>
+              {statusCounts.DELAYED > 0 && (
+                <Badge tone="danger">
+                  {statusCounts.DELAYED} task{statusCounts.DELAYED > 1 ? "s" : ""} delayed
+                </Badge>
+              )}
+              {pendingLeaves > 0 && (
+                <Badge tone="warning">
+                  {pendingLeaves} leave request{pendingLeaves > 1 ? "s" : ""} pending
+                </Badge>
+              )}
+            </>
+          )
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Today's Tasks" value={tasks.length} icon={STAT_ICONS.tasks} tint="var(--info)" />
         <StatCard label="Running" value={statusCounts.RUNNING} icon={STAT_ICONS.running} tint="var(--info)" />
         <StatCard label="Completed" value={statusCounts.COMPLETED} icon={STAT_ICONS.completed} tint="var(--success)" />
         <StatCard label="Delayed" value={statusCounts.DELAYED} icon={STAT_ICONS.delayed} tint="var(--danger)" />
-        <div className="card-shadow flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 transition hover:-translate-y-0.5">
+        <Card interactive padding="sm" className="flex items-center gap-3">
           <ProgressRing percent={completionPct} size={56} stroke={6} />
           <div>
             <p className="text-xs text-muted-foreground">Completion</p>
             <p className="text-sm font-medium text-foreground">today&apos;s progress</p>
           </div>
-        </div>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card-shadow lg:col-span-2 rounded-2xl border border-border bg-surface p-5">
-          <h2 className="mb-4 text-sm font-semibold text-foreground">
+        <Card className="lg:col-span-2">
+          <h2 className="mb-4 text-[15px] font-semibold text-foreground">
             Today&apos;s Production — Blending &amp; Encapsulation
           </h2>
           <div className="space-y-4">
@@ -178,11 +181,11 @@ export default async function DashboardPage() {
               );
             })}
           </div>
-        </div>
+        </Card>
 
         <div className="space-y-4">
-          <div className="card-shadow rounded-2xl border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">KPI — Target vs Actual (Today)</h2>
+          <Card>
+            <h2 className="mb-4 text-[15px] font-semibold text-foreground">KPI — Target vs Actual (Today)</h2>
             <div className="flex flex-wrap justify-around gap-4">
               {kpis.map((k) => {
                 const actual = tasks
@@ -212,10 +215,10 @@ export default async function DashboardPage() {
                 );
               })}
             </div>
-          </div>
+          </Card>
 
-          <div className="card-shadow rounded-2xl border border-border bg-surface p-5">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Card>
+            <h2 className="mb-4 flex items-center gap-2 text-[15px] font-semibold text-foreground">
               <span aria-hidden>📣</span> Latest Announcements
             </h2>
             {latestAnnouncements.length === 0 ? (
@@ -232,7 +235,7 @@ export default async function DashboardPage() {
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
 
@@ -253,7 +256,7 @@ function StatCard({
   tint: string;
 }) {
   return (
-    <div className="card-shadow group rounded-2xl border border-border bg-surface p-4 transition hover:-translate-y-0.5">
+    <Card interactive padding="sm">
       <div
         className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl"
         style={{
@@ -263,8 +266,8 @@ function StatCard({
       >
         {icon}
       </div>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
+    </Card>
   );
 }

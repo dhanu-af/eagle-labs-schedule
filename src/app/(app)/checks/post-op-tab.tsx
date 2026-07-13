@@ -9,6 +9,10 @@ import type { PostOpRow } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
 import { Field, SignatureField } from "./supervisor-preop-tab";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 const ITEM_LABEL: Record<PostOpItem, string> = {
   BLENDING_ROOM: "Blending Room",
@@ -100,45 +104,38 @@ export default function PostOpTab({
         </select>
         <div className="flex gap-2">
           <ExportButton type="postop" />
-          {canSubmit && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              + New Post-Op Check
-            </button>
-          )}
+          {canSubmit && <Button onClick={() => setShowForm(true)}>+ New Post-Op Check</Button>}
         </div>
       </div>
 
-      <div className="card-shadow overflow-x-auto rounded-2xl border border-border bg-surface">
+      <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[1150px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-muted/40 text-left text-xs text-muted-foreground">
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Item</th>
-              <th className="px-3 py-2">Cleaning Type</th>
-              <th className="px-3 py-2">Verification</th>
-              <th className="px-3 py-2">Submitted By</th>
-              <th className="px-3 py-2">Verified By</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Comments</th>
-              <th className="px-3 py-2">Actions</th>
+            <tr className={THEAD_ROW_CLASS}>
+              <Th>Date</Th>
+              <Th>Item</Th>
+              <Th>Cleaning Type</Th>
+              <Th>Verification</Th>
+              <Th>Submitted By</Th>
+              <Th>Verified By</Th>
+              <Th>Status</Th>
+              <Th>Comments</Th>
+              <Th>Actions</Th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((r) => (
-              <tr key={r.id} className="border-b border-border last:border-0 hover:bg-surface-muted/50">
-                <td className="px-3 py-2 text-muted-foreground">{r.date.slice(0, 10)}</td>
-                <td className="px-3 py-2 text-foreground">{ITEM_LABEL[r.item]}</td>
-                <td className="px-3 py-2 text-muted-foreground">{CLEANING_LABEL[r.cleaningType]}</td>
-                <td className="px-3 py-2 text-muted-foreground">{r.cleaningVerificationStatus ?? "—"}</td>
-                <td className="px-3 py-2 text-muted-foreground">
+              <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
+                <td className="px-3 py-2.5 text-foreground">{ITEM_LABEL[r.item]}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">{CLEANING_LABEL[r.cleaningType]}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">{r.cleaningVerificationStatus ?? "—"}</td>
+                <td className="px-3 py-2.5 text-muted-foreground">
                   {r.submittedByName}
                   <br />
                   <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
                 </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
+                <td className="px-3 py-2.5 text-xs text-muted-foreground">
                   {r.verifiedByName ? (
                     <>
                       ✓ {r.verifiedByName}
@@ -146,24 +143,24 @@ export default function PostOpTab({
                       {r.verifiedAt && `Signed ${formatBrisbaneTime(r.verifiedAt)}`}
                     </>
                   ) : canVerify && !r.locked ? (
-                    <button onClick={() => setVerifyingId(r.id)} className="text-info hover:opacity-80">
+                    <button onClick={() => setVerifyingId(r.id)} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                       Verify
                     </button>
                   ) : (
                     "—"
                   )}
                 </td>
-                <td className="px-3 py-2">{STATUS_BADGE[r.status]}</td>
-                <td className="max-w-[200px] px-3 py-2 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
+                <td className="max-w-[200px] px-3 py-2.5 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
+                <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     {r.locked && canUnlock && (
-                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs text-info hover:opacity-80">
+                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
                         Unlock
                       </button>
                     )}
                     {canDelete && (
-                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs text-danger hover:opacity-80">
+                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
                         Delete
                       </button>
                     )}
@@ -173,14 +170,14 @@ export default function PostOpTab({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  No records match these filters.
+                <td colSpan={9}>
+                  <EmptyState title="No records match these filters." />
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       {showForm && <PostOpForm onClose={() => setShowForm(false)} />}
       {verifyingId && (
@@ -216,10 +213,10 @@ function PostOpForm({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Post-Operational Check</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
             ✕
           </button>
         </div>
@@ -257,16 +254,12 @@ function PostOpForm({ onClose }: { onClose: () => void }) {
           <SignatureField />
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={pending}>
               {pending ? "Signing & Submitting..." : "Sign & Submit"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -287,7 +280,7 @@ function VerifyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
         <h2 className="mb-3 text-base font-semibold text-foreground">Cleaning Verification</h2>
         <Field label="Verification Status">
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="input">
@@ -296,16 +289,12 @@ function VerifyModal({
           </select>
         </Field>
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted">
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            disabled={pending}
-            onClick={() => onVerify(status)}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-          >
+          </Button>
+          <Button disabled={pending} onClick={() => onVerify(status)}>
             {pending ? "Saving..." : "Confirm Verification"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
