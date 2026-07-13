@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ResponsiveContainer,
@@ -24,6 +24,8 @@ import type { EnvArea } from "@/generated/prisma";
 import type { EnvironmentalCheckRow, EnvLimit } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
+import { groupRecordsByPeriod } from "./group-records";
+import { GroupToggle, GroupHeaderRow } from "./group-toggle";
 import { Field, SignatureField } from "./supervisor-preop-tab";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -72,12 +74,15 @@ export default function EnvironmentalTab({
   const [showLimits, setShowLimits] = useState(false);
   const [filterArea, setFilterArea] = useState<EnvArea | "">("");
   const [grouping, setGrouping] = useState<Grouping>("daily");
+  const [view, setView] = useState<"day" | "week">("day");
   const [pending, startTransition] = useTransition();
 
   const filtered = useMemo(
     () => (filterArea ? rows.filter((r) => r.area === filterArea) : rows),
     [rows, filterArea]
   );
+
+  const groups = useMemo(() => groupRecordsByPeriod(filtered, (r) => r.date, view), [filtered, view]);
 
   const chartData = useMemo(() => {
     const area = filterArea || "BLENDING_ROOM";
@@ -180,6 +185,10 @@ export default function EnvironmentalTab({
         )}
       </Card>
 
+      <div className="flex items-center justify-end">
+        <GroupToggle view={view} onChange={setView} />
+      </div>
+
       <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[1150px] text-sm">
           <thead>
@@ -198,67 +207,72 @@ export default function EnvironmentalTab({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => (
-              <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
-                <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
-                <td className="px-3 py-2.5 text-foreground">{AREA_LABEL[r.area]}</td>
-                <td className="px-3 py-2.5 tabular-nums">{r.temperature}</td>
-                <td className="px-3 py-2.5 tabular-nums">{r.humidity}</td>
-                <td className="px-3 py-2.5">
-                  {r.passFail ? <Badge tone="success">Pass</Badge> : <Badge tone="danger">OOS</Badge>}
-                </td>
-                <td className="px-3 py-2.5 text-muted-foreground">
-                  {r.submittedByName}
-                  <br />
-                  <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
-                </td>
-                <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                  {r.supervisorApprovedByName ? (
-                    <>
-                      ✓ {r.supervisorApprovedByName}
+            {groups.map((g) => (
+              <Fragment key={g.key}>
+                <GroupHeaderRow colSpan={11} label={g.label} count={g.rows.length} />
+                {g.rows.map((r) => (
+                  <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
+                    <td className="px-3 py-2.5 text-foreground">{AREA_LABEL[r.area]}</td>
+                    <td className="px-3 py-2.5 tabular-nums">{r.temperature}</td>
+                    <td className="px-3 py-2.5 tabular-nums">{r.humidity}</td>
+                    <td className="px-3 py-2.5">
+                      {r.passFail ? <Badge tone="success">Pass</Badge> : <Badge tone="danger">OOS</Badge>}
+                    </td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      {r.submittedByName}
                       <br />
-                      {r.supervisorApprovedAt && `Signed ${formatBrisbaneTime(r.supervisorApprovedAt)}`}
-                    </>
-                  ) : canApproveSupervisor && !r.locked ? (
-                    <button disabled={pending} onClick={() => approve(r.id, "SUPERVISOR")} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
-                      Approve
-                    </button>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                  {r.qaApprovedByName ? (
-                    <>
-                      ✓ {r.qaApprovedByName}
-                      <br />
-                      {r.qaApprovedAt && `Signed ${formatBrisbaneTime(r.qaApprovedAt)}`}
-                    </>
-                  ) : canApproveQa && !r.locked ? (
-                    <button disabled={pending} onClick={() => approve(r.id, "QA")} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
-                      Approve
-                    </button>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
-                <td className="max-w-[200px] px-3 py-2.5 text-xs text-muted-foreground">{r.remarks ?? "—"}</td>
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    {r.locked && canUnlock && (
-                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
-                        Unlock
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
+                      <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {r.supervisorApprovedByName ? (
+                        <>
+                          ✓ {r.supervisorApprovedByName}
+                          <br />
+                          {r.supervisorApprovedAt && `Signed ${formatBrisbaneTime(r.supervisorApprovedAt)}`}
+                        </>
+                      ) : canApproveSupervisor && !r.locked ? (
+                        <button disabled={pending} onClick={() => approve(r.id, "SUPERVISOR")} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
+                          Approve
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {r.qaApprovedByName ? (
+                        <>
+                          ✓ {r.qaApprovedByName}
+                          <br />
+                          {r.qaApprovedAt && `Signed ${formatBrisbaneTime(r.qaApprovedAt)}`}
+                        </>
+                      ) : canApproveQa && !r.locked ? (
+                        <button disabled={pending} onClick={() => approve(r.id, "QA")} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
+                          Approve
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
+                    <td className="max-w-[200px] px-3 py-2.5 text-xs text-muted-foreground">{r.remarks ?? "—"}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        {r.locked && canUnlock && (
+                          <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
+                            Unlock
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
             {filtered.length === 0 && (
               <tr>

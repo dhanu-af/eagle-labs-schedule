@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPostOpCheck, verifyPostOpCheck, unlockCheckRecord, deleteCheckRecord } from "@/lib/actions/checks-actions";
 import { toDateInputValueUTC, todayInBrisbane, formatBrisbaneTime } from "@/lib/ui";
@@ -8,6 +8,8 @@ import type { CleaningType, PostOpItem } from "@/generated/prisma";
 import type { PostOpRow } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
+import { groupRecordsByPeriod } from "./group-records";
+import { GroupToggle, GroupHeaderRow } from "./group-toggle";
 import { Field, SignatureField } from "./supervisor-preop-tab";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -47,6 +49,7 @@ export default function PostOpTab({
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [filterItem, setFilterItem] = useState<PostOpItem | "">("");
+  const [view, setView] = useState<"day" | "week">("day");
   const [pending, startTransition] = useTransition();
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
@@ -54,6 +57,8 @@ export default function PostOpTab({
     () => (filterItem ? rows.filter((r) => r.item === filterItem) : rows),
     [rows, filterItem]
   );
+
+  const groups = useMemo(() => groupRecordsByPeriod(filtered, (r) => r.date, view), [filtered, view]);
 
   function verify(id: string, status: string) {
     startTransition(async () => {
@@ -102,7 +107,8 @@ export default function PostOpTab({
             ))}
           </optgroup>
         </select>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <GroupToggle view={view} onChange={setView} />
           <ExportButton type="postop" />
           {canSubmit && <Button onClick={() => setShowForm(true)}>+ New Post-Op Check</Button>}
         </div>
@@ -126,51 +132,56 @@ export default function PostOpTab({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => (
-              <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
-                <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
-                <td className="px-3 py-2.5 text-foreground">{ITEM_LABEL[r.item]}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.previousProductName ?? "—"}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.previousBatchNumber ?? "—"}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{CLEANING_LABEL[r.cleaningType]}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.cleaningVerificationStatus ?? "—"}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">
-                  {r.submittedByName}
-                  <br />
-                  <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
-                </td>
-                <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                  {r.verifiedByName ? (
-                    <>
-                      ✓ {r.verifiedByName}
+            {groups.map((g) => (
+              <Fragment key={g.key}>
+                <GroupHeaderRow colSpan={11} label={g.label} count={g.rows.length} />
+                {g.rows.map((r) => (
+                  <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.date.slice(0, 10)}</td>
+                    <td className="px-3 py-2.5 text-foreground">{ITEM_LABEL[r.item]}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.previousProductName ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.previousBatchNumber ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{CLEANING_LABEL[r.cleaningType]}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.cleaningVerificationStatus ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      {r.submittedByName}
                       <br />
-                      {r.verifiedAt && `Signed ${formatBrisbaneTime(r.verifiedAt)}`}
-                    </>
-                  ) : canVerify && !r.locked ? (
-                    <button onClick={() => setVerifyingId(r.id)} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
-                      Verify
-                    </button>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
-                <td className="max-w-[200px] px-3 py-2.5 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    {r.locked && canUnlock && (
-                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
-                        Unlock
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
+                      <span className="text-xs">Signed {formatBrisbaneTime(r.submittedAt)}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {r.verifiedByName ? (
+                        <>
+                          ✓ {r.verifiedByName}
+                          <br />
+                          {r.verifiedAt && `Signed ${formatBrisbaneTime(r.verifiedAt)}`}
+                        </>
+                      ) : canVerify && !r.locked ? (
+                        <button onClick={() => setVerifyingId(r.id)} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
+                          Verify
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
+                    <td className="max-w-[200px] px-3 py-2.5 text-xs text-muted-foreground">{r.comments ?? "—"}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        {r.locked && canUnlock && (
+                          <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
+                            Unlock
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
             {filtered.length === 0 && (
               <tr>

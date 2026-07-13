@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createWorkLog, approveWorkLog, unlockCheckRecord, deleteCheckRecord } from "@/lib/actions/checks-actions";
 import { toDateInputValueUTC, todayInBrisbane, formatBrisbaneTime } from "@/lib/ui";
@@ -8,6 +8,8 @@ import type { WorkLogRoom, WorkLogActivity } from "@/generated/prisma";
 import type { WorkLogRow } from "./checks-client";
 import { STATUS_BADGE } from "./status-badge";
 import { ExportButton } from "./export-button";
+import { groupRecordsByPeriod } from "./group-records";
+import { GroupToggle, GroupHeaderRow } from "./group-toggle";
 import { Field, SignatureField } from "./supervisor-preop-tab";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -68,6 +70,7 @@ export default function WorkLogTab({
   const [room, setRoom] = useState<WorkLogRoom>("ENCAPSULATION_ROOM");
   const [showForm, setShowForm] = useState(false);
   const [filterDate, setFilterDate] = useState("");
+  const [view, setView] = useState<"day" | "week">("day");
   const [pending, startTransition] = useTransition();
 
   const filtered = useMemo(
@@ -79,6 +82,8 @@ export default function WorkLogTab({
       }),
     [rows, room, filterDate]
   );
+
+  const groups = useMemo(() => groupRecordsByPeriod(filtered, (r) => r.startDate, view), [filtered, view]);
 
   function approve(id: string) {
     startTransition(async () => {
@@ -127,7 +132,8 @@ export default function WorkLogTab({
           onChange={(e) => setFilterDate(e.target.value)}
           className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
         />
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <GroupToggle view={view} onChange={setView} />
           <ExportButton type="worklog" />
           {canSubmit && <Button onClick={() => setShowForm(true)}>+ New Work Log Entry</Button>}
         </div>
@@ -154,57 +160,62 @@ export default function WorkLogTab({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => (
-              <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
-                <td className="px-3 py-2.5 text-foreground">{r.opName}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.startDate.slice(0, 10)}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.startTime}</td>
-                <td className="px-3 py-2.5 text-foreground">{r.productName}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.productCode}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.batchNumber}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">
-                  {ACTIVITY_LABEL[r.activity]}
-                  {r.activity === "OTHERS" && r.activityOther ? ` — ${r.activityOther}` : ""}
-                </td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.endDate?.slice(0, 10) ?? "—"}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.endTime ?? "—"}</td>
-                <td className="px-3 py-2.5 text-muted-foreground">{r.closingOpName ?? "—"}</td>
-                <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                  {r.signature}
-                  <br />
-                  <span>Signed {formatBrisbaneTime(r.submittedAt)}</span>
-                </td>
-                <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                  {r.supervisorApprovedByName ? (
-                    <>
-                      ✓ {r.supervisorApprovedByName}
+            {groups.map((g) => (
+              <Fragment key={g.key}>
+                <GroupHeaderRow colSpan={14} label={g.label} count={g.rows.length} />
+                {g.rows.map((r) => (
+                  <tr key={r.id} className="border-b border-border last:border-0 transition-colors duration-150 ease-out even:bg-surface-muted/30 hover:bg-surface-muted/60">
+                    <td className="px-3 py-2.5 text-foreground">{r.opName}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.startDate.slice(0, 10)}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.startTime}</td>
+                    <td className="px-3 py-2.5 text-foreground">{r.productName}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.productCode}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.batchNumber}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      {ACTIVITY_LABEL[r.activity]}
+                      {r.activity === "OTHERS" && r.activityOther ? ` — ${r.activityOther}` : ""}
+                    </td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.endDate?.slice(0, 10) ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.endTime ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.closingOpName ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {r.signature}
                       <br />
-                      {r.supervisorApprovedAt && formatBrisbaneTime(r.supervisorApprovedAt)}
-                    </>
-                  ) : canApprove && !r.locked ? (
-                    <button disabled={pending} onClick={() => approve(r.id)} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
-                      Approve
-                    </button>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    {r.locked && canUnlock && (
-                      <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
-                        Unlock
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
+                      <span>Signed {formatBrisbaneTime(r.submittedAt)}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {r.supervisorApprovedByName ? (
+                        <>
+                          ✓ {r.supervisorApprovedByName}
+                          <br />
+                          {r.supervisorApprovedAt && formatBrisbaneTime(r.supervisorApprovedAt)}
+                        </>
+                      ) : canApprove && !r.locked ? (
+                        <button disabled={pending} onClick={() => approve(r.id)} className="font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
+                          Approve
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">{STATUS_BADGE[r.status]}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        {r.locked && canUnlock && (
+                          <button disabled={pending} onClick={() => unlock(r.id)} className="text-xs font-medium text-info transition-colors duration-150 ease-out hover:opacity-80">
+                            Unlock
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button disabled={pending} onClick={() => remove(r.id)} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
             {filtered.length === 0 && (
               <tr>
