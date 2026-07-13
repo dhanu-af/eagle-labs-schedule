@@ -144,6 +144,7 @@ model User {
   failedLoginAttempts Int      @default(0)
   locked              Boolean  @default(false)
   createdAt           DateTime @default(now())
+  lastActiveAt        DateTime?
 
   employee    Employee?    @relation(fields: [employeeId], references: [id])
   loginEvents LoginEvent[]
@@ -539,14 +540,46 @@ model CheckAttachment {
 }
 
 model ChatMessage {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   authorId   String?
   authorName String
   authorRole Role
   message    String
-  createdAt  DateTime @default(now())
+  editedAt   DateTime?
+  createdAt  DateTime  @default(now())
+
+  replyToId String?
+  replyTo   ChatMessage?  @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[] @relation("ChatReplies")
+  reactions ChatReaction[]
 
   @@index([createdAt])
+}
+
+model ChatReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  userName  String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+}
+
+/// One row per user — tracks how far into the shared chat room they've read.
+model ChatReceipt {
+  userId     String   @id
+  lastReadAt DateTime @default(now())
+}
+
+/// One row per user — presence of an active "typing…" state, expires by age (no cleanup job needed).
+model ChatTyping {
+  userId    String   @id
+  userName  String
+  updatedAt DateTime @default(now())
 }
 
 model FormulationFolder {
