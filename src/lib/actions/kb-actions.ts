@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canEdit } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import type { KbCategory } from "@/generated/prisma";
+import { PDFParse } from "pdf-parse";
 
 const STOP_WORDS = new Set([
   "the", "a", "an", "is", "are", "was", "were", "be", "been", "to", "of", "in", "on",
@@ -106,6 +107,25 @@ export async function askDhanu(question: string): Promise<{
     })),
     confident,
   };
+}
+
+/** Super Admin only: extract the text of an uploaded PDF so it can be reviewed and saved as a knowledge entry. */
+export async function extractPdfText(formData: FormData): Promise<string> {
+  const session = await getSession();
+  if (!session || !canEdit(session.role)) throw new Error("Not authorized");
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) throw new Error("No file uploaded");
+  if (file.type !== "application/pdf") throw new Error("Only PDF files are supported");
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    return result.text.trim();
+  } finally {
+    await parser.destroy();
+  }
 }
 
 export async function createKbEntry(data: {

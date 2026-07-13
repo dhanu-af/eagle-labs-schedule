@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createKbEntry, updateKbEntry } from "@/lib/actions/kb-actions";
+import { createKbEntry, updateKbEntry, extractPdfText } from "@/lib/actions/kb-actions";
 import { KB_CATEGORY_LABEL } from "@/lib/ui";
 import type { KbCategory } from "@/generated/prisma";
 import type { KbEntry } from "./ask-dhanu-client";
@@ -18,6 +18,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function titleFromFileName(fileName: string) {
+  return fileName
+    .replace(/\.pdf$/i, "")
+    .replace(/[_-]+/g, " ")
+    .trim();
+}
+
 export default function KbEntryModal({
   entry,
   onClose,
@@ -27,6 +34,12 @@ export default function KbEntryModal({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [titleValue, setTitleValue] = useState(entry?.title ?? "");
+  const [answerValue, setAnswerValue] = useState(entry?.answer ?? "");
+  const [sourceValue, setSourceValue] = useState(entry?.source ?? "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function submit(formData: FormData) {
     const data = {
@@ -48,6 +61,32 @@ export default function KbEntryModal({
     });
   }
 
+  function handlePdfChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExtractError(null);
+    setExtracting(true);
+    startTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const text = await extractPdfText(fd);
+        if (!text) {
+          setExtractError("No selectable text was found in this PDF (it may be a scanned image).");
+        } else {
+          setAnswerValue(text);
+          if (!titleValue.trim()) setTitleValue(titleFromFileName(file.name));
+          if (!sourceValue.trim()) setSourceValue(file.name);
+        }
+      } catch (err) {
+        setExtractError(err instanceof Error ? err.message : "Couldn't read that PDF.");
+      } finally {
+        setExtracting(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    });
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
@@ -59,6 +98,22 @@ export default function KbEntryModal({
             ✕
           </button>
         </div>
+
+        <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <Field label="Or upload a PDF — its text will fill in the Answer field below for you to review">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handlePdfChange}
+              disabled={extracting}
+              className="w-full text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
+            />
+          </Field>
+          {extracting && <p className="mt-1.5 text-xs text-muted-foreground">Extracting text…</p>}
+          {extractError && <p className="mt-1.5 text-xs text-danger">{extractError}</p>}
+        </div>
+
         <form action={submit} className="space-y-3">
           <Field label="Category">
             <select
@@ -77,7 +132,8 @@ export default function KbEntryModal({
             <input
               name="title"
               required
-              defaultValue={entry?.title ?? ""}
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
               placeholder="e.g. Capsules are not closing properly"
               className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
             />
@@ -103,15 +159,17 @@ export default function KbEntryModal({
             <textarea
               name="answer"
               required
-              rows={4}
-              defaultValue={entry?.answer ?? ""}
+              rows={8}
+              value={answerValue}
+              onChange={(e) => setAnswerValue(e.target.value)}
               className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
             />
           </Field>
           <Field label="Source (optional)">
             <input
               name="source"
-              defaultValue={entry?.source ?? ""}
+              value={sourceValue}
+              onChange={(e) => setSourceValue(e.target.value)}
               placeholder="e.g. NJP-800C manual, Section 8"
               className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
             />
