@@ -17,6 +17,7 @@ const ROLE_DISPLAY: Record<string, string> = {
   SUPER_ADMIN: "super admin",
   ADMIN: "admin",
   SUPERVISOR: "supervisor",
+  OPERATIONS: "operations",
   TEAM_LEAD: "team lead",
   QA: "qa",
   EMPLOYEE: "operator",

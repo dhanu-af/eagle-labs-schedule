@@ -16,6 +16,7 @@ enum Role {
   TEAM_LEAD
   QA
   EMPLOYEE
+  OPERATIONS
 }
 
 enum PayRunStatus {

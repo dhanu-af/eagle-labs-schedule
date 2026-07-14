@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "TEAM_LEAD" | "QA" | "EMPLOYEE";
+type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "OPERATIONS" | "TEAM_LEAD" | "QA" | "EMPLOYEE";
 
 export type MyTaskEmployee = {
   id: string;
@@ -52,7 +52,7 @@ function categoryFor(role: Role, teamName: string) {
     if (teamName === "Encapsulation") return "Capsule Operator";
     return "Operator";
   }
-  if (role === "SUPERVISOR") return "Supervisor";
+  if (role === "SUPERVISOR" || role === "OPERATIONS") return "Supervisor";
   if (role === "QA") return "QA/QC";
   if (role === "TEAM_LEAD") return "Team Lead";
   return "Admin";

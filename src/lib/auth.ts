@@ -30,12 +30,22 @@ export function isAdminRole(role: Role) {
 
 /** Manager-tier: can *view* admin surfaces (Team, Payroll, Reports, Audit). */
 export function canManageRole(role: Role) {
-  return role === "ADMIN" || role === "SUPERVISOR" || role === "SUPER_ADMIN";
+  return (
+    role === "ADMIN" ||
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "SUPER_ADMIN"
+  );
 }
 
 /** Checks module: who can submit/approve the Supervisor-owned steps. */
 export function canActAsSupervisor(role: Role) {
-  return role === "SUPERVISOR" || role === "ADMIN" || role === "SUPER_ADMIN";
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
 }
 
 /** Checks module: who can submit/approve the QA-owned steps. */
@@ -48,6 +58,7 @@ export function canActAsOperator(role: Role) {
   return (
     role === "EMPLOYEE" ||
     role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
     role === "QA" ||
     role === "ADMIN" ||
     role === "SUPER_ADMIN"
@@ -66,7 +77,7 @@ export function canEdit(role: Role) {
 
 /** Checks module — Work Log: any employee can fill it in, but only Supervisor or Super Admin (not plain Admin) can approve. */
 export function canApproveWorkLog(role: Role) {
-  return role === "SUPERVISOR" || role === "SUPER_ADMIN";
+  return role === "SUPERVISOR" || role === "OPERATIONS" || role === "SUPER_ADMIN";
 }
 
 /**
@@ -97,7 +108,12 @@ export function canUseTeamChat(_role: Role) {
  * actually scheduling and re-batching daily production.
  */
 export function canManageDailyPlanner(role: Role) {
-  return role === "SUPERVISOR" || role === "ADMIN" || role === "SUPER_ADMIN";
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
 }
 
 export async function hashPassword(password: string) {

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
-type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "TEAM_LEAD" | "QA" | "EMPLOYEE";
+type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "OPERATIONS" | "TEAM_LEAD" | "QA" | "EMPLOYEE";
 type Team = { id: string; name: string; description: string | null };
 type Employee = {
   id: string;
@@ -23,12 +23,13 @@ type Employee = {
   photoUrl: string | null;
   isPermanent: boolean;
 };
-const ALL_ROLES: Role[] = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR", "TEAM_LEAD", "QA", "EMPLOYEE"];
+const ALL_ROLES: Role[] = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR", "OPERATIONS", "TEAM_LEAD", "QA", "EMPLOYEE"];
 
 export const ROLE_LABEL: Record<Role, string> = {
   SUPER_ADMIN: "Super Admin",
   ADMIN: "Admin",
   SUPERVISOR: "Supervisor",
+  OPERATIONS: "Operations",
   TEAM_LEAD: "Team Lead",
   QA: "QA",
   EMPLOYEE: "Operator",
@@ -50,7 +51,9 @@ export default function TeamClient({
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [editTeam, setEditTeam] = useState<Team | null>(null);
   const assignableRoles =
-    currentRole === "SUPER_ADMIN" ? ALL_ROLES : (["ADMIN", "SUPERVISOR", "TEAM_LEAD", "QA", "EMPLOYEE"] as Role[]);
+    currentRole === "SUPER_ADMIN"
+      ? ALL_ROLES
+      : (["ADMIN", "SUPERVISOR", "OPERATIONS", "TEAM_LEAD", "QA", "EMPLOYEE"] as Role[]);
 
   return (
     <div className="space-y-6">

@@ -47,7 +47,7 @@ export async function notifyManagers(params: {
   link?: string;
 }) {
   const managers = await prisma.employee.findMany({
-    where: { active: true, role: { in: ["ADMIN", "SUPER_ADMIN", "SUPERVISOR"] } },
+    where: { active: true, role: { in: ["ADMIN", "SUPER_ADMIN", "SUPERVISOR", "OPERATIONS"] } },
     select: { id: true },
   });
 
