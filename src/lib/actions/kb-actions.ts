@@ -75,19 +75,37 @@ function ingredientAnswer(i: {
   notes: string | null;
   verified: boolean;
   verificationSource: string | null;
+  classification: string | null;
+  chemicalName: string | null;
+  casNumber: string | null;
   mainBenefit: string | null;
   usedFor: string | null;
   typicalDosage: string | null;
   storageConditions: string | null;
   safetyNotes: string | null;
   regulatoryStatus: string | null;
+  tgaStatus: string | null;
+  apvmaStatus: string | null;
+  fdaStatus: string | null;
+  emaStatus: string | null;
+  aicisStatus: string | null;
 }) {
   const parts: string[] = [];
+  if (i.chemicalName) parts.push(`Chemical name: ${i.chemicalName}`);
+  if (i.casNumber) parts.push(`CAS number: ${i.casNumber}`);
   if (i.mainBenefit) parts.push(`Main benefit: ${i.mainBenefit}`);
   if (i.usedFor) parts.push(`Used for: ${i.usedFor}`);
   if (i.notes) parts.push(i.notes);
   if (i.typicalDosage) parts.push(`Typical dosage/use: ${i.typicalDosage}`);
-  if (i.regulatoryStatus) parts.push(`Regulatory status: ${i.regulatoryStatus}`);
+  const authorities = [
+    i.tgaStatus && `TGA: ${i.tgaStatus}`,
+    i.apvmaStatus && `APVMA: ${i.apvmaStatus}`,
+    i.fdaStatus && `FDA: ${i.fdaStatus}`,
+    i.emaStatus && `EMA: ${i.emaStatus}`,
+    i.aicisStatus && `AICIS: ${i.aicisStatus}`,
+  ].filter(Boolean);
+  if (authorities.length > 0) parts.push(`Regulatory status — ${authorities.join(", ")}`);
+  if (i.regulatoryStatus) parts.push(`Regulatory summary: ${i.regulatoryStatus}`);
   if (i.safetyNotes) parts.push(`Safety & handling: ${i.safetyNotes}`);
   if (i.storageConditions) parts.push(`Storage: ${i.storageConditions}`);
   if (parts.length === 0) {

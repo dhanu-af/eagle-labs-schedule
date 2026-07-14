@@ -61,29 +61,61 @@ type IngredientInput = {
   aanLabel?: string;
   aanValue?: string;
   notes?: string;
+  classification?: string;
   mainBenefit?: string;
   usedFor?: string;
   synonyms?: string;
+  chemicalName?: string;
   casNumber?: string;
+  molecularFormula?: string;
+  molecularWeight?: string;
+  tgaStatus?: string;
+  apvmaStatus?: string;
+  fdaStatus?: string;
+  emaStatus?: string;
+  aicisStatus?: string;
+  regulatoryStatus?: string;
+  primaryUse?: string;
+  industry?: string;
+  productTypes?: string;
   typicalDosage?: string;
   storageConditions?: string;
   shelfLife?: string;
   safetyNotes?: string;
+  ghsClassification?: string;
+  signalWord?: string;
+  ppe?: string;
+  handlingPrecautions?: string;
   manufacturingNotes?: string;
   qcNotes?: string;
-  regulatoryStatus?: string;
+  qcIdentity?: string;
+  qcAssay?: string;
+  qcMoisture?: string;
+  qcHeavyMetals?: string;
+  qcMicrobialLimits?: string;
+  appearance?: string;
+  colour?: string;
+  odour?: string;
+  solubility?: string;
+  density?: string;
+  meltingPoint?: string;
+  phValue?: string;
+  relatedIngredientsText?: string;
+  referencesText?: string;
   faq?: string;
   source?: string;
   verified?: boolean;
   verificationSource?: string;
+  verifiedBy?: string;
 };
 
 function withVerificationTimestamp(data: IngredientInput) {
-  const { verified, verificationSource, ...rest } = data;
+  const { verified, verificationSource, verifiedBy, ...rest } = data;
   return {
     ...rest,
     verified: verified ?? false,
     verificationSource: verified ? verificationSource ?? null : null,
+    verifiedBy: verified ? verifiedBy ?? null : null,
     verifiedAt: verified ? new Date() : null,
   };
 }

@@ -432,17 +432,62 @@ model Ingredient {
   verified          Boolean  @default(false)
   verificationSource String?
   verifiedAt        DateTime?
+  verifiedBy        String?
+  classification    String?
   mainBenefit       String?
   usedFor           String?
   synonyms          String?
+  chemicalName      String?
   casNumber         String?
+  molecularFormula  String?
+  molecularWeight   String?
+
+  // Per-authority regulatory status — leave blank ("—") unless confirmed
+  tgaStatus         String?
+  apvmaStatus       String?
+  fdaStatus         String?
+  emaStatus         String?
+  aicisStatus       String?
+  regulatoryStatus  String?
+
+  // Applications
+  primaryUse        String?
+  industry          String?
+  productTypes      String?
+
   typicalDosage     String?
   storageConditions String?
   shelfLife         String?
+
+  // Safety
   safetyNotes       String?
+  ghsClassification String?
+  signalWord        String?
+  ppe               String?
+  handlingPrecautions String?
+
   manufacturingNotes String?
+
+  // Quality specifications
   qcNotes           String?
-  regulatoryStatus  String?
+  qcIdentity        String?
+  qcAssay           String?
+  qcMoisture        String?
+  qcHeavyMetals     String?
+  qcMicrobialLimits String?
+
+  // Physical properties
+  appearance        String?
+  colour            String?
+  odour             String?
+  solubility        String?
+  density           String?
+  meltingPoint      String?
+  phValue           String?
+
+  relatedIngredientsText String?
+  referencesText    String?
+
   faq               String?
   source            String?
   createdAt         DateTime @default(now())
