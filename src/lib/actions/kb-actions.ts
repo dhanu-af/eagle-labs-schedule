@@ -71,7 +71,13 @@ function ingredientKeywords(i: { alternateName: string | null; synonyms: string 
   return [i.alternateName, i.synonyms, i.aanValue, i.type, i.category].filter(Boolean).join(", ");
 }
 
+function ensureFullStop(s: string) {
+  return /[.!?]$/.test(s.trim()) ? s.trim() : `${s.trim()}.`;
+}
+
 function ingredientAnswer(i: {
+  name: string;
+  synonyms: string | null;
   notes: string | null;
   verified: boolean;
   verificationSource: string | null;
@@ -90,13 +96,14 @@ function ingredientAnswer(i: {
   emaStatus: string | null;
   aicisStatus: string | null;
 }) {
-  const parts: string[] = [];
-  if (i.chemicalName) parts.push(`Chemical name: ${i.chemicalName}`);
-  if (i.casNumber) parts.push(`CAS number: ${i.casNumber}`);
-  if (i.mainBenefit) parts.push(`Main benefit: ${i.mainBenefit}`);
-  if (i.usedFor) parts.push(`Used for: ${i.usedFor}`);
-  if (i.notes) parts.push(i.notes);
-  if (i.typicalDosage) parts.push(`Typical dosage/use: ${i.typicalDosage}`);
+  const sentences: string[] = [];
+  if (i.synonyms) sentences.push(`Also known as ${i.synonyms}.`);
+  if (i.notes) sentences.push(ensureFullStop(i.notes));
+  if (i.mainBenefit) sentences.push(`Main benefit: ${ensureFullStop(i.mainBenefit)}`);
+  if (i.usedFor) sentences.push(`Used for: ${ensureFullStop(i.usedFor)}`);
+  if (i.chemicalName) sentences.push(`Chemical name: ${i.chemicalName}.`);
+  if (i.casNumber) sentences.push(`CAS number: ${i.casNumber}.`);
+  if (i.typicalDosage) sentences.push(`Typical dosage/use: ${ensureFullStop(i.typicalDosage)}`);
   const authorities = [
     i.tgaStatus && `TGA: ${i.tgaStatus}`,
     i.apvmaStatus && `APVMA: ${i.apvmaStatus}`,
@@ -104,20 +111,19 @@ function ingredientAnswer(i: {
     i.emaStatus && `EMA: ${i.emaStatus}`,
     i.aicisStatus && `AICIS: ${i.aicisStatus}`,
   ].filter(Boolean);
-  if (authorities.length > 0) parts.push(`Regulatory status — ${authorities.join(", ")}`);
-  if (i.regulatoryStatus) parts.push(`Regulatory summary: ${i.regulatoryStatus}`);
-  if (i.safetyNotes) parts.push(`Safety & handling: ${i.safetyNotes}`);
-  if (i.storageConditions) parts.push(`Storage: ${i.storageConditions}`);
-  if (parts.length === 0) {
-    parts.push(
-      i.verified
-        ? "Verified, but no detail fields have been populated yet."
-        : "Not yet verified against an authoritative source — no details available."
-    );
-  } else if (!i.verified) {
-    parts.push("(Not yet verified against an authoritative source.)");
+  if (authorities.length > 0) sentences.push(`Regulatory status — ${authorities.join(", ")}.`);
+  if (i.regulatoryStatus) sentences.push(`Regulatory summary: ${ensureFullStop(i.regulatoryStatus)}`);
+  if (i.safetyNotes) sentences.push(`Safety & handling: ${ensureFullStop(i.safetyNotes)}`);
+  if (i.storageConditions) sentences.push(`Storage: ${ensureFullStop(i.storageConditions)}`);
+
+  if (sentences.length === 0) {
+    return i.verified
+      ? `${i.name} is verified, but no detail fields have been populated yet.`
+      : `${i.name} has not yet been verified against an authoritative source — no details are available yet.`;
   }
-  return parts.join("\n\n");
+
+  const body = sentences.join(" ");
+  return i.verified ? body : `${body} (Not yet verified against an authoritative source.)`;
 }
 
 export async function askDhanu(question: string): Promise<{
