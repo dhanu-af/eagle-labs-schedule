@@ -17,6 +17,8 @@ type IngredientInput = {
   aanLabel?: string;
   aanValue?: string;
   notes: string;
+  mainBenefit?: string;
+  usedFor?: string;
   synonyms?: string;
   casNumber?: string;
   typicalDosage?: string;

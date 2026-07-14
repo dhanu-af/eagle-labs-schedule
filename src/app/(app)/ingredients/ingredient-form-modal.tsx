@@ -52,6 +52,8 @@ export default function IngredientFormModal({
       aanLabel: get("aanLabel"),
       aanValue: get("aanValue"),
       notes: String(formData.get("notes") ?? ""),
+      mainBenefit: get("mainBenefit"),
+      usedFor: get("usedFor"),
       synonyms: get("synonyms"),
       casNumber: get("casNumber"),
       typicalDosage: get("typicalDosage"),
@@ -135,6 +137,25 @@ export default function IngredientFormModal({
           <Field label="Notes / Benefits">
             <textarea name="notes" required rows={3} defaultValue={ingredient?.notes ?? ""} className="input" />
           </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Main benefit (important — shown prominently)">
+              <input
+                name="mainBenefit"
+                defaultValue={ingredient?.mainBenefit ?? ""}
+                placeholder="e.g. Antioxidant support"
+                className="input"
+              />
+            </Field>
+            <Field label="Used for (important — shown prominently)">
+              <input
+                name="usedFor"
+                defaultValue={ingredient?.usedFor ?? ""}
+                placeholder="e.g. Capsules, tablets, powders"
+                className="input"
+              />
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             {TEXT_FIELDS.map((f) => (

@@ -21,6 +21,8 @@ export default async function IngredientsPage() {
         aanLabel: i.aanLabel,
         aanValue: i.aanValue,
         notes: i.notes,
+        mainBenefit: i.mainBenefit,
+        usedFor: i.usedFor,
         synonyms: i.synonyms,
         casNumber: i.casNumber,
         typicalDosage: i.typicalDosage,

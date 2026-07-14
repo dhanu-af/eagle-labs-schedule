@@ -428,6 +428,8 @@ model Ingredient {
   aanLabel          String?
   aanValue          String?
   notes             String
+  mainBenefit       String?
+  usedFor           String?
   synonyms          String?
   casNumber         String?
   typicalDosage     String?

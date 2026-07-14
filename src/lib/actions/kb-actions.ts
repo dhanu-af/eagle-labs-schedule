@@ -73,12 +73,17 @@ function ingredientKeywords(i: { alternateName: string | null; synonyms: string 
 
 function ingredientAnswer(i: {
   notes: string;
+  mainBenefit: string | null;
+  usedFor: string | null;
   typicalDosage: string | null;
   storageConditions: string | null;
   safetyNotes: string | null;
   regulatoryStatus: string | null;
 }) {
-  const parts = [i.notes];
+  const parts: string[] = [];
+  if (i.mainBenefit) parts.push(`Main benefit: ${i.mainBenefit}`);
+  if (i.usedFor) parts.push(`Used for: ${i.usedFor}`);
+  parts.push(i.notes);
   if (i.typicalDosage) parts.push(`Typical dosage/use: ${i.typicalDosage}`);
   if (i.regulatoryStatus) parts.push(`Regulatory status: ${i.regulatoryStatus}`);
   if (i.safetyNotes) parts.push(`Safety & handling: ${i.safetyNotes}`);

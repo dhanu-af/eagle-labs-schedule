@@ -18,6 +18,8 @@ export type Ingredient = {
   aanLabel: string | null;
   aanValue: string | null;
   notes: string;
+  mainBenefit: string | null;
+  usedFor: string | null;
   synonyms: string | null;
   casNumber: string | null;
   typicalDosage: string | null;
@@ -78,6 +80,18 @@ function IngredientCard({
           </h3>
           <span className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180">▾</span>
         </div>
+        {ingredient.mainBenefit && (
+          <p className="text-sm text-foreground">
+            <span className="font-medium">Main benefit: </span>
+            {ingredient.mainBenefit}
+          </p>
+        )}
+        {ingredient.usedFor && (
+          <p className="text-sm text-foreground">
+            <span className="font-medium">Used for: </span>
+            <span className="text-muted-foreground">{ingredient.usedFor}</span>
+          </p>
+        )}
         <p className="line-clamp-2 text-sm text-muted-foreground">{ingredient.notes}</p>
       </summary>
 
@@ -157,12 +171,14 @@ export default function IngredientsClient({
     () =>
       new Fuse(ingredients, {
         keys: [
-          { name: "name", weight: 0.35 },
-          { name: "alternateName", weight: 0.2 },
-          { name: "synonyms", weight: 0.15 },
-          { name: "aanValue", weight: 0.15 },
-          { name: "type", weight: 0.08 },
-          { name: "category", weight: 0.07 },
+          { name: "name", weight: 0.3 },
+          { name: "alternateName", weight: 0.15 },
+          { name: "synonyms", weight: 0.12 },
+          { name: "aanValue", weight: 0.12 },
+          { name: "mainBenefit", weight: 0.1 },
+          { name: "usedFor", weight: 0.08 },
+          { name: "type", weight: 0.07 },
+          { name: "category", weight: 0.06 },
           { name: "notes", weight: 0.05 },
         ],
         threshold: 0.35,
