@@ -66,6 +66,10 @@ const SAMPLE_QUESTIONS = [
 ];
 
 function AnswerCard({ match, highlight }: { match: KbMatch; highlight?: boolean }) {
+  const isKb = match.kind === "kb";
+  const badgeClass = isKb ? KB_CATEGORY_CLASS[match.category as KbCategory] : "border-info/30 bg-info/10 text-info";
+  const badgeLabel = isKb ? KB_CATEGORY_LABEL[match.category as KbCategory] : match.category;
+
   return (
     <div
       className={`card-shadow rounded-xl border p-5 ${
@@ -73,9 +77,12 @@ function AnswerCard({ match, highlight }: { match: KbMatch; highlight?: boolean 
       }`}
     >
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${KB_CATEGORY_CLASS[match.category]}`}>
-          {KB_CATEGORY_LABEL[match.category]}
-        </span>
+        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${badgeClass}`}>{badgeLabel}</span>
+        {!isKb && (
+          <span className="rounded-full border border-border bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            Ingredient
+          </span>
+        )}
         {highlight && (
           <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
             Best match

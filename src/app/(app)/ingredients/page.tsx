@@ -21,6 +21,16 @@ export default async function IngredientsPage() {
         aanLabel: i.aanLabel,
         aanValue: i.aanValue,
         notes: i.notes,
+        synonyms: i.synonyms,
+        casNumber: i.casNumber,
+        typicalDosage: i.typicalDosage,
+        storageConditions: i.storageConditions,
+        shelfLife: i.shelfLife,
+        safetyNotes: i.safetyNotes,
+        manufacturingNotes: i.manufacturingNotes,
+        qcNotes: i.qcNotes,
+        regulatoryStatus: i.regulatoryStatus,
+        faq: i.faq,
         source: i.source,
       }))}
     />

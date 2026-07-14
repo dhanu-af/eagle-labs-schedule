@@ -9,7 +9,7 @@ export async function getIngredients() {
   return prisma.ingredient.findMany({ orderBy: { name: "asc" } });
 }
 
-export async function createIngredient(data: {
+type IngredientInput = {
   name: string;
   alternateName?: string;
   type: string;
@@ -17,8 +17,20 @@ export async function createIngredient(data: {
   aanLabel?: string;
   aanValue?: string;
   notes: string;
+  synonyms?: string;
+  casNumber?: string;
+  typicalDosage?: string;
+  storageConditions?: string;
+  shelfLife?: string;
+  safetyNotes?: string;
+  manufacturingNotes?: string;
+  qcNotes?: string;
+  regulatoryStatus?: string;
+  faq?: string;
   source?: string;
-}) {
+};
+
+export async function createIngredient(data: IngredientInput) {
   const session = await getSession();
   if (!session || !canEdit(session.role)) throw new Error("Not authorized");
 
@@ -35,19 +47,7 @@ export async function createIngredient(data: {
   return ingredient;
 }
 
-export async function updateIngredient(
-  id: string,
-  data: {
-    name: string;
-    alternateName?: string;
-    type: string;
-    category?: string;
-    aanLabel?: string;
-    aanValue?: string;
-    notes: string;
-    source?: string;
-  }
-) {
+export async function updateIngredient(id: string, data: IngredientInput) {
   const session = await getSession();
   if (!session || !canEdit(session.role)) throw new Error("Not authorized");
 

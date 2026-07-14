@@ -15,6 +15,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+const TEXT_FIELDS: { name: keyof Ingredient; label: string; placeholder: string }[] = [
+  { name: "synonyms", label: "Synonyms (optional)", placeholder: "e.g. Ascorbic Acid; L-Ascorbic Acid" },
+  { name: "casNumber", label: "CAS number (optional — leave blank unless verified)", placeholder: "e.g. 50-81-7" },
+  { name: "regulatoryStatus", label: "Regulatory status (optional)", placeholder: "e.g. AAN: Ascorbic acid" },
+  { name: "typicalDosage", label: "Typical dosage / use level (optional)", placeholder: "e.g. 500-1000 mg/day" },
+  { name: "storageConditions", label: "Storage conditions (optional)", placeholder: "e.g. Store below 25°C, dry, protected from light" },
+  { name: "shelfLife", label: "Shelf life (optional)", placeholder: "e.g. 24 months unopened" },
+];
+
+const TEXTAREA_FIELDS: { name: keyof Ingredient; label: string }[] = [
+  { name: "safetyNotes", label: "Safety & handling (optional)" },
+  { name: "manufacturingNotes", label: "Manufacturing notes (optional)" },
+  { name: "qcNotes", label: "QC / CoA parameters (optional)" },
+  { name: "faq", label: "FAQ (optional)" },
+];
+
 export default function IngredientFormModal({
   ingredient,
   onClose,
@@ -27,15 +43,26 @@ export default function IngredientFormModal({
   const isEdit = !!ingredient;
 
   function submit(formData: FormData) {
+    const get = (key: string) => String(formData.get(key) ?? "") || undefined;
     const data = {
       name: String(formData.get("name") ?? ""),
-      alternateName: String(formData.get("alternateName") ?? "") || undefined,
+      alternateName: get("alternateName"),
       type: String(formData.get("type") ?? ""),
-      category: String(formData.get("category") ?? "") || undefined,
-      aanLabel: String(formData.get("aanLabel") ?? "") || undefined,
-      aanValue: String(formData.get("aanValue") ?? "") || undefined,
+      category: get("category"),
+      aanLabel: get("aanLabel"),
+      aanValue: get("aanValue"),
       notes: String(formData.get("notes") ?? ""),
-      source: String(formData.get("source") ?? "") || undefined,
+      synonyms: get("synonyms"),
+      casNumber: get("casNumber"),
+      typicalDosage: get("typicalDosage"),
+      storageConditions: get("storageConditions"),
+      shelfLife: get("shelfLife"),
+      safetyNotes: get("safetyNotes"),
+      manufacturingNotes: get("manufacturingNotes"),
+      qcNotes: get("qcNotes"),
+      regulatoryStatus: get("regulatoryStatus"),
+      faq: get("faq"),
+      source: get("source"),
     };
     startTransition(async () => {
       if (ingredient) {
@@ -106,8 +133,33 @@ export default function IngredientFormModal({
             </Field>
           </div>
           <Field label="Notes / Benefits">
-            <textarea name="notes" required rows={4} defaultValue={ingredient?.notes ?? ""} className="input" />
+            <textarea name="notes" required rows={3} defaultValue={ingredient?.notes ?? ""} className="input" />
           </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            {TEXT_FIELDS.map((f) => (
+              <Field key={f.name} label={f.label}>
+                <input
+                  name={f.name}
+                  defaultValue={(ingredient?.[f.name] as string | null) ?? ""}
+                  placeholder={f.placeholder}
+                  className="input"
+                />
+              </Field>
+            ))}
+          </div>
+
+          {TEXTAREA_FIELDS.map((f) => (
+            <Field key={f.name} label={f.label}>
+              <textarea
+                name={f.name}
+                rows={2}
+                defaultValue={(ingredient?.[f.name] as string | null) ?? ""}
+                className="input"
+              />
+            </Field>
+          ))}
+
           <Field label="Source (optional)">
             <input
               name="source"

@@ -58,13 +58,33 @@ function scoreEntry(questionTokens: string[], entry: { title: string; keywords: 
 
 export type KbMatch = {
   id: string;
-  category: KbCategory;
+  kind: "kb" | "ingredient";
+  category: string;
   title: string;
   cause: string | null;
   answer: string;
   source: string | null;
   score: number;
 };
+
+function ingredientKeywords(i: { alternateName: string | null; synonyms: string | null; aanValue: string | null; type: string; category: string | null }) {
+  return [i.alternateName, i.synonyms, i.aanValue, i.type, i.category].filter(Boolean).join(", ");
+}
+
+function ingredientAnswer(i: {
+  notes: string;
+  typicalDosage: string | null;
+  storageConditions: string | null;
+  safetyNotes: string | null;
+  regulatoryStatus: string | null;
+}) {
+  const parts = [i.notes];
+  if (i.typicalDosage) parts.push(`Typical dosage/use: ${i.typicalDosage}`);
+  if (i.regulatoryStatus) parts.push(`Regulatory status: ${i.regulatoryStatus}`);
+  if (i.safetyNotes) parts.push(`Safety & handling: ${i.safetyNotes}`);
+  if (i.storageConditions) parts.push(`Storage: ${i.storageConditions}`);
+  return parts.join("\n\n");
+}
 
 export async function askDhanu(question: string): Promise<{
   matches: KbMatch[];
@@ -74,10 +94,39 @@ export async function askDhanu(question: string): Promise<{
   if (!session) throw new Error("Not authorized");
 
   const questionTokens = tokenize(question);
-  const entries = await prisma.knowledgeEntry.findMany();
+  const [entries, ingredients] = await Promise.all([
+    prisma.knowledgeEntry.findMany(),
+    prisma.ingredient.findMany(),
+  ]);
 
-  const scored = entries
-    .map((e) => ({ ...e, score: scoreEntry(questionTokens, e) }))
+  const scoredKb = entries.map((e) => ({
+    id: e.id,
+    kind: "kb" as const,
+    category: e.category as string,
+    title: e.title,
+    cause: e.cause,
+    answer: e.answer,
+    source: e.source,
+    score: scoreEntry(questionTokens, e),
+  }));
+
+  const scoredIngredients = ingredients.map((i) => ({
+    id: i.id,
+    kind: "ingredient" as const,
+    category: i.type,
+    title: i.name,
+    cause: null as string | null,
+    answer: ingredientAnswer(i),
+    source: i.source,
+    score: scoreEntry(questionTokens, {
+      title: i.name,
+      keywords: ingredientKeywords(i),
+      answer: i.notes,
+      cause: null,
+    }),
+  }));
+
+  const scored = [...scoredKb, ...scoredIngredients]
     .filter((e) => e.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
@@ -95,18 +144,7 @@ export async function askDhanu(question: string): Promise<{
     },
   });
 
-  return {
-    matches: scored.map((e) => ({
-      id: e.id,
-      category: e.category,
-      title: e.title,
-      cause: e.cause,
-      answer: e.answer,
-      source: e.source,
-      score: e.score,
-    })),
-    confident,
-  };
+  return { matches: scored, confident };
 }
 
 /** Super Admin only: extract the text of an uploaded PDF so it can be reviewed and saved as a knowledge entry. */

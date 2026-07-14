@@ -18,65 +18,111 @@ export type Ingredient = {
   aanLabel: string | null;
   aanValue: string | null;
   notes: string;
+  synonyms: string | null;
+  casNumber: string | null;
+  typicalDosage: string | null;
+  storageConditions: string | null;
+  shelfLife: string | null;
+  safetyNotes: string | null;
+  manufacturingNotes: string | null;
+  qcNotes: string | null;
+  regulatoryStatus: string | null;
+  faq: string | null;
   source: string | null;
 };
 
+function DetailRow({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <p className="text-sm text-foreground">
+      <span className="font-medium">{label}: </span>
+      <span className="text-muted-foreground">{value}</span>
+    </p>
+  );
+}
+
 function IngredientCard({
   ingredient,
+  related,
   canEdit,
   onEdit,
   onDelete,
+  onJump,
 }: {
   ingredient: Ingredient;
+  related: Ingredient[];
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onJump: (id: string) => void;
 }) {
   return (
-    <div className="card-shadow rounded-xl border border-border bg-surface p-5">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-info/30 bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info">
-          {ingredient.type}
-        </span>
-        {ingredient.category && (
-          <span className="rounded-full border border-border bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-            {ingredient.category}
+    <details id={`ing-${ingredient.id}`} className="group rounded-xl border border-border bg-surface p-5">
+      <summary className="flex cursor-pointer list-none flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-info/30 bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info">
+            {ingredient.type}
           </span>
-        )}
-      </div>
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground">
-          {ingredient.name}
-          {ingredient.alternateName && !ingredient.name.includes(ingredient.alternateName) && (
-            <span className="font-normal text-muted-foreground"> ({ingredient.alternateName})</span>
+          {ingredient.category && (
+            <span className="rounded-full border border-border bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              {ingredient.category}
+            </span>
           )}
-        </h3>
+        </div>
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-sm font-semibold text-foreground">
+            {ingredient.name}
+            {ingredient.alternateName && !ingredient.name.includes(ingredient.alternateName) && (
+              <span className="font-normal text-muted-foreground"> ({ingredient.alternateName})</span>
+            )}
+          </h3>
+          <span className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180">▾</span>
+        </div>
+        <p className="line-clamp-2 text-sm text-muted-foreground">{ingredient.notes}</p>
+      </summary>
+
+      <div className="mt-3 space-y-2 border-t border-border pt-3">
         {canEdit && (
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={onEdit}
-              className="text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
-            >
+          <div className="mb-1 flex items-center gap-3">
+            <button onClick={onEdit} className="text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
               Edit
             </button>
-            <button
-              onClick={onDelete}
-              className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80"
-            >
+            <button onClick={onDelete} className="text-xs font-medium text-danger transition-colors duration-150 ease-out hover:opacity-80">
               Delete
             </button>
           </div>
         )}
+        <DetailRow label={ingredient.aanLabel ?? "Identifier"} value={ingredient.aanValue} />
+        <DetailRow label="Synonyms" value={ingredient.synonyms} />
+        <DetailRow label="CAS number" value={ingredient.casNumber ?? "Not verified — confirm via PubChem/supplier CoA before compliance use"} />
+        <DetailRow label="Regulatory status" value={ingredient.regulatoryStatus} />
+        <DetailRow label="Typical dosage / use level" value={ingredient.typicalDosage} />
+        <DetailRow label="Storage conditions" value={ingredient.storageConditions} />
+        <DetailRow label="Shelf life" value={ingredient.shelfLife} />
+        <DetailRow label="Safety & handling" value={ingredient.safetyNotes} />
+        <DetailRow label="Manufacturing notes" value={ingredient.manufacturingNotes} />
+        <DetailRow label="QC / CoA parameters" value={ingredient.qcNotes} />
+        <DetailRow label="FAQ" value={ingredient.faq} />
+        {ingredient.source && <p className="text-xs text-muted-foreground">Source: {ingredient.source}</p>}
+
+        {related.length > 0 && (
+          <div className="pt-1">
+            <p className="text-xs font-medium text-foreground">Related ingredients</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {related.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => onJump(r.id)}
+                  className="rounded-full border border-border bg-surface-muted px-2 py-0.5 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      {ingredient.aanLabel && ingredient.aanValue && (
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{ingredient.aanLabel}: </span>
-          {ingredient.aanValue}
-        </p>
-      )}
-      <p className="mt-1.5 text-sm text-foreground">{ingredient.notes}</p>
-      {ingredient.source && <p className="mt-2 text-xs text-muted-foreground">Source: {ingredient.source}</p>}
-    </div>
+    </details>
   );
 }
 
@@ -111,11 +157,12 @@ export default function IngredientsClient({
     () =>
       new Fuse(ingredients, {
         keys: [
-          { name: "name", weight: 0.4 },
-          { name: "alternateName", weight: 0.25 },
-          { name: "aanValue", weight: 0.2 },
-          { name: "type", weight: 0.1 },
-          { name: "category", weight: 0.1 },
+          { name: "name", weight: 0.35 },
+          { name: "alternateName", weight: 0.2 },
+          { name: "synonyms", weight: 0.15 },
+          { name: "aanValue", weight: 0.15 },
+          { name: "type", weight: 0.08 },
+          { name: "category", weight: 0.07 },
           { name: "notes", weight: 0.05 },
         ],
         threshold: 0.35,
@@ -133,6 +180,30 @@ export default function IngredientsClient({
     });
   }, [fuse, query, ingredients, type, category]);
 
+  const byId = useMemo(() => new Map(ingredients.map((i) => [i.id, i])), [ingredients]);
+
+  function relatedFor(ingredient: Ingredient): Ingredient[] {
+    if (!ingredient.category) return [];
+    return ingredients
+      .filter((i) => i.id !== ingredient.id && i.category === ingredient.category)
+      .slice(0, 6);
+  }
+
+  function jumpTo(id: string) {
+    const target = byId.get(id);
+    if (!target) return;
+    setQuery("");
+    setType("ALL");
+    setCategory("ALL");
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`ing-${id}`);
+      if (el) {
+        (el as HTMLDetailsElement).open = true;
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  }
+
   function remove(id: string) {
     if (!confirm("Delete this ingredient? This cannot be undone.")) return;
     startTransition(async () => {
@@ -149,11 +220,15 @@ export default function IngredientsClient({
         actions={canEdit ? <Button onClick={() => setShowAdd(true)}>+ Add Ingredient</Button> : undefined}
       />
 
+      <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-xs text-warning">
+        Detail fields (CAS number, regulatory status, dosage, storage, QC/CoA parameters) are general reference — verify against current TGA/USP/EP/BP/FDA sources and the specific supplier&apos;s CoA before regulatory, QC, or label use.
+      </div>
+
       <div className="glass card-shadow flex flex-col gap-3 rounded-xl border border-border p-5 sm:flex-row sm:items-center">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name, alternate name, AAN, type, or category..."
+          placeholder="Search by name, synonym, AAN, type, or category..."
           className="input flex-1"
         />
         <select value={type} onChange={(e) => setType(e.target.value)} className="input sm:max-w-[220px]">
@@ -179,16 +254,18 @@ export default function IngredientsClient({
       </p>
 
       {results.length === 0 ? (
-        <EmptyState title="No ingredients match your search." description="Try a different name, alternate name, or clear a filter." />
+        <EmptyState title="No ingredients match your search." description="Try a different name, synonym, or clear a filter." />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-2">
           {results.map((i) => (
             <IngredientCard
               key={i.id}
               ingredient={i}
+              related={relatedFor(i)}
               canEdit={canEdit}
               onEdit={() => setEditIngredient(i)}
               onDelete={() => remove(i.id)}
+              onJump={jumpTo}
             />
           ))}
         </div>
