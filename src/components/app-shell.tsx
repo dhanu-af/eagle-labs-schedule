@@ -21,6 +21,7 @@ const ROLE_DISPLAY: Record<string, string> = {
   TEAM_LEAD: "team lead",
   QA: "qa",
   EMPLOYEE: "operator",
+  OTHERS: "others",
 };
 
 const icons = {
@@ -63,41 +64,49 @@ export default function AppShell({
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const isManager = isAdmin || user.role === "SUPERVISOR";
   const isSuperAdmin = user.role === "SUPER_ADMIN";
+  const isRestrictedToDhanuAi = user.role === "OTHERS";
 
-  const groups: NavGroup[] = [
-    {
-      label: "Operations",
-      items: [
-        { href: "/", label: "Dashboard", icon: icons.dashboard },
-        { href: "/my-task", label: "My Tasks", icon: icons.myTask },
-        { href: "/daily", label: "Daily Operations", icon: icons.daily },
-        { href: "/weekly", label: "Weekly Operations", icon: icons.weekly },
-        { href: "/kpi", label: "Performance Analytics", icon: icons.kpi },
-        { href: "/checks", label: "Quality Checks", icon: icons.checks },
-        { href: "/formulation-checker", label: "Formula Manager", icon: icons.formulationChecker },
-        { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
-        { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },
-      ],
-    },
-    ...(isManager
-      ? [
-          {
-            label: "Admin",
-            items: [
-              { href: "/reports", label: "Reports & Analytics", icon: icons.reports },
-              ...(isAdmin ? [{ href: "/team", label: "Production Team", icon: icons.team }] : []),
-              ...(isAdmin ? [{ href: "/audit", label: "Audit Trail", icon: icons.audit }] : []),
-              ...(isSuperAdmin
-                ? [
-                    { href: "/user-management", label: "User Management", icon: icons.userManagement },
-                    { href: "/login-history", label: "Access History", icon: icons.loginHistory },
-                  ]
-                : []),
-            ],
-          },
-        ]
-      : []),
-  ];
+  const groups: NavGroup[] = isRestrictedToDhanuAi
+    ? [
+        {
+          label: "Operations",
+          items: [{ href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu }],
+        },
+      ]
+    : [
+        {
+          label: "Operations",
+          items: [
+            { href: "/", label: "Dashboard", icon: icons.dashboard },
+            { href: "/my-task", label: "My Tasks", icon: icons.myTask },
+            { href: "/daily", label: "Daily Operations", icon: icons.daily },
+            { href: "/weekly", label: "Weekly Operations", icon: icons.weekly },
+            { href: "/kpi", label: "Performance Analytics", icon: icons.kpi },
+            { href: "/checks", label: "Quality Checks", icon: icons.checks },
+            { href: "/formulation-checker", label: "Formula Manager", icon: icons.formulationChecker },
+            { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
+            { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },
+          ],
+        },
+        ...(isManager
+          ? [
+              {
+                label: "Admin",
+                items: [
+                  { href: "/reports", label: "Reports & Analytics", icon: icons.reports },
+                  ...(isAdmin ? [{ href: "/team", label: "Production Team", icon: icons.team }] : []),
+                  ...(isAdmin ? [{ href: "/audit", label: "Audit Trail", icon: icons.audit }] : []),
+                  ...(isSuperAdmin
+                    ? [
+                        { href: "/user-management", label: "User Management", icon: icons.userManagement },
+                        { href: "/login-history", label: "Access History", icon: icons.loginHistory },
+                      ]
+                    : []),
+                ],
+              },
+            ]
+          : []),
+      ];
 
   const NavLinks = (
     <nav className="flex flex-col gap-5 px-3">

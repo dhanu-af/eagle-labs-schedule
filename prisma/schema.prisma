@@ -17,6 +17,7 @@ enum Role {
   QA
   EMPLOYEE
   OPERATIONS
+  OTHERS
 }
 
 enum PayRunStatus {

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
-type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "OPERATIONS" | "TEAM_LEAD" | "QA" | "EMPLOYEE";
+type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "OPERATIONS" | "TEAM_LEAD" | "QA" | "EMPLOYEE" | "OTHERS";
 type Team = { id: string; name: string; description: string | null };
 type Employee = {
   id: string;
@@ -33,6 +33,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   TEAM_LEAD: "Team Lead",
   QA: "QA",
   EMPLOYEE: "Operator",
+  OTHERS: "Others",
 };
 
 export default function TeamClient({

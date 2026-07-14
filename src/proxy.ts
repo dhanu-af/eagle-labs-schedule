@@ -11,7 +11,7 @@ async function readSession(request: NextRequest) {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload as { mustChangePassword?: boolean };
+    return payload as { mustChangePassword?: boolean; role?: string };
   } catch {
     return null;
   }
@@ -39,6 +39,10 @@ export async function proxy(request: NextRequest) {
 
   if (session.mustChangePassword && pathname !== "/change-password") {
     return NextResponse.redirect(new URL("/change-password", request.url));
+  }
+
+  if (session.role === "OTHERS" && pathname !== "/ask-dhanu" && pathname !== "/change-password") {
+    return NextResponse.redirect(new URL("/ask-dhanu", request.url));
   }
 
   return NextResponse.next();
