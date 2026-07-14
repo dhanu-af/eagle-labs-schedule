@@ -186,6 +186,7 @@ model User {
   mustChangePassword  Boolean  @default(false)
   failedLoginAttempts Int      @default(0)
   locked              Boolean  @default(false)
+  ingredientLibraryAccess Boolean @default(false)
   createdAt           DateTime @default(now())
   lastActiveAt        DateTime?
 

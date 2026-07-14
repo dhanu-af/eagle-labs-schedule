@@ -3,11 +3,72 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Fuse from "fuse.js";
-import { deleteIngredient } from "@/lib/actions/ingredient-actions";
+import { deleteIngredient, setIngredientLibraryAccess } from "@/lib/actions/ingredient-actions";
 import IngredientFormModal from "./ingredient-form-modal";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+
+export type AccessUser = {
+  id: string;
+  username: string;
+  fullName: string;
+  role: string;
+  ingredientLibraryAccess: boolean;
+};
+
+function AccessManagementPanel({ users }: { users: AccessUser[] }) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
+  const nonSuperAdmins = users.filter((u) => u.role !== "SUPER_ADMIN");
+
+  function toggle(userId: string, granted: boolean) {
+    startTransition(async () => {
+      await setIngredientLibraryAccess(userId, granted);
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-surface p-4">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-left text-sm font-semibold text-foreground"
+      >
+        Manage access — only Super Admin and selected users can open Ingredient Library
+        <span className={`text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}>▾</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2 border-t border-border pt-3">
+          {nonSuperAdmins.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No other users to manage.</p>
+          ) : (
+            nonSuperAdmins.map((u) => (
+              <div key={u.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-muted px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{u.fullName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {u.username} · {u.role.toLowerCase().replace("_", " ")}
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={u.ingredientLibraryAccess}
+                    onChange={(e) => toggle(u.id, e.target.checked)}
+                    className="h-4 w-4 rounded accent-primary"
+                  />
+                  Access
+                </label>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export type Ingredient = {
   id: string;
@@ -142,9 +203,11 @@ function IngredientCard({
 
 export default function IngredientsClient({
   canEdit,
+  accessList,
   ingredients,
 }: {
   canEdit: boolean;
+  accessList: AccessUser[];
   ingredients: Ingredient[];
 }) {
   const router = useRouter();
@@ -231,10 +294,12 @@ export default function IngredientsClient({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ingredients"
+        title="Ingredient Library"
         subtitle="Search the full ingredient & raw material reference — vitamins, minerals, herbal actives, excipients, and regulated chemicals across TGA, FSANZ, AICIS and APVMA."
         actions={canEdit ? <Button onClick={() => setShowAdd(true)}>+ Add Ingredient</Button> : undefined}
       />
+
+      {canEdit && <AccessManagementPanel users={accessList} />}
 
       <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-xs text-warning">
         Detail fields (CAS number, regulatory status, dosage, storage, QC/CoA parameters) are general reference — verify against current TGA/USP/EP/BP/FDA sources and the specific supplier&apos;s CoA before regulatory, QC, or label use.

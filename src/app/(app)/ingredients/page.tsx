@@ -1,17 +1,31 @@
 import { redirect } from "next/navigation";
 import { getSession, canEdit } from "@/lib/auth";
-import { getIngredients } from "@/lib/actions/ingredient-actions";
+import { getIngredients, hasIngredientLibraryAccess, getIngredientLibraryAccessList } from "@/lib/actions/ingredient-actions";
 import IngredientsClient from "./ingredients-client";
 
 export default async function IngredientsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const ingredients = await getIngredients();
+  const isSuperAdmin = canEdit(session.role);
+  const allowed = await hasIngredientLibraryAccess();
+  if (!allowed) redirect("/");
+
+  const [ingredients, accessList] = await Promise.all([
+    getIngredients(),
+    isSuperAdmin ? getIngredientLibraryAccessList() : Promise.resolve([]),
+  ]);
 
   return (
     <IngredientsClient
-      canEdit={canEdit(session.role)}
+      canEdit={isSuperAdmin}
+      accessList={accessList.map((u) => ({
+        id: u.id,
+        username: u.username,
+        fullName: u.fullName,
+        role: u.role,
+        ingredientLibraryAccess: u.ingredientLibraryAccess,
+      }))}
       ingredients={ingredients.map((i) => ({
         id: i.id,
         name: i.name,

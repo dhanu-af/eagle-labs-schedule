@@ -56,7 +56,7 @@ export default function AppShell({
   notifications,
   children,
 }: {
-  user: { name: string; role: string };
+  user: { name: string; role: string; ingredientLibraryAccess: boolean };
   notifications: Notification[];
   children: React.ReactNode;
 }) {
@@ -66,6 +66,7 @@ export default function AppShell({
   const isManager = isAdmin || user.role === "SUPERVISOR";
   const isSuperAdmin = user.role === "SUPER_ADMIN";
   const isRestrictedToDhanuAi = user.role === "OTHERS";
+  const canSeeIngredientLibrary = isSuperAdmin || user.ingredientLibraryAccess;
 
   const groups: NavGroup[] = isRestrictedToDhanuAi
     ? [
@@ -85,7 +86,7 @@ export default function AppShell({
             { href: "/kpi", label: "Performance Analytics", icon: icons.kpi },
             { href: "/checks", label: "Quality Checks", icon: icons.checks },
             { href: "/formulation-checker", label: "Formula Manager", icon: icons.formulationChecker },
-            { href: "/ingredients", label: "Ingredients", icon: icons.ingredients },
+            ...(canSeeIngredientLibrary ? [{ href: "/ingredients", label: "Ingredient Library", icon: icons.ingredients }] : []),
             { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
             { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },
           ],

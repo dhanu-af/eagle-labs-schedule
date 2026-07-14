@@ -11,17 +11,20 @@ export default async function AppLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const notifications = session.employeeId
-    ? await prisma.notification.findMany({
-        where: { employeeId: session.employeeId },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      })
-    : [];
+  const [notifications, user] = await Promise.all([
+    session.employeeId
+      ? prisma.notification.findMany({
+          where: { employeeId: session.employeeId },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        })
+      : Promise.resolve([]),
+    prisma.user.findUnique({ where: { id: session.userId }, select: { ingredientLibraryAccess: true } }),
+  ]);
 
   return (
     <AppShell
-      user={{ name: session.fullName, role: session.role }}
+      user={{ name: session.fullName, role: session.role, ingredientLibraryAccess: user?.ingredientLibraryAccess ?? false }}
       notifications={notifications.map((n) => ({
         id: n.id,
         title: n.title,
