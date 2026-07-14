@@ -51,7 +51,7 @@ export default function IngredientFormModal({
       category: get("category"),
       aanLabel: get("aanLabel"),
       aanValue: get("aanValue"),
-      notes: String(formData.get("notes") ?? ""),
+      notes: get("notes"),
       mainBenefit: get("mainBenefit"),
       usedFor: get("usedFor"),
       synonyms: get("synonyms"),
@@ -65,6 +65,8 @@ export default function IngredientFormModal({
       regulatoryStatus: get("regulatoryStatus"),
       faq: get("faq"),
       source: get("source"),
+      verified: formData.get("verified") === "on",
+      verificationSource: get("verificationSource"),
     };
     startTransition(async () => {
       if (ingredient) {
@@ -134,9 +136,31 @@ export default function IngredientFormModal({
               />
             </Field>
           </div>
-          <Field label="Notes / Benefits">
-            <textarea name="notes" required rows={3} defaultValue={ingredient?.notes ?? ""} className="input" />
+          <Field label="Notes / Benefits (optional — leave blank unless verified)">
+            <textarea name="notes" rows={3} defaultValue={ingredient?.notes ?? ""} className="input" />
           </Field>
+
+          <div className="rounded-lg border border-border bg-surface-muted p-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                name="verified"
+                defaultChecked={ingredient?.verified ?? false}
+                className="h-4 w-4"
+              />
+              Verified against an authoritative source
+            </label>
+            <div className="mt-2">
+              <Field label="Verification source (e.g. TGA Ingredients Table, FSANZ Schedule 29, PubChem CID 54670067)">
+                <input
+                  name="verificationSource"
+                  defaultValue={ingredient?.verificationSource ?? ""}
+                  placeholder="e.g. TGA Ingredients Table, accessed 2026-07-15"
+                  className="input"
+                />
+              </Field>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Main benefit (important — shown prominently)">

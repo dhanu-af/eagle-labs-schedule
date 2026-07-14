@@ -78,7 +78,10 @@ export type Ingredient = {
   category: string | null;
   aanLabel: string | null;
   aanValue: string | null;
-  notes: string;
+  notes: string | null;
+  verified: boolean;
+  verificationSource: string | null;
+  verifiedAt: string | null;
   mainBenefit: string | null;
   usedFor: string | null;
   synonyms: string | null;
@@ -131,6 +134,15 @@ function IngredientCard({
               {ingredient.category}
             </span>
           )}
+          {ingredient.verified ? (
+            <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+              ✓ Verified{ingredient.verificationSource ? ` — ${ingredient.verificationSource}` : ""}
+            </span>
+          ) : (
+            <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
+              Not yet verified
+            </span>
+          )}
         </div>
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-sm font-semibold text-foreground">
@@ -153,7 +165,7 @@ function IngredientCard({
             <span className="text-muted-foreground">{ingredient.usedFor}</span>
           </p>
         )}
-        <p className="line-clamp-2 text-sm text-muted-foreground">{ingredient.notes}</p>
+        {ingredient.notes && <p className="line-clamp-2 text-sm text-muted-foreground">{ingredient.notes}</p>}
       </summary>
 
       <div className="mt-3 space-y-2 border-t border-border pt-3">
@@ -169,7 +181,7 @@ function IngredientCard({
         )}
         <DetailRow label={ingredient.aanLabel ?? "Identifier"} value={ingredient.aanValue} />
         <DetailRow label="Synonyms" value={ingredient.synonyms} />
-        <DetailRow label="CAS number" value={ingredient.casNumber ?? "Not verified — confirm via PubChem/supplier CoA before compliance use"} />
+        <DetailRow label="CAS number" value={ingredient.casNumber} />
         <DetailRow label="Regulatory status" value={ingredient.regulatoryStatus} />
         <DetailRow label="Typical dosage / use level" value={ingredient.typicalDosage} />
         <DetailRow label="Storage conditions" value={ingredient.storageConditions} />
@@ -302,7 +314,7 @@ export default function IngredientsClient({
       {canEdit && <AccessManagementPanel users={accessList} />}
 
       <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-xs text-warning">
-        Detail fields (CAS number, regulatory status, dosage, storage, QC/CoA parameters) are general reference — verify against current TGA/USP/EP/BP/FDA sources and the specific supplier&apos;s CoA before regulatory, QC, or label use.
+        Detail fields are intentionally left blank until independently verified against an authoritative source (TGA Ingredients Table, FSANZ Food Standards Code, AICIS, APVMA, PubChem, etc.) — a &quot;Verified&quot; badge and source citation appear once an entry has been checked.
       </div>
 
       <div className="glass card-shadow flex flex-col gap-3 rounded-xl border border-border p-5 sm:flex-row sm:items-center">

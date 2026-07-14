@@ -428,7 +428,10 @@ model Ingredient {
   category          String?
   aanLabel          String?
   aanValue          String?
-  notes             String
+  notes             String?
+  verified          Boolean  @default(false)
+  verificationSource String?
+  verifiedAt        DateTime?
   mainBenefit       String?
   usedFor           String?
   synonyms          String?

@@ -72,7 +72,9 @@ function ingredientKeywords(i: { alternateName: string | null; synonyms: string 
 }
 
 function ingredientAnswer(i: {
-  notes: string;
+  notes: string | null;
+  verified: boolean;
+  verificationSource: string | null;
   mainBenefit: string | null;
   usedFor: string | null;
   typicalDosage: string | null;
@@ -83,11 +85,20 @@ function ingredientAnswer(i: {
   const parts: string[] = [];
   if (i.mainBenefit) parts.push(`Main benefit: ${i.mainBenefit}`);
   if (i.usedFor) parts.push(`Used for: ${i.usedFor}`);
-  parts.push(i.notes);
+  if (i.notes) parts.push(i.notes);
   if (i.typicalDosage) parts.push(`Typical dosage/use: ${i.typicalDosage}`);
   if (i.regulatoryStatus) parts.push(`Regulatory status: ${i.regulatoryStatus}`);
   if (i.safetyNotes) parts.push(`Safety & handling: ${i.safetyNotes}`);
   if (i.storageConditions) parts.push(`Storage: ${i.storageConditions}`);
+  if (parts.length === 0) {
+    parts.push(
+      i.verified
+        ? "Verified, but no detail fields have been populated yet."
+        : "Not yet verified against an authoritative source — no details available."
+    );
+  } else if (!i.verified) {
+    parts.push("(Not yet verified against an authoritative source.)");
+  }
   return parts.join("\n\n");
 }
 
@@ -126,7 +137,7 @@ export async function askDhanu(question: string): Promise<{
     score: scoreEntry(questionTokens, {
       title: i.name,
       keywords: ingredientKeywords(i),
-      answer: i.notes,
+      answer: i.notes ?? "",
       cause: null,
     }),
   }));

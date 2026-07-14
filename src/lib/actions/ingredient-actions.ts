@@ -60,7 +60,7 @@ type IngredientInput = {
   category?: string;
   aanLabel?: string;
   aanValue?: string;
-  notes: string;
+  notes?: string;
   mainBenefit?: string;
   usedFor?: string;
   synonyms?: string;
@@ -74,13 +74,25 @@ type IngredientInput = {
   regulatoryStatus?: string;
   faq?: string;
   source?: string;
+  verified?: boolean;
+  verificationSource?: string;
 };
+
+function withVerificationTimestamp(data: IngredientInput) {
+  const { verified, verificationSource, ...rest } = data;
+  return {
+    ...rest,
+    verified: verified ?? false,
+    verificationSource: verified ? verificationSource ?? null : null,
+    verifiedAt: verified ? new Date() : null,
+  };
+}
 
 export async function createIngredient(data: IngredientInput) {
   const session = await getSession();
   if (!session || !canEdit(session.role)) throw new Error("Not authorized");
 
-  const ingredient = await prisma.ingredient.create({ data });
+  const ingredient = await prisma.ingredient.create({ data: withVerificationTimestamp(data) });
 
   await logAudit(session, {
     action: "CREATE_INGREDIENT",
@@ -97,7 +109,7 @@ export async function updateIngredient(id: string, data: IngredientInput) {
   const session = await getSession();
   if (!session || !canEdit(session.role)) throw new Error("Not authorized");
 
-  await prisma.ingredient.update({ where: { id }, data });
+  await prisma.ingredient.update({ where: { id }, data: withVerificationTimestamp(data) });
 
   await logAudit(session, {
     action: "UPDATE_INGREDIENT",
