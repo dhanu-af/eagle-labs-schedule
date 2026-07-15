@@ -6,6 +6,7 @@ import BrisbaneClock from "@/components/brisbane-clock";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DEFAULT_FILL_WEIGHT_MG } from "@/lib/kpi-defaults";
 import {
   STATUS_CLASS,
   STATUS_LABEL,
@@ -50,7 +51,7 @@ export default async function DashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
-  const [tasks, teams, kpis, todaysKpiTargets, pendingLeaves, latestAnnouncements] =
+  const [tasks, teams, kpis, todaysKpiTargets, todaysKpiProduction, pendingLeaves, latestAnnouncements] =
     await Promise.all([
       prisma.dailyTask.findMany({
         where: { date: { gte: today, lt: tomorrow } },
@@ -60,6 +61,7 @@ export default async function DashboardPage() {
       prisma.team.findMany({ orderBy: { name: "asc" } }),
       prisma.kpi.findMany({ include: { team: true } }),
       prisma.kpiDailyTarget.findMany({ where: { date: { gte: today, lt: tomorrow } } }),
+      prisma.kpiDailyProduction.findMany({ where: { date: { gte: today, lt: tomorrow } } }),
       prisma.leaveRequest.count({ where: { status: "PENDING" } }),
       prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 2 }),
     ]);
@@ -194,6 +196,9 @@ export default async function DashboardPage() {
                 const todayOverride = todaysKpiTargets.find((dt) => dt.kpiId === k.id);
                 const target = todayOverride ? todayOverride.target : k.target;
                 const p = pct(actual, target);
+                const isEncapsulation = k.team.name.toLowerCase().includes("encapsulation");
+                const fillWeightMg = todaysKpiProduction.find((pr) => pr.kpiId === k.id)?.fillWeightMg ?? DEFAULT_FILL_WEIGHT_MG;
+                const totalCapsules = isEncapsulation && actual && fillWeightMg ? Math.round((actual * 1_000_000) / fillWeightMg) : null;
                 return (
                   <div key={k.id} className="flex flex-col items-center gap-2 text-center">
                     <ProgressRing
@@ -210,6 +215,9 @@ export default async function DashboardPage() {
                       <p className="text-[11px] text-muted-foreground">
                         {actual}/{target} {k.unit}
                       </p>
+                      {totalCapsules !== null && (
+                        <p className="text-[11px] font-medium text-primary">{totalCapsules.toLocaleString()} capsules</p>
+                      )}
                     </div>
                   </div>
                 );

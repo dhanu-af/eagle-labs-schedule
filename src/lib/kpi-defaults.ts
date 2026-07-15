@@ -1,0 +1,2 @@
+export const DEFAULT_FILL_WEIGHT_MG = 450;
+export const DEFAULT_CAPSULES_PER_BOTTLE = 31;

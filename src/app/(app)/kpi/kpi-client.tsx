@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createKpi, deleteKpi, setDailyTarget, setKpiDailyProduction, updateKpi } from "@/lib/actions/kpi-actions";
 import { pct, toDateInputValue } from "@/lib/ui";
+import { DEFAULT_FILL_WEIGHT_MG, DEFAULT_CAPSULES_PER_BOTTLE } from "@/lib/kpi-defaults";
 import KpiChart from "./kpi-chart";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -31,9 +32,6 @@ type ProductionEntry = {
   capsulesPerBottle: number | null;
   productionTimeHours: number | null;
 };
-
-const DEFAULT_FILL_WEIGHT_MG = 450;
-const DEFAULT_CAPSULES_PER_BOTTLE = 31;
 
 export default function KpiClient({
   weekStartStr,
