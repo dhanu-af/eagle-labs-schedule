@@ -39,6 +39,8 @@ export default function KpiChart({
             fontSize: 12,
             color: "var(--foreground)",
           }}
+          labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 4 }}
+          itemStyle={{ color: "var(--foreground)" }}
           formatter={(value, name) => [`${value} ${unit}`, name === "target" ? "Target" : "Actual"]}
         />
         <Bar dataKey="actual" radius={[6, 6, 2, 2]} maxBarSize={28}>
