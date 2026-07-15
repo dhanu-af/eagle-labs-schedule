@@ -265,9 +265,10 @@ model Kpi {
   unit     String  @default("kg")
   target   Float
 
-  team          Team             @relation(fields: [teamId], references: [id])
-  records       KpiRecord[]
-  dailyTargets  KpiDailyTarget[]
+  team           Team                 @relation(fields: [teamId], references: [id])
+  records        KpiRecord[]
+  dailyTargets   KpiDailyTarget[]
+  dailyProduction KpiDailyProduction[]
 }
 
 model KpiDailyTarget {
@@ -275,6 +276,23 @@ model KpiDailyTarget {
   kpiId  String
   date   DateTime
   target Float
+
+  kpi Kpi @relation(fields: [kpiId], references: [id])
+
+  @@unique([kpiId, date])
+  @@index([date])
+}
+
+model KpiDailyProduction {
+  id                  String   @id @default(cuid())
+  kpiId               String
+  date                DateTime
+  batchWeightKg       Float?
+  fillWeightMg        Float?
+  capsulesPerBottle   Int?
+  productionTimeHours Float?
+  updatedBy           String?
+  updatedAt           DateTime @updatedAt
 
   kpi Kpi @relation(fields: [kpiId], references: [id])
 

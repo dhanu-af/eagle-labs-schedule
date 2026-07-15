@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit } from "@/lib/auth";
+import { getSession, canEdit, canEditKpiProduction } from "@/lib/auth";
 import { toDateInputValueUTC, todayInBrisbane } from "@/lib/ui";
 import KpiClient from "./kpi-client";
 
@@ -40,7 +40,7 @@ export default async function KpiPage({
   const historyStart = monthlyRangeStart < weeklyRangeStart ? monthlyRangeStart : weeklyRangeStart;
   const historyEnd = monthlyRangeEnd;
 
-  const [teams, kpis, tasks, dailyTargets, historyTasks, historyTargets] = await Promise.all([
+  const [teams, kpis, tasks, dailyTargets, historyTasks, historyTargets, dailyProduction] = await Promise.all([
     prisma.team.findMany({ orderBy: { name: "asc" } }),
     prisma.kpi.findMany({ include: { team: true }, orderBy: { name: "asc" } }),
     prisma.dailyTask.findMany({
@@ -54,6 +54,9 @@ export default async function KpiPage({
     }),
     prisma.kpiDailyTarget.findMany({
       where: { date: { gte: historyStart, lt: historyEnd } },
+    }),
+    prisma.kpiDailyProduction.findMany({
+      where: { date: { gte: weekStart, lt: weekEnd } },
     }),
   ]);
 
@@ -131,6 +134,24 @@ export default async function KpiPage({
   const currentWeekIndex = WEEKS_COUNT - 1;
   const currentMonthIndex = MONTHS_COUNT - 1;
 
+  const productionByKpi = Object.fromEntries(
+    kpis.map((k) => [
+      k.id,
+      days.map((d) => {
+        const entry = dailyProduction.find(
+          (p) => p.kpiId === k.id && p.date.toDateString() === d.toDateString()
+        );
+        if (!entry) return null;
+        return {
+          batchWeightKg: entry.batchWeightKg,
+          fillWeightMg: entry.fillWeightMg,
+          capsulesPerBottle: entry.capsulesPerBottle,
+          productionTimeHours: entry.productionTimeHours,
+        };
+      }),
+    ])
+  );
+
   return (
     <KpiClient
       weekStartStr={toDateInputValueUTC(weekStart)}
@@ -178,6 +199,8 @@ export default async function KpiPage({
       monthlyByKpi={monthlyByKpi}
       currentMonthIndex={currentMonthIndex}
       canManage={!!session && canEdit(session.role)}
+      productionByKpi={productionByKpi}
+      canEditProduction={!!session && canEditKpiProduction(session.role)}
     />
   );
 }

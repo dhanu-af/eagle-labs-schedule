@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createKpi, deleteKpi, setDailyTarget, updateKpi } from "@/lib/actions/kpi-actions";
+import { createKpi, deleteKpi, setDailyTarget, setKpiDailyProduction, updateKpi } from "@/lib/actions/kpi-actions";
 import { pct, toDateInputValue } from "@/lib/ui";
 import KpiChart from "./kpi-chart";
 import { Card } from "@/components/ui/Card";
@@ -26,6 +26,13 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 type PeriodSeries = Record<string, { actual: number[]; target: number[] }>;
 
+type ProductionEntry = {
+  batchWeightKg: number | null;
+  fillWeightMg: number | null;
+  capsulesPerBottle: number | null;
+  productionTimeHours: number | null;
+};
+
 export default function KpiClient({
   weekStartStr,
   todayStr,
@@ -40,6 +47,8 @@ export default function KpiClient({
   monthlyByKpi,
   currentMonthIndex,
   canManage,
+  productionByKpi,
+  canEditProduction,
 }: {
   weekStartStr: string;
   todayStr: string;
@@ -54,6 +63,8 @@ export default function KpiClient({
   monthlyByKpi: PeriodSeries;
   currentMonthIndex: number;
   canManage: boolean;
+  productionByKpi: Record<string, (ProductionEntry | null)[]>;
+  canEditProduction: boolean;
 }) {
   const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
@@ -170,6 +181,8 @@ export default function KpiClient({
                 actuals={dailyActuals}
                 unit={k.unit}
                 canManage={canManage}
+                production={productionByKpi[k.id] ?? Array(7).fill(null)}
+                canEditProduction={canEditProduction}
               />
 
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
@@ -285,6 +298,8 @@ function DailyTargetsRow({
   actuals,
   unit,
   canManage,
+  production,
+  canEditProduction,
 }: {
   kpiId: string;
   weekStartStr: string;
@@ -292,12 +307,15 @@ function DailyTargetsRow({
   actuals: number[];
   unit: string;
   canManage: boolean;
+  production: (ProductionEntry | null)[];
+  canEditProduction: boolean;
 }) {
   const router = useRouter();
   const [values, setValues] = useState(targets);
   const [dirtyDays, setDirtyDays] = useState<Set<number>>(new Set());
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const [openDay, setOpenDay] = useState<number | null>(null);
 
   useEffect(() => {
     setValues(targets);
@@ -360,6 +378,14 @@ function DailyTargetsRow({
               <span className={`text-[9px] font-medium tabular-nums ${met ? "text-success" : "text-foreground"}`}>
                 {actual} done
               </span>
+              <button
+                onClick={() => setOpenDay(i)}
+                className={`text-[9px] font-medium underline decoration-dotted underline-offset-2 transition-colors duration-150 ease-out hover:text-primary ${
+                  production[i] ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Details
+              </button>
             </div>
           );
         })}
@@ -370,6 +396,181 @@ function DailyTargetsRow({
           {pending ? "Saving..." : "Save daily targets"}
         </Button>
       )}
+      {openDay !== null && (
+        <ProductionDetailsModal
+          kpiId={kpiId}
+          dateStr={dateForDay(openDay)}
+          dayLabel={`${DAY_LABELS[openDay]} - ${new Date(dateForDay(openDay) + "T00:00:00").getDate()}`}
+          unit={unit}
+          existing={production[openDay]}
+          canEdit={canEditProduction}
+          onClose={() => setOpenDay(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProductionDetailsModal({
+  kpiId,
+  dateStr,
+  dayLabel,
+  unit,
+  existing,
+  canEdit,
+  onClose,
+}: {
+  kpiId: string;
+  dateStr: string;
+  dayLabel: string;
+  unit: string;
+  existing: ProductionEntry | null;
+  canEdit: boolean;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+  const [batchWeightKg, setBatchWeightKg] = useState(existing?.batchWeightKg ?? "");
+  const [fillWeightMg, setFillWeightMg] = useState(existing?.fillWeightMg ?? "");
+  const [capsulesPerBottle, setCapsulesPerBottle] = useState(existing?.capsulesPerBottle ?? "");
+  const [productionTimeHours, setProductionTimeHours] = useState(existing?.productionTimeHours ?? "");
+
+  const batchWeight = Number(batchWeightKg) || null;
+  const fillWeight = Number(fillWeightMg) || null;
+  const perBottle = Number(capsulesPerBottle) || null;
+  const timeHours = Number(productionTimeHours) || null;
+
+  const totalCapsules = batchWeight && fillWeight ? Math.round((batchWeight * 1_000_000) / fillWeight) : null;
+  const totalBottles = totalCapsules && perBottle ? Math.floor(totalCapsules / perBottle) : null;
+  const productionRate = totalCapsules && timeHours ? Math.round(totalCapsules / timeHours) : null;
+
+  function save() {
+    setError("");
+    startTransition(async () => {
+      try {
+        await setKpiDailyProduction(kpiId, dateStr, {
+          batchWeightKg: batchWeight,
+          fillWeightMg: fillWeight,
+          capsulesPerBottle: perBottle,
+          productionTimeHours: timeHours,
+        });
+        router.refresh();
+        onClose();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't save production details.");
+      }
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-foreground">{dayLabel} — Production Details</h2>
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+            ✕
+          </button>
+        </div>
+
+        {canEdit ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Total Batch Weight ({unit})</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={batchWeightKg}
+                  onChange={(e) => setBatchWeightKg(e.target.value)}
+                  className="input"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Average Fill Weight (mg/capsule)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={fillWeightMg}
+                  onChange={(e) => setFillWeightMg(e.target.value)}
+                  className="input"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Capsules per Bottle</span>
+                <input
+                  type="number"
+                  step="1"
+                  value={capsulesPerBottle}
+                  onChange={(e) => setCapsulesPerBottle(e.target.value)}
+                  className="input"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Average Production Time (hours)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={productionTimeHours}
+                  onChange={(e) => setProductionTimeHours(e.target.value)}
+                  className="input"
+                />
+              </label>
+            </div>
+
+            <div className="rounded-lg border border-border bg-surface-muted/40 p-3 text-xs">
+              <DetailLine label="Total Capsules" value={totalCapsules !== null ? `${totalCapsules.toLocaleString()} capsules` : "—"} />
+              <DetailLine
+                label="Total Bottle Quantity"
+                value={
+                  totalBottles !== null
+                    ? `${totalBottles.toLocaleString()} bottles${perBottle ? ` (${perBottle} capsules/bottle)` : ""}`
+                    : "—"
+                }
+              />
+              <DetailLine label="Average Production Rate" value={productionRate !== null ? `${productionRate.toLocaleString()} capsules/hour` : "—"} />
+            </div>
+
+            {error && <p className="text-xs text-danger">{error}</p>}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button onClick={save} disabled={pending}>
+                {pending ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        ) : existing ? (
+          <div className="rounded-lg border border-border bg-surface-muted/40 p-3 text-xs">
+            <DetailLine label="Total Batch Weight" value={batchWeight !== null ? `${batchWeight} ${unit}` : "—"} />
+            <DetailLine label="Average Fill Weight" value={fillWeight !== null ? `${fillWeight} mg/capsule` : "—"} />
+            <DetailLine label="Total Capsules" value={totalCapsules !== null ? `${totalCapsules.toLocaleString()} capsules` : "—"} />
+            <DetailLine
+              label="Total Bottle Quantity"
+              value={
+                totalBottles !== null
+                  ? `${totalBottles.toLocaleString()} bottles${perBottle ? ` (${perBottle} capsules/bottle)` : ""}`
+                  : "—"
+              }
+            />
+            <DetailLine label="Average Production Time" value={timeHours !== null ? `${timeHours} hours` : "—"} />
+            <DetailLine label="Average Production Rate" value={productionRate !== null ? `${productionRate.toLocaleString()} capsules/hour` : "—"} />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">No production details recorded for this day yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DetailLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-1 first:pt-0 last:pb-0">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium tabular-nums text-foreground">{value}</span>
     </div>
   );
 }

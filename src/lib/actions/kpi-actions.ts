@@ -2,12 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit } from "@/lib/auth";
+import { getSession, canEdit, canEditKpiProduction } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 
 async function requireManager() {
   const session = await getSession();
   if (!session || !canEdit(session.role)) throw new Error("Not authorized");
+  return session;
+}
+
+async function requireProductionEditor() {
+  const session = await getSession();
+  if (!session || !canEditKpiProduction(session.role)) throw new Error("Not authorized");
   return session;
 }
 
@@ -89,6 +95,36 @@ export async function setDailyTarget(kpiId: string, dateStr: string, target: num
     entityType: "Kpi",
     entityId: kpiId,
     summary: `Set target for ${dateStr} to ${target} on KPI ${kpiId}`,
+  });
+
+  revalidatePath("/kpi");
+}
+
+export async function setKpiDailyProduction(
+  kpiId: string,
+  dateStr: string,
+  data: {
+    batchWeightKg: number | null;
+    fillWeightMg: number | null;
+    capsulesPerBottle: number | null;
+    productionTimeHours: number | null;
+  }
+) {
+  const session = await requireProductionEditor();
+
+  const date = new Date(`${dateStr}T00:00:00`);
+
+  await prisma.kpiDailyProduction.upsert({
+    where: { kpiId_date: { kpiId, date } },
+    update: { ...data, updatedBy: session.fullName },
+    create: { kpiId, date, ...data, updatedBy: session.fullName },
+  });
+
+  await logAudit(session, {
+    action: "SET_KPI_DAILY_PRODUCTION",
+    entityType: "Kpi",
+    entityId: kpiId,
+    summary: `Set production details for ${dateStr} on KPI ${kpiId}`,
   });
 
   revalidatePath("/kpi");

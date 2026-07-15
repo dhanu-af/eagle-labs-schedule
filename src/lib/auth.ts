@@ -80,6 +80,11 @@ export function canApproveWorkLog(role: Role) {
   return role === "SUPERVISOR" || role === "OPERATIONS" || role === "SUPER_ADMIN";
 }
 
+/** KPI daily production details (batch weight, fill weight, capsule/bottle counts): Supervisor or Super Admin only. */
+export function canEditKpiProduction(role: Role) {
+  return role === "SUPERVISOR" || role === "OPERATIONS" || role === "SUPER_ADMIN";
+}
+
 /**
  * Daily Planner: any authenticated employee may update a task's actual
  * production quantity and move its status (e.g. via "Move to..."), even
