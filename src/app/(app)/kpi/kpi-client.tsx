@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createKpi, deleteKpi, setDailyTarget, setKpiDailyProduction, updateKpi } from "@/lib/actions/kpi-actions";
-import { pct, toDateInputValue } from "@/lib/ui";
+import { getTaskActivity } from "@/lib/actions/daily-actions";
+import { pct, toDateInputValue, formatBrisbaneDateTime } from "@/lib/ui";
 import { DEFAULT_FILL_WEIGHT_MG, DEFAULT_CAPSULES_PER_BOTTLE } from "@/lib/kpi-defaults";
 import KpiChart from "./kpi-chart";
 import { Card } from "@/components/ui/Card";
@@ -31,6 +32,22 @@ type ProductionEntry = {
   fillWeightMg: number | null;
   capsulesPerBottle: number | null;
   productionTimeHours: number | null;
+};
+
+type TaskActivityEntry = {
+  id: string;
+  action: string;
+  summary: string;
+  actorName: string;
+  createdAt: string;
+};
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  CREATE_TASK: "Task created",
+  UPDATE_TASK_STATUS: "Status / weight update",
+  UPDATE_TASK: "Task updated",
+  DELETE_TASK: "Task deleted",
+  DUPLICATE_DAY: "Duplicated from previous day",
 };
 
 export default function KpiClient({
@@ -176,6 +193,8 @@ export default function KpiClient({
 
               <DailyTargetsRow
                 kpiId={k.id}
+                teamId={k.teamId}
+                product={k.product}
                 weekStartStr={weekStartStr}
                 targets={dailyTargets}
                 actuals={dailyActuals}
@@ -294,6 +313,8 @@ function PeriodSection({
 
 function DailyTargetsRow({
   kpiId,
+  teamId,
+  product,
   weekStartStr,
   targets,
   actuals,
@@ -304,6 +325,8 @@ function DailyTargetsRow({
   showProduction,
 }: {
   kpiId: string;
+  teamId: string;
+  product: string | null;
   weekStartStr: string;
   targets: number[];
   actuals: number[];
@@ -404,6 +427,8 @@ function DailyTargetsRow({
       {openDay !== null && (
         <ProductionDetailsModal
           kpiId={kpiId}
+          teamId={teamId}
+          product={product}
           dateStr={dateForDay(openDay)}
           dayLabel={`${DAY_LABELS[openDay]} - ${new Date(dateForDay(openDay) + "T00:00:00").getDate()}`}
           unit={unit}
@@ -419,6 +444,8 @@ function DailyTargetsRow({
 
 function ProductionDetailsModal({
   kpiId,
+  teamId,
+  product,
   dateStr,
   dayLabel,
   unit,
@@ -428,6 +455,8 @@ function ProductionDetailsModal({
   onClose,
 }: {
   kpiId: string;
+  teamId: string;
+  product: string | null;
   dateStr: string;
   dayLabel: string;
   unit: string;
@@ -442,6 +471,18 @@ function ProductionDetailsModal({
   const [fillWeightMg, setFillWeightMg] = useState<number | "">(existing?.fillWeightMg ?? DEFAULT_FILL_WEIGHT_MG);
   const [capsulesPerBottle, setCapsulesPerBottle] = useState<number | "">(existing?.capsulesPerBottle ?? DEFAULT_CAPSULES_PER_BOTTLE);
   const [productionTimeHours, setProductionTimeHours] = useState<number | "">(existing?.productionTimeHours ?? "");
+  const [activity, setActivity] = useState<TaskActivityEntry[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getTaskActivity(teamId, product, dateStr).then((entries) => {
+      if (!cancelled) setActivity(entries);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId, product, dateStr]);
 
   const fillWeight = Number(fillWeightMg) || null;
   const perBottle = Number(capsulesPerBottle) || null;
@@ -470,7 +511,7 @@ function ProductionDetailsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="card-elevated w-full max-w-sm rounded-xl border border-border bg-surface p-5">
+      <div className="card-elevated max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">{dayLabel} — Production Details</h2>
           <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
@@ -561,6 +602,31 @@ function ProductionDetailsModal({
         ) : (
           <p className="text-xs text-muted-foreground">No production details recorded for this day yet.</p>
         )}
+
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+            Activity History
+          </p>
+          {activity === null ? (
+            <p className="text-xs text-muted-foreground">Loading...</p>
+          ) : activity.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No task activity recorded for this day.</p>
+          ) : (
+            <div className="space-y-2">
+              {activity.map((a) => (
+                <div key={a.id} className="rounded-lg border border-border bg-surface-muted/40 px-3 py-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-foreground">{ACTIVITY_LABELS[a.action] ?? a.action}</span>
+                    <span className="shrink-0 text-[10px] text-muted-foreground">{formatBrisbaneDateTime(a.createdAt)}</span>
+                  </div>
+                  <p className="mt-0.5 text-muted-foreground">
+                    {a.summary} · <span className="font-medium text-foreground">{a.actorName}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

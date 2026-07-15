@@ -152,11 +152,12 @@ export async function updateTaskStatus(
     },
   });
 
+  const qtyNote = ` — ${task.actualQty}${task.targetQty ? `/${task.targetQty}` : ""} ${task.targetUnit}`;
   await logAudit(session, {
     action: "UPDATE_TASK_STATUS",
     entityType: "DailyTask",
     entityId: taskId,
-    summary: `Set ${task.product} · ${task.process} to ${status}${delayReason ? ` (${delayReason})` : ""}`,
+    summary: `Set ${task.product} · ${task.process} to ${status}${delayReason ? ` (${delayReason})` : ""}${qtyNote}`,
   });
 
   if (status === "DELAYED") {
@@ -213,4 +214,37 @@ export async function duplicatePreviousDay(dateStr: string) {
 
   revalidatePath("/daily");
   revalidatePath("/");
+}
+
+export async function getTaskActivity(teamId: string, product: string | null, dateStr: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Not authorized");
+
+  const date = new Date(`${dateStr}T00:00:00`);
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  const tasks = await prisma.dailyTask.findMany({
+    where: {
+      teamId,
+      date: { gte: date, lt: nextDate },
+      ...(product ? { product } : {}),
+    },
+    select: { id: true },
+  });
+
+  if (tasks.length === 0) return [];
+
+  const logs = await prisma.auditLog.findMany({
+    where: { entityType: "DailyTask", entityId: { in: tasks.map((t) => t.id) } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return logs.map((l) => ({
+    id: l.id,
+    action: l.action,
+    summary: l.summary,
+    actorName: l.actorName,
+    createdAt: l.createdAt.toISOString(),
+  }));
 }
