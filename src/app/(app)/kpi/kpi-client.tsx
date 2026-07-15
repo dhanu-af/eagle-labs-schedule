@@ -202,7 +202,7 @@ export default function KpiClient({
                 canManage={canManage}
                 production={productionByKpi[k.id] ?? Array(7).fill(null)}
                 canEditProduction={canEditProduction}
-                showProduction={k.teamName.toLowerCase().includes("encapsulation")}
+                isEncapsulation={k.teamName.toLowerCase().includes("encapsulation")}
               />
 
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
@@ -322,7 +322,7 @@ function DailyTargetsRow({
   canManage,
   production,
   canEditProduction,
-  showProduction,
+  isEncapsulation,
 }: {
   kpiId: string;
   teamId: string;
@@ -334,7 +334,7 @@ function DailyTargetsRow({
   canManage: boolean;
   production: (ProductionEntry | null)[];
   canEditProduction: boolean;
-  showProduction: boolean;
+  isEncapsulation: boolean;
 }) {
   const router = useRouter();
   const [values, setValues] = useState(targets);
@@ -404,16 +404,14 @@ function DailyTargetsRow({
               <span className={`text-[9px] font-medium tabular-nums ${met ? "text-success" : "text-foreground"}`}>
                 {actual} done
               </span>
-              {showProduction && (
-                <button
-                  onClick={() => setOpenDay(i)}
-                  className={`text-[9px] font-medium underline decoration-dotted underline-offset-2 transition-colors duration-150 ease-out hover:text-primary ${
-                    production[i] ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  Details
-                </button>
-              )}
+              <button
+                onClick={() => setOpenDay(i)}
+                className={`text-[9px] font-medium underline decoration-dotted underline-offset-2 transition-colors duration-150 ease-out hover:text-primary ${
+                  production[i] ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Details
+              </button>
             </div>
           );
         })}
@@ -435,6 +433,7 @@ function DailyTargetsRow({
           actual={actuals[openDay] ?? 0}
           existing={production[openDay]}
           canEdit={canEditProduction}
+          isEncapsulation={isEncapsulation}
           onClose={() => setOpenDay(null)}
         />
       )}
@@ -452,6 +451,7 @@ function ProductionDetailsModal({
   actual,
   existing,
   canEdit,
+  isEncapsulation,
   onClose,
 }: {
   kpiId: string;
@@ -463,6 +463,7 @@ function ProductionDetailsModal({
   actual: number;
   existing: ProductionEntry | null;
   canEdit: boolean;
+  isEncapsulation: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -519,7 +520,7 @@ function ProductionDetailsModal({
           </button>
         </div>
 
-        {canEdit ? (
+        {isEncapsulation && (canEdit ? (
           <div className="space-y-3">
             <div className="rounded-lg border border-border bg-surface-muted/40 px-3 py-2 text-xs">
               <DetailLine label="Total Batch Weight" value={`${actual} ${unit}`} />
@@ -601,9 +602,9 @@ function ProductionDetailsModal({
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">No production details recorded for this day yet.</p>
-        )}
+        ))}
 
-        <div className="mt-4 border-t border-border pt-3">
+        <div className={isEncapsulation ? "mt-4 border-t border-border pt-3" : ""}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
             Activity History
           </p>
