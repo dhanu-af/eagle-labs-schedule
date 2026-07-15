@@ -297,10 +297,12 @@ function DailyTargetsRow({
   const [values, setValues] = useState(targets);
   const [dirtyDays, setDirtyDays] = useState<Set<number>>(new Set());
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setValues(targets);
     setDirtyDays(new Set());
+    setError("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStartStr, kpiId]);
 
@@ -312,10 +314,15 @@ function DailyTargetsRow({
 
   function save() {
     const days = Array.from(dirtyDays);
+    setError("");
     startTransition(async () => {
-      await Promise.all(days.map((i) => setDailyTarget(kpiId, dateForDay(i), values[i])));
-      setDirtyDays(new Set());
-      router.refresh();
+      try {
+        await Promise.all(days.map((i) => setDailyTarget(kpiId, dateForDay(i), values[i])));
+        setDirtyDays(new Set());
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't save the daily target.");
+      }
     });
   }
 
@@ -357,6 +364,7 @@ function DailyTargetsRow({
           );
         })}
       </div>
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
       {dirtyDays.size > 0 && (
         <Button size="sm" className="mt-2 w-full" onClick={save} disabled={pending}>
           {pending ? "Saving..." : "Save daily targets"}
@@ -377,16 +385,22 @@ function KpiFormModal({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
 
   function submit(formData: FormData) {
+    setError("");
     startTransition(async () => {
-      if (existing) {
-        await updateKpi(existing.id, formData);
-      } else {
-        await createKpi(formData);
+      try {
+        if (existing) {
+          await updateKpi(existing.id, formData);
+        } else {
+          await createKpi(formData);
+        }
+        router.refresh();
+        onClose();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't save this KPI.");
       }
-      router.refresh();
-      onClose();
     });
   }
 
@@ -433,13 +447,14 @@ function KpiFormModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Daily Target</span>
-              <input name="target" type="number" step="0.1" required defaultValue={existing?.target} className="input" />
+              <input name="target" type="number" step="0.1" min="0.01" required defaultValue={existing?.target} className="input" />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Unit</span>
               <input name="unit" defaultValue={existing?.unit ?? "kg"} className="input" />
             </label>
           </div>
+          {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
