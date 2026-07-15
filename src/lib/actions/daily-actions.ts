@@ -240,11 +240,15 @@ export async function getTaskActivity(teamId: string, product: string | null, da
     orderBy: { createdAt: "asc" },
   });
 
-  return logs.map((l) => ({
-    id: l.id,
-    action: l.action,
-    summary: l.summary,
-    actorName: l.actorName,
-    createdAt: l.createdAt.toISOString(),
-  }));
+  return logs.map((l) => {
+    const statusMatch = l.action === "UPDATE_TASK_STATUS" ? l.summary.match(/to (NOT_STARTED|RUNNING|COMPLETED|DELAYED)/) : null;
+    return {
+      id: l.id,
+      action: l.action,
+      summary: l.summary,
+      actorName: l.actorName,
+      createdAt: l.createdAt.toISOString(),
+      status: statusMatch ? statusMatch[1] : null,
+    };
+  });
 }

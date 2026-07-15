@@ -40,6 +40,7 @@ type TaskActivityEntry = {
   summary: string;
   actorName: string;
   createdAt: string;
+  status: string | null;
 };
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -49,6 +50,30 @@ const ACTIVITY_LABELS: Record<string, string> = {
   DELETE_TASK: "Task deleted",
   DUPLICATE_DAY: "Duplicated from previous day",
 };
+
+/** First RUNNING → last COMPLETED, minus any time spent DELAYED in between. */
+function computeNetWorkingHours(activity: TaskActivityEntry[]): number | null {
+  const statusEvents = activity.filter((a) => a.status).map((a) => ({ status: a.status!, at: new Date(a.createdAt).getTime() }));
+  const startedAt = statusEvents.find((e) => e.status === "RUNNING")?.at;
+  const completedEvents = statusEvents.filter((e) => e.status === "COMPLETED");
+  const completedAt = completedEvents.length > 0 ? completedEvents[completedEvents.length - 1].at : undefined;
+  if (!startedAt || !completedAt || completedAt <= startedAt) return null;
+
+  let delayedMs = 0;
+  let delayStart: number | null = null;
+  for (const e of statusEvents) {
+    if (e.at < startedAt || e.at > completedAt) continue;
+    if (e.status === "DELAYED") {
+      delayStart = e.at;
+    } else if (delayStart !== null) {
+      delayedMs += e.at - delayStart;
+      delayStart = null;
+    }
+  }
+
+  const netMs = completedAt - startedAt - delayedMs;
+  return netMs > 0 ? Math.round((netMs / 3_600_000) * 100) / 100 : null;
+}
 
 export default function KpiClient({
   weekStartStr,
@@ -477,7 +502,12 @@ function ProductionDetailsModal({
   useEffect(() => {
     let cancelled = false;
     getTaskActivity(teamId, product, dateStr).then((entries) => {
-      if (!cancelled) setActivity(entries);
+      if (cancelled) return;
+      setActivity(entries);
+      if (existing?.productionTimeHours == null) {
+        const netHours = computeNetWorkingHours(entries);
+        if (netHours !== null) setProductionTimeHours(netHours);
+      }
     });
     return () => {
       cancelled = true;
@@ -557,6 +587,9 @@ function ProductionDetailsModal({
                   onChange={(e) => setProductionTimeHours(e.target.value === "" ? "" : Number(e.target.value))}
                   className="input"
                 />
+                <span className="mt-1 block text-[10px] text-muted-foreground">
+                  Auto-calculated from the activity log (first Running to last Completed, minus any Delayed time) — editable.
+                </span>
               </label>
             </div>
 
