@@ -183,6 +183,7 @@ export default function KpiClient({
                 canManage={canManage}
                 production={productionByKpi[k.id] ?? Array(7).fill(null)}
                 canEditProduction={canEditProduction}
+                showProduction={k.teamName.toLowerCase().includes("encapsulation")}
               />
 
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
@@ -300,6 +301,7 @@ function DailyTargetsRow({
   canManage,
   production,
   canEditProduction,
+  showProduction,
 }: {
   kpiId: string;
   weekStartStr: string;
@@ -309,6 +311,7 @@ function DailyTargetsRow({
   canManage: boolean;
   production: (ProductionEntry | null)[];
   canEditProduction: boolean;
+  showProduction: boolean;
 }) {
   const router = useRouter();
   const [values, setValues] = useState(targets);
@@ -378,14 +381,16 @@ function DailyTargetsRow({
               <span className={`text-[9px] font-medium tabular-nums ${met ? "text-success" : "text-foreground"}`}>
                 {actual} done
               </span>
-              <button
-                onClick={() => setOpenDay(i)}
-                className={`text-[9px] font-medium underline decoration-dotted underline-offset-2 transition-colors duration-150 ease-out hover:text-primary ${
-                  production[i] ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                Details
-              </button>
+              {showProduction && (
+                <button
+                  onClick={() => setOpenDay(i)}
+                  className={`text-[9px] font-medium underline decoration-dotted underline-offset-2 transition-colors duration-150 ease-out hover:text-primary ${
+                    production[i] ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  Details
+                </button>
+              )}
             </div>
           );
         })}
