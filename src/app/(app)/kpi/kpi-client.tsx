@@ -350,7 +350,7 @@ function DailyTargetsRow({
               ) : (
                 <span className="text-[10px] text-foreground">{values[i]}</span>
               )}
-              <span className={`text-[9px] tabular-nums ${met ? "text-success" : "text-muted-foreground"}`}>
+              <span className={`text-[9px] font-medium tabular-nums ${met ? "text-success" : "text-foreground"}`}>
                 {actual} done
               </span>
             </div>
