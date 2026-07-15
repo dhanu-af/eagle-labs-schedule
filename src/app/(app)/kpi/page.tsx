@@ -12,6 +12,9 @@ function startOfWeek(d: Date) {
   return monday;
 }
 
+const WEEKS_COUNT = 8;
+const MONTHS_COUNT = 6;
+
 export default async function KpiPage({
   searchParams,
 }: {
@@ -24,7 +27,20 @@ export default async function KpiPage({
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
-  const [teams, kpis, tasks, dailyTargets] = await Promise.all([
+  const today = todayInBrisbane();
+  const currentWeekStart = startOfWeek(today);
+  const weeklyRangeStart = new Date(currentWeekStart);
+  weeklyRangeStart.setUTCDate(weeklyRangeStart.getUTCDate() - (WEEKS_COUNT - 1) * 7);
+
+  const currentMonthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const monthlyRangeStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - (MONTHS_COUNT - 1), 1));
+  const monthlyRangeEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1));
+
+  // The 6-month window always encloses the 8-week window, so one broad fetch covers both summaries.
+  const historyStart = monthlyRangeStart < weeklyRangeStart ? monthlyRangeStart : weeklyRangeStart;
+  const historyEnd = monthlyRangeEnd;
+
+  const [teams, kpis, tasks, dailyTargets, historyTasks, historyTargets] = await Promise.all([
     prisma.team.findMany({ orderBy: { name: "asc" } }),
     prisma.kpi.findMany({ include: { team: true }, orderBy: { name: "asc" } }),
     prisma.dailyTask.findMany({
@@ -33,6 +49,12 @@ export default async function KpiPage({
     prisma.kpiDailyTarget.findMany({
       where: { date: { gte: weekStart, lt: weekEnd } },
     }),
+    prisma.dailyTask.findMany({
+      where: { date: { gte: historyStart, lt: historyEnd } },
+    }),
+    prisma.kpiDailyTarget.findMany({
+      where: { date: { gte: historyStart, lt: historyEnd } },
+    }),
   ]);
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -40,6 +62,74 @@ export default async function KpiPage({
     d.setUTCDate(d.getUTCDate() + i);
     return d;
   });
+
+  function actualFor(kpi: (typeof kpis)[number], date: Date, source: typeof historyTasks) {
+    return source
+      .filter(
+        (t) =>
+          t.teamId === kpi.teamId &&
+          (kpi.product ? t.product === kpi.product : true) &&
+          t.date.toDateString() === date.toDateString()
+      )
+      .reduce((s, t) => s + t.actualQty, 0);
+  }
+
+  function targetFor(kpi: (typeof kpis)[number], date: Date, source: typeof historyTargets) {
+    const override = source.find((dt) => dt.kpiId === kpi.id && dt.date.toDateString() === date.toDateString());
+    return override ? override.target : kpi.target;
+  }
+
+  const WEEK_LABELS: string[] = [];
+  const weeklyByKpi: Record<string, { actual: number[]; target: number[] }> = {};
+  for (const k of kpis) weeklyByKpi[k.id] = { actual: Array(WEEKS_COUNT).fill(0), target: Array(WEEKS_COUNT).fill(0) };
+
+  for (let w = 0; w < WEEKS_COUNT; w++) {
+    const bucketStart = new Date(weeklyRangeStart);
+    bucketStart.setUTCDate(bucketStart.getUTCDate() + w * 7);
+    const bucketEnd = new Date(bucketStart);
+    bucketEnd.setUTCDate(bucketEnd.getUTCDate() + 6);
+    WEEK_LABELS.push(
+      `${bucketStart.toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}`
+    );
+    for (const k of kpis) {
+      let actualSum = 0;
+      let targetSum = 0;
+      for (let d = 0; d < 7; d++) {
+        const day = new Date(bucketStart);
+        day.setUTCDate(day.getUTCDate() + d);
+        actualSum += actualFor(k, day, historyTasks);
+        targetSum += targetFor(k, day, historyTargets);
+      }
+      weeklyByKpi[k.id].actual[w] = actualSum;
+      weeklyByKpi[k.id].target[w] = targetSum;
+    }
+  }
+
+  const MONTH_LABELS: string[] = [];
+  const monthlyByKpi: Record<string, { actual: number[]; target: number[] }> = {};
+  for (const k of kpis) monthlyByKpi[k.id] = { actual: Array(MONTHS_COUNT).fill(0), target: Array(MONTHS_COUNT).fill(0) };
+
+  for (let m = 0; m < MONTHS_COUNT; m++) {
+    const monthStart = new Date(Date.UTC(monthlyRangeStart.getUTCFullYear(), monthlyRangeStart.getUTCMonth() + m, 1));
+    const monthEnd = new Date(Date.UTC(monthlyRangeStart.getUTCFullYear(), monthlyRangeStart.getUTCMonth() + m + 1, 1));
+    const daysInMonth = Math.round((monthEnd.getTime() - monthStart.getTime()) / 86400000);
+    MONTH_LABELS.push(monthStart.toLocaleDateString("en-AU", { month: "short", year: "2-digit" }));
+    for (const k of kpis) {
+      let actualSum = 0;
+      let targetSum = 0;
+      for (let d = 0; d < daysInMonth; d++) {
+        const day = new Date(monthStart);
+        day.setUTCDate(day.getUTCDate() + d);
+        actualSum += actualFor(k, day, historyTasks);
+        targetSum += targetFor(k, day, historyTargets);
+      }
+      monthlyByKpi[k.id].actual[m] = actualSum;
+      monthlyByKpi[k.id].target[m] = targetSum;
+    }
+  }
+
+  const currentWeekIndex = WEEKS_COUNT - 1;
+  const currentMonthIndex = MONTHS_COUNT - 1;
 
   return (
     <KpiClient
@@ -81,6 +171,12 @@ export default async function KpiPage({
           }),
         ])
       )}
+      weekLabels={WEEK_LABELS}
+      weeklyByKpi={weeklyByKpi}
+      currentWeekIndex={currentWeekIndex}
+      monthLabels={MONTH_LABELS}
+      monthlyByKpi={monthlyByKpi}
+      currentMonthIndex={currentMonthIndex}
       canManage={!!session && canEdit(session.role)}
     />
   );

@@ -24,6 +24,8 @@ type Kpi = {
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+type PeriodSeries = Record<string, { actual: number[]; target: number[] }>;
+
 export default function KpiClient({
   weekStartStr,
   todayStr,
@@ -31,6 +33,12 @@ export default function KpiClient({
   kpis,
   dailyByKpi,
   dailyTargetsByKpi,
+  weekLabels,
+  weeklyByKpi,
+  currentWeekIndex,
+  monthLabels,
+  monthlyByKpi,
+  currentMonthIndex,
   canManage,
 }: {
   weekStartStr: string;
@@ -39,6 +47,12 @@ export default function KpiClient({
   kpis: Kpi[];
   dailyByKpi: Record<string, number[]>;
   dailyTargetsByKpi: Record<string, number[]>;
+  weekLabels: string[];
+  weeklyByKpi: PeriodSeries;
+  currentWeekIndex: number;
+  monthLabels: string[];
+  monthlyByKpi: PeriodSeries;
+  currentMonthIndex: number;
   canManage: boolean;
 }) {
   const router = useRouter();
@@ -171,10 +185,95 @@ export default function KpiClient({
         })}
       </div>
 
+      {kpis.length > 0 && (
+        <>
+          <PeriodSection
+            title="Weekly KPI"
+            subtitle={`Actual vs target by week — last ${weekLabels.length} weeks`}
+            kpis={kpis}
+            labels={weekLabels}
+            byKpi={weeklyByKpi}
+            currentIndex={currentWeekIndex}
+          />
+          <PeriodSection
+            title="Monthly KPI"
+            subtitle={`Actual vs target by month — last ${monthLabels.length} months`}
+            kpis={kpis}
+            labels={monthLabels}
+            byKpi={monthlyByKpi}
+            currentIndex={currentMonthIndex}
+          />
+        </>
+      )}
+
       {showAdd && <KpiFormModal teams={teams} onClose={() => setShowAdd(false)} />}
       {editKpi && (
         <KpiFormModal teams={teams} existing={editKpi} onClose={() => setEditKpi(null)} />
       )}
+    </div>
+  );
+}
+
+function PeriodSection({
+  title,
+  subtitle,
+  kpis,
+  labels,
+  byKpi,
+  currentIndex,
+}: {
+  title: string;
+  subtitle: string;
+  kpis: Kpi[];
+  labels: string[];
+  byKpi: PeriodSeries;
+  currentIndex: number;
+}) {
+  return (
+    <div className="space-y-3 border-t border-border pt-4">
+      <div>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {kpis.map((k) => {
+          const series = byKpi[k.id] ?? { actual: [], target: [] };
+          const totalActual = series.actual.reduce((s, v) => s + v, 0);
+          const totalTarget = series.target.reduce((s, v) => s + v, 0);
+          const totalPct = pct(totalActual, totalTarget);
+          const chartColor = totalPct >= 100 ? "#4ade80" : totalPct >= 50 ? "#34d399" : "#e0aa4e";
+          const chartData = series.actual.map((actual, i) => ({
+            day: labels[i] ?? "",
+            actual,
+            target: series.target[i] ?? 0,
+            isToday: i === currentIndex,
+          }));
+
+          return (
+            <Card key={k.id}>
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {k.teamName} · {k.name}
+                    {k.product && (
+                      <span className="ml-1.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        {k.product}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-semibold tabular-nums text-foreground">{totalPct}%</p>
+                  <p className="text-xs text-muted-foreground">
+                    {totalActual}/{totalTarget} {k.unit}
+                  </p>
+                </div>
+              </div>
+              <KpiChart data={chartData} unit={k.unit} color={chartColor} />
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
