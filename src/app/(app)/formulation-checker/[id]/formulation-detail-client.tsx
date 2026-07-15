@@ -7,6 +7,7 @@ import { deleteFormulation } from "@/lib/actions/formulation-actions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
+import FormulationIngredientModal from "./formulation-ingredient-modal";
 
 type Ingredient = {
   id: string;
@@ -46,6 +47,7 @@ export default function FormulationDetailClient({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [openIngredientName, setOpenIngredientName] = useState<string | null>(null);
 
   const baseUnitKey = formulation.baseUnit.trim().toLowerCase();
   const canConvertUnits = baseUnitKey in UNIT_TO_MG;
@@ -136,7 +138,7 @@ export default function FormulationDetailClient({
       <Card>
         <h2 className="mb-3 text-[15px] font-semibold text-foreground">Master Formulation — Controlled Percentage Basis</h2>
         <p className="mb-3 text-sm text-muted-foreground">
-          Base Batch Size: <span className="font-medium text-foreground">{formulation.baseBatchSize} {formulation.baseUnit}</span>
+          Base Batch Size: <span className="font-medium text-foreground">{formulation.baseBatchSize.toFixed(2)} {formulation.baseUnit}</span>
         </p>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] text-sm">
@@ -159,9 +161,17 @@ export default function FormulationDetailClient({
                 <tr key={ing.id} className="border-b border-border last:border-0 even:bg-surface-muted/30">
                   <td className="px-2 py-1.5 text-muted-foreground">{i + 1}</td>
                   <td className="px-2 py-1.5 text-muted-foreground">{ing.rmNumber ?? "—"}</td>
-                  <td className="px-2 py-1.5 text-foreground">{ing.ingredientName}</td>
+                  <td className="px-2 py-1.5 text-foreground">
+                    <button
+                      type="button"
+                      onClick={() => setOpenIngredientName(ing.ingredientName)}
+                      className="text-left underline decoration-dotted underline-offset-2 hover:text-primary"
+                    >
+                      {ing.ingredientName}
+                    </button>
+                  </td>
                   <td className="px-2 py-1.5 text-muted-foreground">{ing.uin ?? "—"}</td>
-                  <td className="px-2 py-1.5 text-muted-foreground">{ing.baseQty.toFixed(3)}</td>
+                  <td className="px-2 py-1.5 text-muted-foreground">{ing.baseQty.toFixed(2)}</td>
                   <td className="px-2 py-1.5 text-muted-foreground">
                     {totalQty > 0 ? ((ing.baseQty / totalQty) * 100).toFixed(4) : "0.0000"}%
                   </td>
@@ -177,7 +187,7 @@ export default function FormulationDetailClient({
                 <td colSpan={4} className="px-2 py-2 text-right">
                   TOTAL
                 </td>
-                <td className="px-2 py-2">{totalQty.toFixed(3)}</td>
+                <td className="px-2 py-2">{totalQty.toFixed(2)}</td>
                 <td className="px-2 py-2">100.0000%</td>
                 <td colSpan={4}></td>
               </tr>
@@ -277,6 +287,13 @@ export default function FormulationDetailClient({
           </table>
         </div>
       </Card>
+
+      {openIngredientName && (
+        <FormulationIngredientModal
+          ingredientName={openIngredientName}
+          onClose={() => setOpenIngredientName(null)}
+        />
+      )}
     </div>
   );
 }

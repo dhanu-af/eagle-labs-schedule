@@ -9,6 +9,59 @@ export async function getIngredients() {
   return prisma.ingredient.findMany({ orderBy: { name: "asc" } });
 }
 
+function normalizeForMatch(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+const DESCRIPTOR_SUFFIXES = /\s*(extract|powder|oil|root|leaf)\s*$/i;
+
+/**
+ * Formulation ingredient names are free text and rarely match the Ingredient
+ * Library's canonical name byte-for-byte (e.g. "Tongkat Ali (Eurycoma longifolia)"
+ * vs the library's "Tongkat Ali"). Only exact-normalized matches are attempted —
+ * loose substring matching risks silently showing the WRONG ingredient's
+ * regulatory/safety details, which is worse than reporting no match.
+ */
+export async function findIngredientLibraryMatch(
+  formulationIngredientName: string
+): Promise<{ authorized: false } | { authorized: true; ingredient: Awaited<ReturnType<typeof getIngredients>>[number] | null }> {
+  const allowed = await hasIngredientLibraryAccess();
+  if (!allowed) return { authorized: false };
+
+  const all = await prisma.ingredient.findMany();
+
+  // Ordered by specificity — the raw, full formulation name is tried first so an
+  // exact match always wins over a looser stripped/parenthetical candidate
+  // (e.g. "Vitamin C (Ascorbic Acid)" must match that exact library entry, not
+  // some other ingredient whose synonyms merely contain "Vitamin C").
+  const candidates: string[] = [formulationIngredientName];
+  const stripped = formulationIngredientName.replace(DESCRIPTOR_SUFFIXES, "").trim();
+  if (stripped) candidates.push(stripped);
+  const parenMatch = formulationIngredientName.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (parenMatch) {
+    const outer = parenMatch[1].trim();
+    const inner = parenMatch[2].trim();
+    if (outer) candidates.push(outer);
+    if (inner) candidates.push(inner);
+    const strippedOuter = outer.replace(DESCRIPTOR_SUFFIXES, "").trim();
+    if (strippedOuter && strippedOuter !== outer) candidates.push(strippedOuter);
+  }
+
+  for (const candidate of candidates) {
+    const cNorm = normalizeForMatch(candidate);
+    if (!cNorm) continue;
+    const match = all.find((ing) => {
+      const nameNorm = normalizeForMatch(ing.name);
+      const altNorm = ing.alternateName ? normalizeForMatch(ing.alternateName) : "";
+      const synNorms = ing.synonyms ? ing.synonyms.split(/[;,]/).map(normalizeForMatch).filter(Boolean) : [];
+      return cNorm === nameNorm || (altNorm && cNorm === altNorm) || synNorms.includes(cNorm);
+    });
+    if (match) return { authorized: true, ingredient: match };
+  }
+
+  return { authorized: true, ingredient: null };
+}
+
 /** Super Admin has access automatically; everyone else needs an explicit grant. */
 export async function hasIngredientLibraryAccess(): Promise<boolean> {
   const session = await getSession();
