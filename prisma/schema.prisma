@@ -287,7 +287,6 @@ model KpiDailyProduction {
   id                  String   @id @default(cuid())
   kpiId               String
   date                DateTime
-  batchWeightKg       Float?
   fillWeightMg        Float?
   capsulesPerBottle   Int?
   productionTimeHours Float?

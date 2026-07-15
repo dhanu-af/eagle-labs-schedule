@@ -27,11 +27,13 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 type PeriodSeries = Record<string, { actual: number[]; target: number[] }>;
 
 type ProductionEntry = {
-  batchWeightKg: number | null;
   fillWeightMg: number | null;
   capsulesPerBottle: number | null;
   productionTimeHours: number | null;
 };
+
+const DEFAULT_FILL_WEIGHT_MG = 450;
+const DEFAULT_CAPSULES_PER_BOTTLE = 31;
 
 export default function KpiClient({
   weekStartStr,
@@ -407,6 +409,7 @@ function DailyTargetsRow({
           dateStr={dateForDay(openDay)}
           dayLabel={`${DAY_LABELS[openDay]} - ${new Date(dateForDay(openDay) + "T00:00:00").getDate()}`}
           unit={unit}
+          actual={actuals[openDay] ?? 0}
           existing={production[openDay]}
           canEdit={canEditProduction}
           onClose={() => setOpenDay(null)}
@@ -421,6 +424,7 @@ function ProductionDetailsModal({
   dateStr,
   dayLabel,
   unit,
+  actual,
   existing,
   canEdit,
   onClose,
@@ -429,6 +433,7 @@ function ProductionDetailsModal({
   dateStr: string;
   dayLabel: string;
   unit: string;
+  actual: number;
   existing: ProductionEntry | null;
   canEdit: boolean;
   onClose: () => void;
@@ -436,17 +441,15 @@ function ProductionDetailsModal({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const [batchWeightKg, setBatchWeightKg] = useState(existing?.batchWeightKg ?? "");
-  const [fillWeightMg, setFillWeightMg] = useState(existing?.fillWeightMg ?? "");
-  const [capsulesPerBottle, setCapsulesPerBottle] = useState(existing?.capsulesPerBottle ?? "");
-  const [productionTimeHours, setProductionTimeHours] = useState(existing?.productionTimeHours ?? "");
+  const [fillWeightMg, setFillWeightMg] = useState<number | "">(existing?.fillWeightMg ?? DEFAULT_FILL_WEIGHT_MG);
+  const [capsulesPerBottle, setCapsulesPerBottle] = useState<number | "">(existing?.capsulesPerBottle ?? DEFAULT_CAPSULES_PER_BOTTLE);
+  const [productionTimeHours, setProductionTimeHours] = useState<number | "">(existing?.productionTimeHours ?? "");
 
-  const batchWeight = Number(batchWeightKg) || null;
   const fillWeight = Number(fillWeightMg) || null;
   const perBottle = Number(capsulesPerBottle) || null;
   const timeHours = Number(productionTimeHours) || null;
 
-  const totalCapsules = batchWeight && fillWeight ? Math.round((batchWeight * 1_000_000) / fillWeight) : null;
+  const totalCapsules = actual && fillWeight ? Math.round((actual * 1_000_000) / fillWeight) : null;
   const totalBottles = totalCapsules && perBottle ? Math.floor(totalCapsules / perBottle) : null;
   const productionRate = totalCapsules && timeHours ? Math.round(totalCapsules / timeHours) : null;
 
@@ -455,7 +458,6 @@ function ProductionDetailsModal({
     startTransition(async () => {
       try {
         await setKpiDailyProduction(kpiId, dateStr, {
-          batchWeightKg: batchWeight,
           fillWeightMg: fillWeight,
           capsulesPerBottle: perBottle,
           productionTimeHours: timeHours,
@@ -480,24 +482,19 @@ function ProductionDetailsModal({
 
         {canEdit ? (
           <div className="space-y-3">
+            <div className="rounded-lg border border-border bg-surface-muted/40 px-3 py-2 text-xs">
+              <DetailLine label="Total Batch Weight" value={`${actual} ${unit}`} />
+              <p className="mt-1 text-[10px] text-muted-foreground">Follows the day's actual production automatically.</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted-foreground">Total Batch Weight ({unit})</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={batchWeightKg}
-                  onChange={(e) => setBatchWeightKg(e.target.value)}
-                  className="input"
-                />
-              </label>
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-muted-foreground">Average Fill Weight (mg/capsule)</span>
                 <input
                   type="number"
                   step="0.01"
                   value={fillWeightMg}
-                  onChange={(e) => setFillWeightMg(e.target.value)}
+                  onChange={(e) => setFillWeightMg(e.target.value === "" ? "" : Number(e.target.value))}
                   className="input"
                 />
               </label>
@@ -507,17 +504,17 @@ function ProductionDetailsModal({
                   type="number"
                   step="1"
                   value={capsulesPerBottle}
-                  onChange={(e) => setCapsulesPerBottle(e.target.value)}
+                  onChange={(e) => setCapsulesPerBottle(e.target.value === "" ? "" : Number(e.target.value))}
                   className="input"
                 />
               </label>
-              <label className="block">
+              <label className="col-span-2 block">
                 <span className="mb-1 block text-xs font-medium text-muted-foreground">Average Production Time (hours)</span>
                 <input
                   type="number"
                   step="0.1"
                   value={productionTimeHours}
-                  onChange={(e) => setProductionTimeHours(e.target.value)}
+                  onChange={(e) => setProductionTimeHours(e.target.value === "" ? "" : Number(e.target.value))}
                   className="input"
                 />
               </label>
@@ -549,7 +546,7 @@ function ProductionDetailsModal({
           </div>
         ) : existing ? (
           <div className="rounded-lg border border-border bg-surface-muted/40 p-3 text-xs">
-            <DetailLine label="Total Batch Weight" value={batchWeight !== null ? `${batchWeight} ${unit}` : "—"} />
+            <DetailLine label="Total Batch Weight" value={`${actual} ${unit}`} />
             <DetailLine label="Average Fill Weight" value={fillWeight !== null ? `${fillWeight} mg/capsule` : "—"} />
             <DetailLine label="Total Capsules" value={totalCapsules !== null ? `${totalCapsules.toLocaleString()} capsules` : "—"} />
             <DetailLine

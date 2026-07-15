@@ -104,7 +104,6 @@ export async function setKpiDailyProduction(
   kpiId: string,
   dateStr: string,
   data: {
-    batchWeightKg: number | null;
     fillWeightMg: number | null;
     capsulesPerBottle: number | null;
     productionTimeHours: number | null;

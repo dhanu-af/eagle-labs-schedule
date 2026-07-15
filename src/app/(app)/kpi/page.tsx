@@ -143,7 +143,6 @@ export default async function KpiPage({
         );
         if (!entry) return null;
         return {
-          batchWeightKg: entry.batchWeightKg,
           fillWeightMg: entry.fillWeightMg,
           capsulesPerBottle: entry.capsulesPerBottle,
           productionTimeHours: entry.productionTimeHours,
