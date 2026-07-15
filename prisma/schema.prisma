@@ -764,6 +764,7 @@ model Formulation {
 
   folder      FormulationFolder       @relation(fields: [folderId], references: [id])
   ingredients FormulationIngredient[]
+  batchRecords BatchRecord[]
 
   @@index([folderId])
 }
@@ -785,4 +786,235 @@ model FormulationIngredient {
   formulation Formulation @relation(fields: [formulationId], references: [id], onDelete: Cascade)
 
   @@index([formulationId])
+}
+
+/// A single produced batch's full GMP Batch Manufacturing Record (Blending stage),
+/// mirroring the paper BMR template: work log, operators' declaration, equipment
+/// record, line clearance, per-mix dispensing/blending/reconciliation, warehouse
+/// return, and raw materials request — all under one editable, exportable record.
+model BatchRecord {
+  id                String    @id @default(cuid())
+  formulationId     String?
+  productName       String
+  batchNumber       String
+  writtenByName     String?
+  writtenSignedDate DateTime?
+  checkedByName     String?
+  checkedSignedDate DateTime?
+  reviewDate        DateTime?
+  notes             String?
+
+  numberOfMixes   Int    @default(1)
+  batchSizePerMix Float
+  batchSizeUnit   String @default("kg")
+
+  declEncapsulation Boolean @default(false)
+  declBlendingMixing Boolean @default(false)
+  declDispensing    Boolean @default(false)
+  declPolishing     Boolean @default(false)
+  declCoating       Boolean @default(false)
+
+  releasedByWarehouse String?
+  releasedDate        DateTime?
+  requestCheckedBy    String?
+  ailsNumber          String?
+  palletNumber        String?
+
+  status    CheckStatus @default(PENDING)
+  locked    Boolean     @default(false)
+
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  formulation      Formulation?              @relation(fields: [formulationId], references: [id])
+  workLogEntries   BatchWorkLogEntry[]
+  operators        BatchOperatorSignoff[]
+  equipment        BatchEquipmentItem[]
+  lineClearance    BatchLineClearance?
+  mixes            BatchMix[]
+  warehouseReturns BatchWarehouseReturnLine[]
+  materialRequests BatchMaterialRequestLine[]
+
+  @@index([formulationId])
+  @@index([batchNumber])
+}
+
+model BatchWorkLogEntry {
+  id            String    @id @default(cuid())
+  batchRecordId String
+  rowNumber     Int
+  date          DateTime?
+  operatorName  String?
+  processNumber Int?
+  startTime     String?
+  finishTime    String?
+  breakMinutes  Float?
+  totalHours    Float?
+  sign          String?
+
+  batchRecord BatchRecord @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
+
+  @@index([batchRecordId])
+}
+
+model BatchOperatorSignoff {
+  id            String    @id @default(cuid())
+  batchRecordId String
+  rowNumber     Int
+  name          String?
+  signature     String?
+  date          DateTime?
+
+  batchRecord BatchRecord @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
+
+  @@index([batchRecordId])
+}
+
+model BatchEquipmentItem {
+  id                 String  @id @default(cuid())
+  batchRecordId      String
+  rowNumber          Int
+  eqNumber           String?
+  itemName           String?
+  calibrationUpdated String?
+  notes              String?
+
+  batchRecord BatchRecord @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
+
+  @@index([batchRecordId])
+}
+
+model BatchLineClearance {
+  id            String @id @default(cuid())
+  batchRecordId String @unique
+
+  roomNumber         String?
+  roomCleanType      String?
+  equipmentCleanType String?
+  performedBySign    String?
+  performedByDate    DateTime?
+  performedByTime    String?
+  verifiedBySign     String?
+  verifiedByDate     DateTime?
+  verifiedByTime     String?
+
+  probioticProduct    Boolean   @default(false)
+  roomRhPercent       Float?
+  roomRhTime          String?
+  roomTemperature     Float?
+  roomTempTime        String?
+  roomUseApprovalSign String?
+  roomUseApprovalDate DateTime?
+
+  materialsIdentifiedChecked   Boolean @default(false)
+  materialsPassLabelledChecked Boolean @default(false)
+
+  batchRecord BatchRecord @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
+}
+
+model BatchMix {
+  id            String @id @default(cuid())
+  batchRecordId String
+  mixNumber     Int
+
+  dispensingStartDate DateTime?
+  dispensingStartTime String?
+  dispensingStartSign String?
+  dispensingEndDate   DateTime?
+  dispensingEndTime   String?
+  dispensingEndSign   String?
+
+  blendingStartDate DateTime?
+  blendingStartTime String?
+  blendingStartSign String?
+  blendingEndDate   DateTime?
+  blendingEndTime   String?
+  blendingEndSign   String?
+
+  mixCompletedSign String?
+  mixCompletedDate DateTime?
+  mixCompletedTime String?
+  verifiedBySign   String?
+  verifiedByDate   DateTime?
+  verifiedByTime   String?
+
+  samplesRejectsSpillsKg Float?
+  bulkSampleWeightG      Float?
+  bulkVolumeMl           Float?
+  tappedVolumeMl         Float?
+
+  batchRecord      BatchRecord           @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
+  dispensingLines  BatchDispensingLine[]
+  drums            BatchDrum[]
+
+  @@unique([batchRecordId, mixNumber])
+}
+
+model BatchDispensingLine {
+  id     String @id @default(cuid())
+  mixId  String
+  order  Int
+  rmNumber       String?
+  ingredientName String
+  uin            String?
+  requiredQtyKg  Float
+  actualQtyDispensedKg Float?
+  performedBySign String?
+  performedByDate DateTime?
+  verifiedBySign  String?
+  verifiedByDate  DateTime?
+
+  mix BatchMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+
+  @@index([mixId])
+}
+
+model BatchDrum {
+  id                String  @id @default(cuid())
+  mixId             String
+  drumNumber        String?
+  netWeightKg       Float?
+  passLabelAttached Boolean @default(false)
+
+  mix BatchMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+
+  @@index([mixId])
+}
+
+model BatchWarehouseReturnLine {
+  id            String @id @default(cuid())
+  batchRecordId String
+  order         Int
+  rmNumber            String?
+  ingredientName      String
+  uin                 String?
+  kgPerBatch          Float?
+  qtyUsedKg           Float?
+  actualQtyReturnedKg Float?
+  operatorSign        String?
+  operatorDate        DateTime?
+
+  batchRecord BatchRecord @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
+
+  @@index([batchRecordId])
+}
+
+model BatchMaterialRequestLine {
+  id            String @id @default(cuid())
+  batchRecordId String
+  order         Int
+  rmNumber            String?
+  ingredientName      String
+  uin                 String?
+  kgPerBatch          Float?
+  qtyReleasedKg       Float?
+  actualQtyReceivedKg Float?
+  operatorSign        String?
+  operatorDate        DateTime?
+
+  batchRecord BatchRecord @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
+
+  @@index([batchRecordId])
 }
