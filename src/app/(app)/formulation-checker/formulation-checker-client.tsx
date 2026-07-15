@@ -172,7 +172,7 @@ export default function FormulationCheckerClient({
                       </Link>
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">
-                      {f.baseBatchSize} {f.baseUnit}
+                      {f.baseBatchSize.toFixed(2)} {f.baseUnit}
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">{f.ingredientCount}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{formatBrisbaneDateTime(f.updatedAt)}</td>
