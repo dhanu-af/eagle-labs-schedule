@@ -67,7 +67,7 @@ export async function createDailyTask(formData: FormData) {
     action: "CREATE_TASK",
     entityType: "DailyTask",
     entityId: task.id,
-    summary: `Created task ${product} · ${process} for team ${teamId}`,
+    summary: `Created task ${product} · ${process} for team ${teamId} — ${task.actualQty}${task.targetQty ? `/${task.targetQty}` : ""} ${task.targetUnit}`,
   });
 
   revalidatePath("/daily");
@@ -91,7 +91,7 @@ export async function updateDailyTask(id: string, formData: FormData) {
 
   if (!product || !process) throw new Error("Product and process are required");
 
-  await prisma.dailyTask.update({
+  const task = await prisma.dailyTask.update({
     where: { id },
     data: {
       employeeId,
@@ -111,7 +111,7 @@ export async function updateDailyTask(id: string, formData: FormData) {
     action: "UPDATE_TASK",
     entityType: "DailyTask",
     entityId: id,
-    summary: `Updated task ${product} · ${process}`,
+    summary: `Updated task ${product} · ${process} — ${task.actualQty}${task.targetQty ? `/${task.targetQty}` : ""} ${task.targetUnit}`,
   });
 
   revalidatePath("/daily");
@@ -127,7 +127,7 @@ export async function deleteDailyTask(id: string) {
     action: "DELETE_TASK",
     entityType: "DailyTask",
     entityId: id,
-    summary: `Deleted task ${task.product} · ${task.process}`,
+    summary: `Deleted task ${task.product} · ${task.process} — ${task.actualQty}${task.targetQty ? `/${task.targetQty}` : ""} ${task.targetUnit}`,
   });
 
   revalidatePath("/daily");
