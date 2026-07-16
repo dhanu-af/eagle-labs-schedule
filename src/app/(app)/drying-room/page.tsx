@@ -7,6 +7,7 @@ const DEFAULT_WHATSAPP_GROUPS = [
   { name: "Production Team", identifier: null },
   { name: "Management", identifier: null },
   { name: "Dhanu", identifier: "0433517390" },
+  { name: "Jade", identifier: "+61421708100" },
 ];
 
 export default async function DryingRoomPage() {
