@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canUpdateDailyProgress, canManageDryingRoom } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { generateMorningReportText } from "@/lib/generate-morning-report";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import type { DryingBayPurpose, DryingStage, TrolleyQcStatus } from "@/generated/prisma";
 
 async function requireOperatorAccess() {
@@ -273,12 +274,20 @@ export async function sendMorningReportToWhatsApp(target: { groupId: string | nu
   const session = await requireOperatorAccess();
 
   let targetLabel: string;
+  let phoneNumber: string;
   if (target.groupId) {
     const group = await prisma.whatsAppGroup.findUnique({ where: { id: target.groupId } });
     if (!group) throw new Error("WhatsApp group not found");
+    if (!group.identifier) {
+      throw new Error(
+        `"${group.name}" has no phone number set — WhatsApp's Business API can only message individual numbers, not real groups. Add a number for this target first.`
+      );
+    }
     targetLabel = group.name;
+    phoneNumber = group.identifier;
   } else if (target.phoneNumber) {
     targetLabel = target.phoneNumber;
+    phoneNumber = target.phoneNumber;
   } else {
     throw new Error("Select a group or enter a phone number");
   }
@@ -292,7 +301,29 @@ export async function sendMorningReportToWhatsApp(target: { groupId: string | nu
   ]);
 
   const reportText = generateMorningReportText(bays, misc);
+  const result = await sendWhatsAppMessage(phoneNumber, reportText);
 
+  if (result.sent) {
+    await logAudit(session, {
+      action: "SEND_MORNING_REPORT_WHATSAPP",
+      entityType: target.groupId ? "WhatsAppGroup" : "WhatsAppNumber",
+      entityId: target.groupId ?? undefined,
+      summary: `Sent Morning Report to "${targetLabel}" via WhatsApp:\n${reportText}`,
+    });
+    return { ok: true, target: targetLabel, reportText, sent: true };
+  }
+
+  if (result.reason === "api_error") {
+    await logAudit(session, {
+      action: "SEND_MORNING_REPORT_WHATSAPP_FAILED",
+      entityType: target.groupId ? "WhatsAppGroup" : "WhatsAppNumber",
+      entityId: target.groupId ?? undefined,
+      summary: `Failed to send Morning Report to "${targetLabel}": ${result.error}`,
+    });
+    throw new Error(`WhatsApp send failed: ${result.error}`);
+  }
+
+  // Not configured yet -- record the intent instead of a real send.
   await logAudit(session, {
     action: "SEND_MORNING_REPORT_WHATSAPP",
     entityType: target.groupId ? "WhatsAppGroup" : "WhatsAppNumber",
@@ -300,5 +331,5 @@ export async function sendMorningReportToWhatsApp(target: { groupId: string | nu
     summary: `Sent Morning Report to "${targetLabel}" (stub — no WhatsApp integration configured yet):\n${reportText}`,
   });
 
-  return { ok: true, target: targetLabel, reportText };
+  return { ok: true, target: targetLabel, reportText, sent: false };
 }

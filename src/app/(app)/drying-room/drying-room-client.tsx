@@ -1208,7 +1208,11 @@ function MorningReportTab({
         const result = await sendMorningReportToWhatsApp(
           sendMode === "group" ? { groupId, phoneNumber: null } : { groupId: null, phoneNumber }
         );
-        setSendResult(`Sent to "${result.target}" (recorded in Audit Trail — WhatsApp isn't connected yet, so no real message went out).`);
+        setSendResult(
+          result.sent
+            ? `Sent to "${result.target}" via WhatsApp.`
+            : `Sent to "${result.target}" (recorded in Audit Trail — WhatsApp isn't connected yet, so no real message went out).`
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't send report.");
       }
