@@ -5,10 +5,17 @@ export const PURPOSE_LABEL: Record<DryingBayPurpose, string> = {
   DRYING: "Drying",
   WAITING_QC: "Waiting QC",
   READY_FOR_POUCHING: "Ready for Pouching",
+  READY_FOR_PRODUCTION: "Ready for Production",
   CLEANING_REQUIRED: "Cleaning Required",
   RND: "R&D",
   STORAGE: "Storage",
   SERVICE: "Service",
+  SORTING: "Sorting",
+  QA_QC_APPROVALS: "QA/QC Approvals",
+  POLISHING: "Polishing",
+  COATING: "Coating",
+  RE_COATING: "Re Coating",
+  QUARANTINE: "Quarantine",
 };
 
 export const STAGE_LABEL: Record<DryingStage, string> = {
@@ -50,10 +57,17 @@ export type BayStatusKey =
   | "WAITING_QC"
   | "WRAPPED"
   | "READY_FOR_POUCHING"
+  | "READY_FOR_PRODUCTION"
   | "CLEANING_REQUIRED"
   | "QC_HOLD"
   | "SERVICE"
-  | "RND";
+  | "RND"
+  | "SORTING"
+  | "QA_QC_APPROVALS"
+  | "POLISHING"
+  | "COATING"
+  | "RE_COATING"
+  | "QUARANTINE";
 
 export const BAY_STATUS_LABEL: Record<BayStatusKey, string> = {
   EMPTY: "Empty",
@@ -62,10 +76,17 @@ export const BAY_STATUS_LABEL: Record<BayStatusKey, string> = {
   WAITING_QC: "Waiting QC",
   WRAPPED: "Wrapped",
   READY_FOR_POUCHING: "Ready for Pouching",
+  READY_FOR_PRODUCTION: "Ready for Production",
   CLEANING_REQUIRED: "Cleaning Required",
   QC_HOLD: "QC Hold",
   SERVICE: "Service",
   RND: "R&D",
+  SORTING: "Sorting",
+  QA_QC_APPROVALS: "QA/QC Approvals",
+  POLISHING: "Polishing",
+  COATING: "Coating",
+  RE_COATING: "Re Coating",
+  QUARANTINE: "Quarantine",
 };
 
 export const BAY_STATUS_CLASS: Record<BayStatusKey, string> = {
@@ -75,10 +96,17 @@ export const BAY_STATUS_CLASS: Record<BayStatusKey, string> = {
   WAITING_QC: "bg-purple-500/10 text-purple-400 border-purple-500/30",
   WRAPPED: "bg-info/10 text-info border-info/30",
   READY_FOR_POUCHING: "bg-success/10 text-success border-success/30",
+  READY_FOR_PRODUCTION: "bg-success/10 text-success border-success/30",
   CLEANING_REQUIRED: "bg-warning/10 text-warning border-warning/30",
   QC_HOLD: "bg-danger/10 text-danger border-danger/30",
   SERVICE: "bg-surface-muted text-muted-foreground border-border",
   RND: "bg-primary/10 text-primary border-primary/30",
+  SORTING: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+  QA_QC_APPROVALS: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+  POLISHING: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+  COATING: "bg-orange-500/10 text-orange-500 border-orange-500/30",
+  RE_COATING: "bg-orange-500/10 text-orange-500 border-orange-500/30",
+  QUARANTINE: "bg-danger/10 text-danger border-danger/30",
 };
 
 const STAGE_TO_BAY_STATUS: Partial<Record<DryingStage, BayStatusKey>> = {
@@ -95,10 +123,17 @@ const PURPOSE_TO_BAY_STATUS: Record<DryingBayPurpose, BayStatusKey> = {
   DRYING: "DRYING",
   WAITING_QC: "WAITING_QC",
   READY_FOR_POUCHING: "READY_FOR_POUCHING",
+  READY_FOR_PRODUCTION: "READY_FOR_PRODUCTION",
   CLEANING_REQUIRED: "CLEANING_REQUIRED",
   RND: "RND",
   STORAGE: "SERVICE",
   SERVICE: "SERVICE",
+  SORTING: "SORTING",
+  QA_QC_APPROVALS: "QA_QC_APPROVALS",
+  POLISHING: "POLISHING",
+  COATING: "COATING",
+  RE_COATING: "RE_COATING",
+  QUARANTINE: "QUARANTINE",
 };
 
 /** Named quick-action buttons valid from each stage, matching the module spec's Quick Actions list. */

@@ -21,7 +21,12 @@ async function requireManagerAccess() {
 
 export async function updateBayPurpose(
   bayId: string,
-  data: { purpose: DryingBayPurpose; assignedEmployeeId: string | null; expectedFinishTime: string | null }
+  data: {
+    purpose: DryingBayPurpose;
+    assignedEmployeeId: string | null;
+    department: string | null;
+    expectedFinishTime: string | null;
+  }
 ) {
   const session = await requireOperatorAccess();
 
@@ -30,6 +35,7 @@ export async function updateBayPurpose(
     data: {
       purpose: data.purpose,
       assignedEmployeeId: data.assignedEmployeeId,
+      department: data.department,
       expectedFinishTime: data.expectedFinishTime ? new Date(data.expectedFinishTime) : null,
       updatedBy: session.fullName,
     },
@@ -221,14 +227,23 @@ export async function deleteMiscStorageItem(id: string) {
 
 /**
  * V1 stub: no WhatsApp Business API/Twilio credentials exist in this project yet, so this
- * records the send (report text + target group) as an audit entry instead of making a real
- * network call. Swapping in a real send later only touches this function.
+ * records the send (report text + target) as an audit entry instead of making a real
+ * network call. Swapping in a real send later only touches this function. Target is either
+ * a saved group or an ad hoc phone number.
  */
-export async function sendMorningReportToWhatsApp(groupId: string) {
+export async function sendMorningReportToWhatsApp(target: { groupId: string | null; phoneNumber: string | null }) {
   const session = await requireOperatorAccess();
 
-  const group = await prisma.whatsAppGroup.findUnique({ where: { id: groupId } });
-  if (!group) throw new Error("WhatsApp group not found");
+  let targetLabel: string;
+  if (target.groupId) {
+    const group = await prisma.whatsAppGroup.findUnique({ where: { id: target.groupId } });
+    if (!group) throw new Error("WhatsApp group not found");
+    targetLabel = group.name;
+  } else if (target.phoneNumber) {
+    targetLabel = target.phoneNumber;
+  } else {
+    throw new Error("Select a group or enter a phone number");
+  }
 
   const [bays, misc] = await Promise.all([
     prisma.dryingBay.findMany({
@@ -242,10 +257,10 @@ export async function sendMorningReportToWhatsApp(groupId: string) {
 
   await logAudit(session, {
     action: "SEND_MORNING_REPORT_WHATSAPP",
-    entityType: "WhatsAppGroup",
-    entityId: groupId,
-    summary: `Sent Morning Report to "${group.name}" (stub — no WhatsApp integration configured yet):\n${reportText}`,
+    entityType: target.groupId ? "WhatsAppGroup" : "WhatsAppNumber",
+    entityId: target.groupId ?? undefined,
+    summary: `Sent Morning Report to "${targetLabel}" (stub — no WhatsApp integration configured yet):\n${reportText}`,
   });
 
-  return { ok: true, group: group.name, reportText };
+  return { ok: true, target: targetLabel, reportText };
 }

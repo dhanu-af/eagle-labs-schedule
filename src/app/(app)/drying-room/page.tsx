@@ -44,6 +44,7 @@ export default async function DryingRoomPage() {
         bayNumber: b.bayNumber,
         purpose: b.purpose,
         assignedEmployeeId: b.assignedEmployeeId,
+        department: b.department,
         expectedFinishTime: b.expectedFinishTime?.toISOString() ?? null,
         updatedAt: b.updatedAt.toISOString(),
         batches: b.batches.map((batch) => ({

@@ -69,6 +69,7 @@ type Bay = {
   bayNumber: number;
   purpose: DryingBayPurpose;
   assignedEmployeeId: string | null;
+  department: string | null;
   expectedFinishTime: string | null;
   updatedAt: string;
   batches: Batch[];
@@ -91,10 +92,32 @@ const PURPOSE_OPTIONS: DryingBayPurpose[] = [
   "DRYING",
   "WAITING_QC",
   "READY_FOR_POUCHING",
+  "READY_FOR_PRODUCTION",
   "CLEANING_REQUIRED",
+  "SORTING",
+  "QA_QC_APPROVALS",
+  "POLISHING",
+  "COATING",
+  "RE_COATING",
+  "QUARANTINE",
   "RND",
   "STORAGE",
   "SERVICE",
+];
+
+const STAGE_OPTIONS: DryingStage[] = [
+  "RECEIVING",
+  "DRYING",
+  "ROTATION_REQUIRED",
+  "CONTINUE_DRYING",
+  "QC_SAMPLING",
+  "QC_PENDING",
+  "QC_APPROVED",
+  "QC_HOLD",
+  "WRAPPING",
+  "READY_FOR_POUCHING",
+  "POUCHING",
+  "COMPLETE",
 ];
 
 const TABS = ["dashboard", "bays", "misc", "report"] as const;
@@ -329,6 +352,7 @@ function BayDetailModal({
   const [error, setError] = useState("");
   const [purpose, setPurpose] = useState<DryingBayPurpose>(bay.purpose);
   const [assignedEmployeeId, setAssignedEmployeeId] = useState(bay.assignedEmployeeId ?? "");
+  const [department, setDepartment] = useState(bay.department ?? "");
   const [expectedFinishTime, setExpectedFinishTime] = useState(
     bay.expectedFinishTime ? bay.expectedFinishTime.slice(0, 16) : ""
   );
@@ -341,6 +365,7 @@ function BayDetailModal({
         await updateBayPurpose(bay.id, {
           purpose,
           assignedEmployeeId: assignedEmployeeId || null,
+          department: department || null,
           expectedFinishTime: expectedFinishTime || null,
         });
         router.refresh();
@@ -424,7 +449,16 @@ function BayDetailModal({
                   ))}
                 </select>
               </label>
-              <label className="col-span-2 block">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Assigned Department</span>
+                <input
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  placeholder="e.g. Packaging"
+                  className="input"
+                />
+              </label>
+              <label className="block">
                 <span className="mb-1 block text-xs font-medium text-muted-foreground">Expected Finish Time</span>
                 <input
                   type="datetime-local"
@@ -513,6 +547,7 @@ function BatchCard({
 }) {
   const [showTrolleys, setShowTrolleys] = useState(false);
   const [moveTarget, setMoveTarget] = useState("");
+  const [stageTarget, setStageTarget] = useState("");
   const actions = STAGE_ACTIONS[batch.currentStage] ?? [];
   const alerts = computeBatchAlerts(batch);
 
@@ -563,6 +598,28 @@ function BatchCard({
           ))}
         </div>
       )}
+
+      <div className="mt-2 flex items-center gap-1.5">
+        <select value={stageTarget} onChange={(e) => setStageTarget(e.target.value)} className="input py-1 text-[11px]">
+          <option value="">Move to stage...</option>
+          {STAGE_OPTIONS.map((s) => (
+            <option key={s} value={s}>
+              {STAGE_LABEL[s]}
+            </option>
+          ))}
+        </select>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={!stageTarget}
+          onClick={() => {
+            onSetStage(batch.id, stageTarget as DryingStage);
+            setStageTarget("");
+          }}
+        >
+          Set
+        </Button>
+      </div>
 
       {otherBays.length > 0 && (
         <div className="mt-2 flex items-center gap-1.5">
@@ -1011,7 +1068,9 @@ function MorningReportTab({
   whatsAppGroups: WhatsAppGroupOpt[];
 }) {
   const [pending, startTransition] = useTransition();
+  const [sendMode, setSendMode] = useState<"group" | "number">("group");
   const [groupId, setGroupId] = useState(whatsAppGroups[0]?.id ?? "");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [sendResult, setSendResult] = useState("");
   const [error, setError] = useState("");
 
@@ -1029,27 +1088,58 @@ function MorningReportTab({
     setSendResult("");
     startTransition(async () => {
       try {
-        const result = await sendMorningReportToWhatsApp(groupId);
-        setSendResult(`Sent to "${result.group}" (recorded in Audit Trail — WhatsApp isn't connected yet, so no real message went out).`);
+        const result = await sendMorningReportToWhatsApp(
+          sendMode === "group" ? { groupId, phoneNumber: null } : { groupId: null, phoneNumber }
+        );
+        setSendResult(`Sent to "${result.target}" (recorded in Audit Trail — WhatsApp isn't connected yet, so no real message went out).`);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't send report.");
       }
     });
   }
 
+  const canSend = sendMode === "group" ? !!groupId : phoneNumber.trim().length > 0;
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-foreground">Morning Report</h2>
         <div className="flex items-center gap-2">
-          <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className="input py-1 text-xs">
-            {whatsAppGroups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-          <Button size="sm" onClick={send} disabled={pending || !groupId}>
+          <div className="flex gap-1 rounded-md border border-border bg-surface p-0.5">
+            <button
+              onClick={() => setSendMode("group")}
+              className={`rounded px-2 py-1 text-[11px] font-medium transition-colors duration-150 ease-out ${
+                sendMode === "group" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Group
+            </button>
+            <button
+              onClick={() => setSendMode("number")}
+              className={`rounded px-2 py-1 text-[11px] font-medium transition-colors duration-150 ease-out ${
+                sendMode === "number" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Number
+            </button>
+          </div>
+          {sendMode === "group" ? (
+            <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className="input py-1 text-xs">
+              {whatsAppGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="+61 4xx xxx xxx"
+              className="input py-1 text-xs"
+            />
+          )}
+          <Button size="sm" onClick={send} disabled={pending || !canSend}>
             {pending ? "Sending..." : "Send to WhatsApp"}
           </Button>
         </div>
