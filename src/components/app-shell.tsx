@@ -9,6 +9,7 @@ import NotificationBell from "@/components/notification-bell";
 import { logoutAction } from "@/lib/actions/auth-actions";
 import { initials } from "@/lib/ui";
 import { Button } from "@/components/ui/Button";
+import IdleLogout from "@/components/idle-logout";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode };
 type NavGroup = { label: string; items: NavItem[] };
@@ -158,6 +159,7 @@ export default function AppShell({
 
   return (
     <div className="flex min-h-screen">
+      <IdleLogout />
       <aside className="glass hidden md:flex md:w-64 md:flex-col border-r border-border py-6">
         <div className="mb-7 flex items-center gap-2.5 px-5">
           <div
