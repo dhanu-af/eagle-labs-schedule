@@ -30,6 +30,7 @@ enum TaskStatus {
   RUNNING
   COMPLETED
   DELAYED
+  OTHER
 }
 
 enum Priority {
@@ -292,6 +293,7 @@ model KpiDailyProduction {
   productionTimeHours Float?
   plannedBatchSizeKg  Float?
   totalInputWeightKg  Float?
+  machineSpeedHz      Float?
   updatedBy           String?
   updatedAt           DateTime @updatedAt
 

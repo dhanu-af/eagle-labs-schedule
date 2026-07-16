@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit, canEditKpiProduction } from "@/lib/auth";
+import { getSession, canEdit, canEditKpiProduction, canEditMachineSpeed } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 
 async function requireManager() {
@@ -109,16 +109,18 @@ export async function setKpiDailyProduction(
     productionTimeHours: number | null;
     plannedBatchSizeKg: number | null;
     totalInputWeightKg: number | null;
+    machineSpeedHz: number | null;
   }
 ) {
   const session = await requireProductionEditor();
 
   const date = new Date(`${dateStr}T00:00:00`);
+  const canSetSpeed = canEditMachineSpeed(session.role);
 
   await prisma.kpiDailyProduction.upsert({
     where: { kpiId_date: { kpiId, date } },
-    update: { ...data, updatedBy: session.fullName },
-    create: { kpiId, date, ...data, updatedBy: session.fullName },
+    update: canSetSpeed ? { ...data, updatedBy: session.fullName } : { ...data, machineSpeedHz: undefined, updatedBy: session.fullName },
+    create: { kpiId, date, ...data, machineSpeedHz: canSetSpeed ? data.machineSpeedHz : null, updatedBy: session.fullName },
   });
 
   await logAudit(session, {

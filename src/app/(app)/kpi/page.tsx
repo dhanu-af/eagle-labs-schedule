@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getSession, canEdit, canEditKpiProduction } from "@/lib/auth";
+import { getSession, canEdit, canEditKpiProduction, canEditMachineSpeed } from "@/lib/auth";
 import { toDateInputValueUTC, todayInBrisbane } from "@/lib/ui";
 import KpiClient from "./kpi-client";
 
@@ -148,6 +148,7 @@ export default async function KpiPage({
           productionTimeHours: entry.productionTimeHours,
           plannedBatchSizeKg: entry.plannedBatchSizeKg,
           totalInputWeightKg: entry.totalInputWeightKg,
+          machineSpeedHz: entry.machineSpeedHz,
         };
       }),
     ])
@@ -202,6 +203,7 @@ export default async function KpiPage({
       canManage={!!session && canEdit(session.role)}
       productionByKpi={productionByKpi}
       canEditProduction={!!session && canEditKpiProduction(session.role)}
+      canEditMachineSpeed={!!session && canEditMachineSpeed(session.role)}
     />
   );
 }

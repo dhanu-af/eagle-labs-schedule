@@ -85,6 +85,11 @@ export function canEditKpiProduction(role: Role) {
   return role === "SUPERVISOR" || role === "OPERATIONS" || role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
+/** Encapsulation machine speed (Hz): Super Admin only — everyone else with KPI production access can view it. */
+export function canEditMachineSpeed(role: Role) {
+  return role === "SUPER_ADMIN";
+}
+
 /**
  * Daily Planner: any authenticated employee may update a task's actual
  * production quantity and move its status (e.g. via "Move to..."), even

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createKpi, deleteKpi, setDailyTarget, setKpiDailyProduction, updateKpi } from "@/lib/actions/kpi-actions";
 import { getTaskActivity } from "@/lib/actions/daily-actions";
 import { pct, toDateInputValue, formatBrisbaneDateTime } from "@/lib/ui";
-import { DEFAULT_FILL_WEIGHT_MG, DEFAULT_CAPSULES_PER_BOTTLE } from "@/lib/kpi-defaults";
+import { DEFAULT_FILL_WEIGHT_MG, DEFAULT_CAPSULES_PER_BOTTLE, CAPSULES_PER_HOUR_PER_HZ } from "@/lib/kpi-defaults";
 import KpiChart from "./kpi-chart";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -34,6 +34,7 @@ type ProductionEntry = {
   productionTimeHours: number | null;
   plannedBatchSizeKg: number | null;
   totalInputWeightKg: number | null;
+  machineSpeedHz: number | null;
 };
 
 type TaskActivityEntry = {
@@ -93,6 +94,7 @@ export default function KpiClient({
   canManage,
   productionByKpi,
   canEditProduction,
+  canEditMachineSpeed,
 }: {
   weekStartStr: string;
   todayStr: string;
@@ -109,6 +111,7 @@ export default function KpiClient({
   canManage: boolean;
   productionByKpi: Record<string, (ProductionEntry | null)[]>;
   canEditProduction: boolean;
+  canEditMachineSpeed: boolean;
 }) {
   const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
@@ -229,6 +232,7 @@ export default function KpiClient({
                 canManage={canManage}
                 production={productionByKpi[k.id] ?? Array(7).fill(null)}
                 canEditProduction={canEditProduction}
+                canEditMachineSpeed={canEditMachineSpeed}
                 isEncapsulation={k.teamName.toLowerCase().includes("encapsulation")}
                 isBlending={k.teamName.toLowerCase().includes("blending")}
               />
@@ -350,6 +354,7 @@ function DailyTargetsRow({
   canManage,
   production,
   canEditProduction,
+  canEditMachineSpeed,
   isEncapsulation,
   isBlending,
 }: {
@@ -363,6 +368,7 @@ function DailyTargetsRow({
   canManage: boolean;
   production: (ProductionEntry | null)[];
   canEditProduction: boolean;
+  canEditMachineSpeed: boolean;
   isEncapsulation: boolean;
   isBlending: boolean;
 }) {
@@ -463,6 +469,7 @@ function DailyTargetsRow({
           actual={actuals[openDay] ?? 0}
           existing={production[openDay]}
           canEdit={canEditProduction}
+          canEditMachineSpeed={canEditMachineSpeed}
           isEncapsulation={isEncapsulation}
           isBlending={isBlending}
           onClose={() => setOpenDay(null)}
@@ -482,6 +489,7 @@ function ProductionDetailsModal({
   actual,
   existing,
   canEdit,
+  canEditMachineSpeed,
   isEncapsulation,
   isBlending,
   onClose,
@@ -495,6 +503,7 @@ function ProductionDetailsModal({
   actual: number;
   existing: ProductionEntry | null;
   canEdit: boolean;
+  canEditMachineSpeed: boolean;
   isEncapsulation: boolean;
   isBlending: boolean;
   onClose: () => void;
@@ -507,6 +516,7 @@ function ProductionDetailsModal({
   const [productionTimeHours, setProductionTimeHours] = useState<number | "">(existing?.productionTimeHours ?? "");
   const [plannedBatchSizeKg, setPlannedBatchSizeKg] = useState<number | "">(existing?.plannedBatchSizeKg ?? "");
   const [totalInputWeightKg, setTotalInputWeightKg] = useState<number | "">(existing?.totalInputWeightKg ?? "");
+  const [machineSpeedHz, setMachineSpeedHz] = useState<number | "">(existing?.machineSpeedHz ?? "");
   const [activity, setActivity] = useState<TaskActivityEntry[] | null>(null);
 
   useEffect(() => {
@@ -531,6 +541,9 @@ function ProductionDetailsModal({
   const totalBottles = totalCapsules && perBottle ? Math.floor(totalCapsules / perBottle) : null;
   const productionRate = totalCapsules && timeHours ? Math.round(totalCapsules / timeHours) : null;
 
+  const machineSpeed = Number(machineSpeedHz) || null;
+  const theoreticalCapsules = machineSpeed && timeHours ? Math.round(machineSpeed * CAPSULES_PER_HOUR_PER_HZ * timeHours) : null;
+
   const inputWeight = Number(totalInputWeightKg) || null;
   const plannedSize = Number(plannedBatchSizeKg) || null;
   const materialLoss = inputWeight !== null ? inputWeight - actual : null;
@@ -547,6 +560,7 @@ function ProductionDetailsModal({
           productionTimeHours: timeHours,
           plannedBatchSizeKg: isBlending ? plannedSize : null,
           totalInputWeightKg: isBlending ? inputWeight : null,
+          machineSpeedHz: isEncapsulation ? machineSpeed : null,
         });
         router.refresh();
         onClose();
@@ -607,6 +621,23 @@ function ProductionDetailsModal({
                   Auto-calculated from the activity log (first Running to last Completed, minus any Delayed time) — editable.
                 </span>
               </label>
+              <label className="col-span-2 block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Machine Speed (Hz)</span>
+                {canEditMachineSpeed ? (
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={machineSpeedHz}
+                    onChange={(e) => setMachineSpeedHz(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="input"
+                  />
+                ) : (
+                  <p className="input flex items-center text-muted-foreground">{machineSpeed !== null ? `${machineSpeed} Hz` : "—"}</p>
+                )}
+                <span className="mt-1 block text-[10px] text-muted-foreground">
+                  {canEditMachineSpeed ? "Editable by Super Admin only." : "Super Admin only — contact one to update."}
+                </span>
+              </label>
             </div>
 
             <div className="rounded-lg border border-border bg-surface-muted/40 p-3 text-xs">
@@ -620,6 +651,7 @@ function ProductionDetailsModal({
                 }
               />
               <DetailLine label="Average Production Rate" value={productionRate !== null ? `${productionRate.toLocaleString()} capsules/hour` : "—"} />
+              <DetailLine label="Theoretical Capsules" value={theoreticalCapsules !== null ? `${theoreticalCapsules.toLocaleString()} capsules` : "—"} />
             </div>
 
             {error && <p className="text-xs text-danger">{error}</p>}
@@ -648,6 +680,8 @@ function ProductionDetailsModal({
             />
             <DetailLine label="Average Production Time" value={timeHours !== null ? `${timeHours} hours` : "—"} />
             <DetailLine label="Average Production Rate" value={productionRate !== null ? `${productionRate.toLocaleString()} capsules/hour` : "—"} />
+            <DetailLine label="Machine Speed" value={machineSpeed !== null ? `${machineSpeed} Hz` : "—"} />
+            <DetailLine label="Theoretical Capsules" value={theoreticalCapsules !== null ? `${theoreticalCapsules.toLocaleString()} capsules` : "—"} />
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">No production details recorded for this day yet.</p>
