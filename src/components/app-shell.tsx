@@ -43,6 +43,7 @@ const icons = {
   userManagement: "👤",
   loginHistory: "🔐",
   dryingRoom: "🏭",
+  warehouse: "🏬",
 };
 
 type Notification = {
@@ -91,6 +92,7 @@ export default function AppShell({
             { href: "/formulation-checker", label: "Formula Manager", icon: icons.formulationChecker },
             { href: "/batch-records", label: "Batch Records", icon: icons.batchRecords },
             { href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom },
+            { href: "/warehouse", label: "Warehouse Management", icon: icons.warehouse },
             ...(canSeeIngredientLibrary ? [{ href: "/ingredients", label: "Ingredient Library", icon: icons.ingredients }] : []),
             { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
             { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },

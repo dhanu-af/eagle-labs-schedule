@@ -514,6 +514,8 @@ model Ingredient {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  warehouseItem WarehouseItem?
+
   @@index([type])
   @@index([category])
 }
@@ -786,6 +788,7 @@ model Formulation {
   folder      FormulationFolder       @relation(fields: [folderId], references: [id])
   ingredients FormulationIngredient[]
   batchRecords BatchRecord[]
+  warehouseMaterialRequests WarehouseMaterialRequest[]
 
   @@index([folderId])
 }
@@ -1172,4 +1175,288 @@ model WhatsAppGroup {
   name       String  @unique
   identifier String?
   active     Boolean @default(true)
+}
+
+// ---------------------------------------------------------------------------
+// Warehouse Management — Phase 1
+// ---------------------------------------------------------------------------
+
+enum WarehouseItemCategory {
+  RAW_MATERIAL
+  PACKAGING
+  CONSUMABLE
+  FINISHED_GOOD
+}
+
+enum WarehouseZone {
+  DRY_STORE
+  COLD_STORE
+  QUARANTINE
+  RELEASED
+  REJECTED
+  PACKAGING
+  FINISHED_GOODS
+}
+
+model WarehouseLocation {
+  id       String        @id @default(cuid())
+  code     String        @unique
+  label    String
+  zone     WarehouseZone
+  parentId String?
+  parent   WarehouseLocation?  @relation("LocationTree", fields: [parentId], references: [id])
+  children WarehouseLocation[] @relation("LocationTree")
+  active   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  itemsDefaultingHere       WarehouseItem[]            @relation("ItemDefaultLocation")
+  goodsReceivingLines       GoodsReceivingLine[]
+  requestLinesReleasedHere  WarehouseRequestLine[]      @relation("ReleaseLocation")
+  requestLinesReturnedHere  WarehouseRequestLine[]      @relation("ReturnLocation")
+  ledgerEntriesFrom         MaterialLedgerEntry[]       @relation("LedgerFrom")
+  ledgerEntriesTo           MaterialLedgerEntry[]       @relation("LedgerTo")
+
+  @@index([zone])
+  @@index([parentId])
+}
+
+model WarehouseItem {
+  id                String   @id @default(cuid())
+  itemCode          String   @unique
+  name              String
+  category          WarehouseItemCategory
+  subCategory       String?
+  ingredientId      String?  @unique
+  ingredient        Ingredient? @relation(fields: [ingredientId], references: [id])
+  unit              String
+  minimumStock      Float?
+  maximumStock      Float?
+  defaultLocationId String?
+  defaultLocation   WarehouseLocation? @relation("ItemDefaultLocation", fields: [defaultLocationId], references: [id])
+  active            Boolean  @default(true)
+  createdBy         String?
+  updatedBy         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  goodsReceivingLines GoodsReceivingLine[]
+  requestLines        WarehouseRequestLine[]
+  ledgerEntries        MaterialLedgerEntry[]
+
+  @@index([category])
+  @@index([ingredientId])
+}
+
+enum GoodsReceivingLineStatus {
+  QUARANTINE
+  RELEASED
+  REJECTED
+}
+
+model GoodsReceiving {
+  id             String   @id @default(cuid())
+  supplierName   String
+  poNumber       String?
+  deliveryDate   DateTime
+  invoiceRef     String?
+  receivedByName String
+  checkedByName  String?
+  approvedByName String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lines GoodsReceivingLine[]
+
+  @@index([deliveryDate])
+}
+
+model GoodsReceivingLine {
+  id                      String   @id @default(cuid())
+  goodsReceivingId        String
+  goodsReceiving          GoodsReceiving @relation(fields: [goodsReceivingId], references: [id], onDelete: Cascade)
+  itemId                  String
+  item                    WarehouseItem  @relation(fields: [itemId], references: [id])
+  lotNumber               String
+  supplierLot             String?
+  internalLot             String?
+  expiryDate              DateTime?
+  manufactureDate         DateTime?
+  quantity                Float
+  unit                    String
+  coaReference            String?
+  photoReference          String?
+  deliveryDocketReference String?
+  storageCondition        String?
+  status                  GoodsReceivingLineStatus @default(QUARANTINE)
+  locationId              String?
+  location                WarehouseLocation? @relation(fields: [locationId], references: [id])
+  qaReleasedByName        String?
+  qaReleasedAt            DateTime?
+  qaRejectReason          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ledgerEntries MaterialLedgerEntry[]
+
+  @@index([goodsReceivingId])
+  @@index([itemId])
+  @@index([status])
+}
+
+enum WarehouseRequestStatus {
+  REQUESTED
+  WAREHOUSE_PREPARING
+  RELEASED
+  WAITING_PRODUCTION_CONFIRMATION
+  PARTIALLY_RECEIVED
+  RECEIVED
+  IN_PRODUCTION
+  RETURN_PENDING
+  WAREHOUSE_VERIFYING
+  COMPLETED
+}
+
+enum ReceiptOutcome {
+  ACCEPTED
+  REJECTED
+  SHORTAGE
+  DAMAGED
+}
+
+model WarehouseMaterialRequest {
+  id              String   @id @default(cuid())
+  requestNumber   String   @unique
+  batchReference  String
+  batchSize       Float?
+  batchSizeUnit   String?
+  requiredDate    DateTime?
+  priority        Priority @default(MEDIUM)
+  status          WarehouseRequestStatus @default(REQUESTED)
+  requestedByName String
+  formulationId   String?
+  formulation     Formulation? @relation(fields: [formulationId], references: [id])
+  comments        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lines         WarehouseRequestLine[]
+  ledgerEntries MaterialLedgerEntry[]
+
+  @@index([status])
+  @@index([batchReference])
+}
+
+model WarehouseRequestLine {
+  id                     String   @id @default(cuid())
+  requestId              String
+  request                WarehouseMaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  itemId                 String?
+  item                   WarehouseItem? @relation(fields: [itemId], references: [id])
+  ingredientNameFreeText String?
+  requestedQty           Float
+  unit                   String
+
+  // Step 2 — warehouse release
+  releasedQty       Float?
+  releaseLotNumber  String?
+  releaseExpiry     DateTime?
+  releaseLocationId String?
+  releaseLocation   WarehouseLocation? @relation("ReleaseLocation", fields: [releaseLocationId], references: [id])
+  releasedByName    String?
+  releasedAt        DateTime?
+  releaseComments   String?
+
+  // Step 3/4 — production receipt check + confirm
+  receiptOutcome  ReceiptOutcome?
+  receivedQty     Float?
+  receivedByName  String?
+  receivedAt      DateTime?
+  receiptComments String?
+
+  // Step 5 — usage during production
+  usedQty  Float?
+  wasteQty Float?
+
+  // Steps 6/7/8 — return + verification
+  returnQty              Float?
+  returnConditionNotes   String?
+  returnLocationId       String?
+  returnLocation         WarehouseLocation? @relation("ReturnLocation", fields: [returnLocationId], references: [id])
+  returnSubmittedByName  String?
+  returnSubmittedAt      DateTime?
+  returnVerifiedByName   String?
+  returnVerifiedAt       DateTime?
+  returnQaApprovedByName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ledgerEntries MaterialLedgerEntry[]
+
+  @@index([requestId])
+  @@index([itemId])
+}
+
+enum LedgerEntryType {
+  RECEIPT
+  RESERVE
+  ISSUE
+  RETURN
+  ADJUSTMENT
+  RECOUNT
+  STATUS_CHANGE
+}
+
+enum StockBucket {
+  AVAILABLE
+  RESERVED
+  IN_PRODUCTION
+  AWAITING_VERIFICATION
+  EXPIRED
+  DAMAGED
+  BLOCKED
+}
+
+model MaterialLedgerEntry {
+  id       String  @id @default(cuid())
+  sequence Int     @default(autoincrement()) @unique
+
+  entryType LedgerEntryType
+  itemId    String
+  item      WarehouseItem @relation(fields: [itemId], references: [id])
+  lotNumber String?
+  quantity  Float
+  unit      String
+
+  fromBucket StockBucket?
+  toBucket   StockBucket?
+
+  fromLocationId String?
+  fromLocation   WarehouseLocation? @relation("LedgerFrom", fields: [fromLocationId], references: [id])
+  toLocationId   String?
+  toLocation     WarehouseLocation? @relation("LedgerTo", fields: [toLocationId], references: [id])
+
+  batchReference       String?
+  requestId            String?
+  request              WarehouseMaterialRequest? @relation(fields: [requestId], references: [id])
+  requestLineId        String?
+  requestLine          WarehouseRequestLine? @relation(fields: [requestLineId], references: [id])
+  goodsReceivingLineId String?
+  goodsReceivingLine   GoodsReceivingLine? @relation(fields: [goodsReceivingLineId], references: [id])
+
+  performedByName String
+  approvedByName  String?
+  reasonCode      String?
+
+  resultingBalance Float
+
+  createdAt DateTime @default(now())
+
+  @@index([itemId, lotNumber])
+  @@index([requestId])
+  @@index([entryType])
+  @@index([createdAt])
 }

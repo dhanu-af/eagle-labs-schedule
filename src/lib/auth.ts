@@ -136,6 +136,33 @@ export function canManageDailyPlanner(role: Role) {
   );
 }
 
+/** Warehouse: manager tier — item/location CRUD, release stock to production, verify returns. No dedicated WAREHOUSE role exists; mirrors canManageDryingRoom's precedent. */
+export function canManageWarehouse(role: Role) {
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
+/** Warehouse: any production-floor operator can create a material request and confirm materials received. Excludes OTHERS (restricted external role, see app-shell's separate nav view). */
+export function canRequestMaterials(role: Role) {
+  return (
+    role === "EMPLOYEE" ||
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "QA" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
+/** Warehouse: QA release of quarantined Goods Receiving lines into Available stock. */
+export function canQaReleaseStock(role: Role) {
+  return role === "QA" || role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }
