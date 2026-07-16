@@ -1,6 +1,15 @@
 const GRAPH_API_VERSION = "v21.0";
 
 /**
+ * Meta's Cloud API requires E.164 (country code, no leading 0). Staff type numbers in
+ * local Australian format (e.g. "0433517390"), so normalize that case specifically.
+ */
+function toE164AU(to: string): string {
+  const digits = to.replace(/\D/g, "");
+  return digits.startsWith("0") ? `61${digits.slice(1)}` : digits;
+}
+
+/**
  * Sends a plain-text WhatsApp message via Meta's WhatsApp Cloud API. Returns
  * { sent: false, reason: "not_configured" } when WHATSAPP_ACCESS_TOKEN/WHATSAPP_PHONE_NUMBER_ID
  * aren't set, so callers can fall back to recording the intent instead of a real send.
@@ -16,7 +25,7 @@ export async function sendWhatsAppMessage(
     return { sent: false, reason: "not_configured" };
   }
 
-  const digitsOnly = to.replace(/\D/g, "");
+  const digitsOnly = toE164AU(to);
 
   const response = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
     method: "POST",
