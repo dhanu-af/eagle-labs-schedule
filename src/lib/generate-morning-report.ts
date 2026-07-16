@@ -20,30 +20,39 @@ type ReportMiscItem = {
   status: string | null;
 };
 
-function batchLine(b: ReportBatch): string {
-  const qty = `${b.numberOfTrolleys} ${b.numberOfTrolleys === 1 ? "Trolley" : "Trolleys"}`;
-  return `${b.productName}\nBatch ${b.batchNumber}\n${qty} ${STAGE_LABEL[b.currentStage]}`;
+function bayStatusLine(bay: ReportBay): string {
+  if (bay.purpose === "CLEANED") return "✅ Cleaned";
+  if (bay.purpose === "CLEANING_REQUIRED") return "⚠️ Cleaning Required";
+  if (bay.purpose === "EMPTY") return "Empty";
+  return PURPOSE_LABEL[bay.purpose];
 }
 
-/** Pure text-block report, matching the module spec's example format exactly. Kept separate from any delivery channel (live tab today, WhatsApp/etc. later). */
+function batchLine(b: ReportBatch): string {
+  const qty = `${b.numberOfTrolleys} ${b.numberOfTrolleys === 1 ? "Trolley" : "Trolleys"}`;
+  return `• *${b.productName}* – Batch *${b.batchNumber}*\n   ${qty} – ${STAGE_LABEL[b.currentStage]}`;
+}
+
+/** Text-block report using WhatsApp's markdown (*bold*, bullets, emoji) so the message renders
+ * cleanly there; the same text is also shown as-is on the live Reports tab. */
 export function generateMorningReportText(bays: ReportBay[], misc: ReportMiscItem[]): string {
-  const lines: string[] = ["DRYING ROOM STATUS"];
+  const lines: string[] = ["*Drying Room Status Report*", ""];
 
   for (const bay of bays) {
-    lines.push(`Bay ${bay.bayNumber}`);
+    lines.push(`*Bay ${bay.bayNumber}*`);
     if (bay.batches.length === 0) {
-      lines.push(bay.purpose === "EMPTY" ? "Empty" : PURPOSE_LABEL[bay.purpose]);
+      lines.push(bayStatusLine(bay));
     } else {
       for (const b of bay.batches) lines.push(batchLine(b));
     }
+    lines.push("");
   }
 
   if (misc.length > 0) {
-    lines.push("Miscellaneous");
+    lines.push("*Miscellaneous*");
     for (const m of misc) {
-      lines.push(`${m.product}\n${m.quantityLabel}${m.status ? ` ${m.status}` : ""}`);
+      lines.push(`• ${m.product} – ${m.quantityLabel}${m.status ? ` – ${m.status}` : ""}`);
     }
   }
 
-  return lines.join("\n");
+  return lines.join("\n").trim();
 }

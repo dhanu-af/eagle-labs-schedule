@@ -150,7 +150,7 @@ const TAB_LABEL: Record<Tab, string> = {
   dashboard: "Dashboard",
   bays: "Bays",
   misc: "Misc Storage",
-  report: "Morning Report",
+  report: "Reports",
 };
 
 function employeeName(employees: Employee[], id: string | null) {
@@ -251,16 +251,36 @@ export default function DryingRoomClient({
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
+function StatCard({
+  label,
+  value,
+  highlight,
+  onClick,
+}: {
+  label: string;
+  value: number | string;
+  highlight?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <Card interactive padding="sm">
-      <p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <Card
+      interactive
+      padding="sm"
+      onClick={onClick}
+      className={`${onClick ? "cursor-pointer" : ""} ${highlight ? "border-warning/40 bg-warning/10" : ""}`}
+    >
+      <p className={`text-2xl font-semibold tabular-nums ${highlight ? "text-warning" : "text-foreground"}`}>{value}</p>
+      <p className={`text-xs ${highlight ? "text-warning/80" : "text-muted-foreground"}`}>{label}</p>
     </Card>
   );
 }
 
 function DashboardTab({ bays, allBatches, alerts }: { bays: Bay[]; allBatches: Batch[]; alerts: DryingAlert[] }) {
+  const [showPriorityList, setShowPriorityList] = useState(false);
+  const priorityJobs = bays
+    .flatMap((bay) => bay.batches.map((batch) => ({ ...batch, bayNumber: bay.bayNumber })))
+    .filter((b) => b.priorityRank !== null)
+    .sort((a, b) => (a.priorityRank ?? 99) - (b.priorityRank ?? 99));
   const totalBays = bays.length;
   const occupiedBays = bays.filter((b) => b.batches.length > 0).length;
   const emptyBays = bays.filter((b) => b.purpose === "EMPTY" && b.batches.length === 0).length;
@@ -291,7 +311,38 @@ function DashboardTab({ bays, allBatches, alerts }: { bays: Bay[]; allBatches: B
           <StatCard label="Rotation Required" value={rotationRequiredCount} />
           <StatCard label="Wrapped Products" value={wrappedTrolleys} />
           <StatCard label="Overdue Batches" value={overdueBatchIds.size} />
+          <StatCard
+            label="Priority Jobs"
+            value={priorityJobs.length}
+            highlight
+            onClick={() => setShowPriorityList((v) => !v)}
+          />
         </div>
+
+        {showPriorityList && (
+          <div className="mt-3 space-y-1.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-warning/80">
+              Priority Jobs ({priorityJobs.length})
+            </p>
+            {priorityJobs.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No batches have a priority set right now.</p>
+            ) : (
+              priorityJobs.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex flex-wrap items-center justify-between gap-1 rounded-md border border-border/60 bg-surface-muted/30 px-2 py-1.5 text-xs"
+                >
+                  <span className="font-medium text-foreground">
+                    {PRIORITY_BADGE[b.priorityRank!]} {b.productName} · Batch {b.batchNumber}
+                  </span>
+                  <span className="text-muted-foreground">
+                    Bay {b.bayNumber} · {STAGE_LABEL[b.currentStage]}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       <div>
@@ -1224,7 +1275,7 @@ function MorningReportTab({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Morning Report</h2>
+        <h2 className="text-sm font-semibold text-foreground">Reports</h2>
         <div className="flex items-center gap-2">
           <div className="flex gap-1 rounded-md border border-border bg-surface p-0.5">
             <button
