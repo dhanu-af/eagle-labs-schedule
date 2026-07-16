@@ -9,9 +9,12 @@ import {
   STAGE_ACTIONS,
   BAY_STATUS_LABEL,
   BAY_STATUS_CLASS,
+  PRIORITY_LABEL,
+  PRIORITY_BADGE,
   computeBayStatus,
   computeBatchAlerts,
   computeBayAlerts,
+  daysSinceProduction,
   type DryingAlert,
 } from "@/lib/drying-room-defaults";
 import { generateMorningReportText } from "@/lib/generate-morning-report";
@@ -22,6 +25,7 @@ import {
   deleteBatch,
   moveBatchToBay,
   updateBatchStage,
+  updateBatchPriority,
   updateTrolley,
   upsertMiscStorageItem,
   deleteMiscStorageItem,
@@ -62,6 +66,7 @@ type Batch = {
   currentStage: DryingStage;
   stageUpdatedAt: string;
   assignedEmployeeId: string | null;
+  priorityRank: number | null;
   trolleys: Trolley[];
 };
 
@@ -347,12 +352,21 @@ function BaysGrid({
             {bay.batches.length === 0 ? (
               <p className="text-xs text-muted-foreground">{PURPOSE_LABEL[bay.purpose]}</p>
             ) : (
-              <div className="space-y-1">
-                {bay.batches.map((b) => (
-                  <p key={b.id} className="text-xs text-foreground">
-                    {b.productName} · {b.numberOfTrolleys} trolleys · <span className="text-muted-foreground">{STAGE_LABEL[b.currentStage]}</span>
-                  </p>
-                ))}
+              <div className="space-y-2">
+                {[...bay.batches]
+                  .sort((a, b) => (a.priorityRank ?? 99) - (b.priorityRank ?? 99))
+                  .map((b) => (
+                    <div key={b.id} className="rounded-md border border-border/60 bg-surface-muted/30 px-2 py-1.5 text-xs">
+                      <p className="font-medium text-foreground">
+                        {b.priorityRank && `${PRIORITY_BADGE[b.priorityRank]} `}
+                        {b.productName} · Batch {b.batchNumber}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {b.batchSize} {b.batchSizeUnit} · {b.trayCount} trays · {daysSinceProduction(b.dateEnteredDryingRoom)}{" "}
+                        day{daysSinceProduction(b.dateEnteredDryingRoom) === 1 ? "" : "s"} · {STAGE_LABEL[b.currentStage]}
+                      </p>
+                    </div>
+                  ))}
               </div>
             )}
             {operatorName && <p className="mt-1.5 text-[11px] text-muted-foreground">Operator: {operatorName}</p>}
@@ -438,6 +452,18 @@ function BayDetailModal({
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't move batch.");
+      }
+    });
+  }
+
+  function setPriority(batchId: string, priorityRank: number | null) {
+    setError("");
+    startTransition(async () => {
+      try {
+        await updateBatchPriority(batchId, priorityRank);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't set priority.");
       }
     });
   }
@@ -530,6 +556,7 @@ function BayDetailModal({
                     onSetStage={setStage}
                     onRemove={removeBatch}
                     onMoveBay={moveBatch}
+                    onSetPriority={setPriority}
                     onRefresh={() => router.refresh()}
                   />
                 ))}
@@ -564,6 +591,7 @@ function BatchCard({
   onSetStage,
   onRemove,
   onMoveBay,
+  onSetPriority,
   onRefresh,
 }: {
   batch: Batch;
@@ -573,6 +601,7 @@ function BatchCard({
   onSetStage: (batchId: string, stage: DryingStage) => void;
   onRemove: (batchId: string) => void;
   onMoveBay: (batchId: string, bayId: string) => void;
+  onSetPriority: (batchId: string, priorityRank: number | null) => void;
   onRefresh: () => void;
 }) {
   const [showTrolleys, setShowTrolleys] = useState(false);
@@ -580,21 +609,29 @@ function BatchCard({
   const [stageTarget, setStageTarget] = useState("");
   const actions = STAGE_ACTIONS[batch.currentStage] ?? [];
   const alerts = computeBatchAlerts(batch);
+  const days = daysSinceProduction(batch.dateEnteredDryingRoom);
 
   return (
     <div className="rounded-lg border border-border bg-surface-muted/40 p-3 text-xs">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-medium text-foreground">
+            {batch.priorityRank && `${PRIORITY_BADGE[batch.priorityRank]} `}
             {batch.productName} · Batch {batch.batchNumber}
           </p>
           <p className="text-muted-foreground">
-            {batch.batchSize} {batch.batchSizeUnit} · {batch.numberOfTrolleys} trolleys · {batch.trayCount} trays
+            {batch.batchSize} {batch.batchSizeUnit} · {batch.numberOfTrolleys} trolleys · {batch.trayCount} trays · {days} day
+            {days === 1 ? "" : "s"}
           </p>
-          <p className="mt-1">
+          <p className="mt-1 flex flex-wrap gap-1">
             <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-foreground">
               {STAGE_LABEL[batch.currentStage]}
             </span>
+            {batch.priorityRank && (
+              <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                {PRIORITY_LABEL[batch.priorityRank]}
+              </span>
+            )}
           </p>
         </div>
         {canManage && (
@@ -602,6 +639,19 @@ function BatchCard({
             Remove
           </button>
         )}
+      </div>
+
+      <div className="mt-2 flex items-center gap-1.5">
+        <select
+          value={batch.priorityRank ?? ""}
+          onChange={(e) => onSetPriority(batch.id, e.target.value ? Number(e.target.value) : null)}
+          className="input py-1 text-[11px]"
+        >
+          <option value="">No priority</option>
+          <option value="1">1st Priority</option>
+          <option value="2">2nd Priority</option>
+          <option value="3">3rd Priority</option>
+        </select>
       </div>
 
       {alerts.length > 0 && (
@@ -805,6 +855,7 @@ function AddBatchModal({
   const [trayCount, setTrayCount] = useState(0);
   const [dateEnteredDryingRoom, setDateEnteredDryingRoom] = useState(toDateInputValue(new Date()));
   const [assignedEmployeeId, setAssignedEmployeeId] = useState("");
+  const [priorityRank, setPriorityRank] = useState("");
 
   function submit() {
     setError("");
@@ -820,6 +871,7 @@ function AddBatchModal({
           dateEnteredDryingRoom,
           dryingStartTime: new Date().toISOString(),
           assignedEmployeeId: assignedEmployeeId || null,
+          priorityRank: priorityRank ? Number(priorityRank) : null,
         });
         onCreated();
       } catch (err) {
@@ -888,6 +940,15 @@ function AddBatchModal({
                   {e.name}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-muted-foreground">Priority</span>
+            <select value={priorityRank} onChange={(e) => setPriorityRank(e.target.value)} className="input">
+              <option value="">None</option>
+              <option value="1">1st Priority</option>
+              <option value="2">2nd Priority</option>
+              <option value="3">3rd Priority</option>
             </select>
           </label>
           {error && <p className="text-xs text-danger">{error}</p>}
@@ -1165,7 +1226,7 @@ function MorningReportTab({
             <input
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="+61 4xx xxx xxx"
+              placeholder="Phone number or wa.me link"
               className="input py-1 text-xs"
             />
           )}

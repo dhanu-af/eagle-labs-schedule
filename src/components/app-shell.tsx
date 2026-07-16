@@ -42,7 +42,7 @@ const icons = {
   audit: "📋",
   userManagement: "👤",
   loginHistory: "🔐",
-  dryingRoom: "🌡️",
+  dryingRoom: "🏭",
 };
 
 type Notification = {

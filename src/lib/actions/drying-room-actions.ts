@@ -82,6 +82,7 @@ export async function createBatch(
     dateEnteredDryingRoom: string;
     dryingStartTime: string | null;
     assignedEmployeeId: string | null;
+    priorityRank: number | null;
   }
 ) {
   const session = await requireOperatorAccess();
@@ -100,6 +101,7 @@ export async function createBatch(
       dateEnteredDryingRoom: new Date(data.dateEnteredDryingRoom),
       dryingStartTime: data.dryingStartTime ? new Date(data.dryingStartTime) : null,
       assignedEmployeeId: data.assignedEmployeeId,
+      priorityRank: data.priorityRank,
       updatedBy: session.fullName,
       trolleys: {
         create: Array.from({ length: Math.max(1, data.numberOfTrolleys) }, (_, i) => ({ trolleyNumber: i + 1 })),
@@ -142,6 +144,21 @@ export async function moveBatchToBay(batchId: string, bayId: string | null) {
     entityType: "DryingBatch",
     entityId: batchId,
     summary: bayId ? `Moved batch ${batchId} to bay ${bayId}` : `Unassigned batch ${batchId} from its bay`,
+  });
+
+  revalidatePath("/drying-room");
+}
+
+export async function updateBatchPriority(batchId: string, priorityRank: number | null) {
+  const session = await requireOperatorAccess();
+
+  await prisma.dryingBatch.update({ where: { id: batchId }, data: { priorityRank, updatedBy: session.fullName } });
+
+  await logAudit(session, {
+    action: "UPDATE_DRYING_BATCH_PRIORITY",
+    entityType: "DryingBatch",
+    entityId: batchId,
+    summary: priorityRank ? `Set batch ${batchId} to priority ${priorityRank}` : `Cleared priority on batch ${batchId}`,
   });
 
   revalidatePath("/drying-room");

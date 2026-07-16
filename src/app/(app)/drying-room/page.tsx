@@ -3,7 +3,11 @@ import { getSession, canManageDryingRoom } from "@/lib/auth";
 import DryingRoomClient from "./drying-room-client";
 
 const BAY_COUNT = 7;
-const DEFAULT_WHATSAPP_GROUPS = ["Production Team", "Management"];
+const DEFAULT_WHATSAPP_GROUPS = [
+  { name: "Production Team", identifier: null },
+  { name: "Management", identifier: null },
+  { name: "Dhanu", identifier: "0433517390" },
+];
 
 export default async function DryingRoomPage() {
   const session = await getSession();
@@ -17,7 +21,7 @@ export default async function DryingRoomPage() {
   }
 
   await prisma.whatsAppGroup.createMany({
-    data: DEFAULT_WHATSAPP_GROUPS.map((name) => ({ name })),
+    data: DEFAULT_WHATSAPP_GROUPS,
     skipDuplicates: true,
   });
 
@@ -60,6 +64,7 @@ export default async function DryingRoomPage() {
           currentStage: batch.currentStage,
           stageUpdatedAt: batch.stageUpdatedAt.toISOString(),
           assignedEmployeeId: batch.assignedEmployeeId,
+          priorityRank: batch.priorityRank,
           trolleys: batch.trolleys.map((t) => ({
             id: t.id,
             trolleyNumber: t.trolleyNumber,

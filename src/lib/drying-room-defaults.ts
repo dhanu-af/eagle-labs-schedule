@@ -1,5 +1,14 @@
 import type { DryingBayPurpose, DryingStage } from "@/generated/prisma";
 
+/** Whole days elapsed since the batch entered the drying room -- shown on every batch line. */
+export function daysSinceProduction(dateEnteredDryingRoom: Date | string): number {
+  const ms = Date.now() - new Date(dateEnteredDryingRoom).getTime();
+  return Math.max(0, Math.floor(ms / 86_400_000));
+}
+
+export const PRIORITY_LABEL: Record<number, string> = { 1: "1st Priority", 2: "2nd Priority", 3: "3rd Priority" };
+export const PRIORITY_BADGE: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
 export const PURPOSE_LABEL: Record<DryingBayPurpose, string> = {
   EMPTY: "Empty",
   DRYING: "Drying",
