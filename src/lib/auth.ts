@@ -90,6 +90,16 @@ export function canEditMachineSpeed(role: Role) {
   return role === "SUPER_ADMIN";
 }
 
+/** Drying Room: destructive actions (delete batch/misc item) restricted like the Daily Planner's manage permission. Status/quick-action updates use canUpdateDailyProgress instead, open to every operator. */
+export function canManageDryingRoom(role: Role) {
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
 /**
  * Daily Planner: any authenticated employee may update a task's actual
  * production quantity and move its status (e.g. via "Move to..."), even

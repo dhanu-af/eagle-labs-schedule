@@ -42,6 +42,7 @@ const icons = {
   audit: "📋",
   userManagement: "👤",
   loginHistory: "🔐",
+  dryingRoom: "🌡️",
 };
 
 type Notification = {
@@ -93,6 +94,10 @@ export default function AppShell({
             { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
             { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },
           ],
+        },
+        {
+          label: "Others",
+          items: [{ href: "/drying-room", label: "Drying / Production Storage Area", icon: icons.dryingRoom }],
         },
         ...(isManager
           ? [

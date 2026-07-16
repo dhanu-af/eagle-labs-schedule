@@ -1039,3 +1039,111 @@ model BatchMaterialRequestLine {
 
   @@index([batchRecordId])
 }
+
+enum DryingBayPurpose {
+  EMPTY
+  DRYING
+  WAITING_QC
+  READY_FOR_POUCHING
+  CLEANING_REQUIRED
+  RND
+  STORAGE
+  SERVICE
+}
+
+enum DryingStage {
+  RECEIVING
+  DRYING
+  ROTATION_REQUIRED
+  CONTINUE_DRYING
+  QC_SAMPLING
+  QC_PENDING
+  QC_APPROVED
+  QC_HOLD
+  WRAPPING
+  READY_FOR_POUCHING
+  POUCHING
+  COMPLETE
+}
+
+enum TrolleyQcStatus {
+  PENDING
+  PASSED
+  FAILED
+}
+
+model DryingBay {
+  id                 String   @id @default(cuid())
+  bayNumber          Int      @unique
+  purpose            DryingBayPurpose @default(EMPTY)
+  assignedEmployeeId String?
+  expectedFinishTime DateTime?
+  updatedBy          String?
+  updatedAt          DateTime @updatedAt
+
+  batches DryingBatch[]
+}
+
+model DryingBatch {
+  id                    String   @id @default(cuid())
+  bayId                 String?
+  productName           String
+  batchNumber           String
+  batchSize             Float
+  batchSizeUnit         String
+  numberOfTrolleys      Int
+  trayCount             Int
+  dateEnteredDryingRoom DateTime
+  dryingStartTime       DateTime?
+  currentStage          DryingStage @default(RECEIVING)
+  stageUpdatedAt        DateTime @default(now())
+  assignedEmployeeId    String?
+  completedAt           DateTime?
+  updatedBy             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  bay      DryingBay? @relation(fields: [bayId], references: [id])
+  trolleys DryingTrolley[]
+
+  @@index([bayId])
+}
+
+model DryingTrolley {
+  id                 String   @id @default(cuid())
+  batchId            String
+  trolleyNumber      Int
+  quantity           Float?
+  trayCount          Int?
+  wrapped            Boolean  @default(false)
+  rotationCompleted  Boolean  @default(false)
+  qcStatus           TrolleyQcStatus @default(PENDING)
+  assignedEmployeeId String?
+  remarks            String?
+
+  batch DryingBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+}
+
+model MiscStorageItem {
+  id             String   @id @default(cuid())
+  product        String
+  batchNumber    String?
+  quantityLabel  String
+  storageType    String?
+  status         String?
+  requiredAction String?
+  location       String?
+  remarks        String?
+  updatedBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model WhatsAppGroup {
+  id         String  @id @default(cuid())
+  name       String  @unique
+  identifier String?
+  active     Boolean @default(true)
+}
