@@ -67,6 +67,10 @@ export default function DailyKanban({
 
     if (newStatus === "DELAYED") {
       delayReason = window.prompt("Reason for delay?", task.delayReason ?? "") ?? task.delayReason ?? "";
+    } else if (newStatus === "OTHER") {
+      const comment = window.prompt("Comment for Other status (required):", task.delayReason ?? "");
+      if (!comment || !comment.trim()) return;
+      delayReason = comment.trim();
     } else {
       delayReason = null;
     }
@@ -291,6 +295,9 @@ function KanbanCard({
       )}
       {t.status === "DELAYED" && t.delayReason && (
         <p className="mt-1.5 text-[11px] text-danger">⚠ {t.delayReason}</p>
+      )}
+      {t.status === "OTHER" && t.delayReason && (
+        <p className="mt-1.5 text-[11px] text-muted-foreground">💬 {t.delayReason}</p>
       )}
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-2">
         <div className="flex min-w-0 items-center gap-1.5">

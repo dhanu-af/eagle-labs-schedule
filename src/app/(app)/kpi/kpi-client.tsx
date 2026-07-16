@@ -54,7 +54,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   DUPLICATE_DAY: "Duplicated from previous day",
 };
 
-/** First RUNNING → last COMPLETED, minus any time spent DELAYED in between. */
+/** First RUNNING → last COMPLETED, minus any time spent DELAYED or OTHER in between — only actual Running time counts. */
 function computeNetWorkingHours(activity: TaskActivityEntry[]): number | null {
   const statusEvents = activity.filter((a) => a.status).map((a) => ({ status: a.status!, at: new Date(a.createdAt).getTime() }));
   const startedAt = statusEvents.find((e) => e.status === "RUNNING")?.at;
@@ -62,19 +62,19 @@ function computeNetWorkingHours(activity: TaskActivityEntry[]): number | null {
   const completedAt = completedEvents.length > 0 ? completedEvents[completedEvents.length - 1].at : undefined;
   if (!startedAt || !completedAt || completedAt <= startedAt) return null;
 
-  let delayedMs = 0;
-  let delayStart: number | null = null;
+  let excludedMs = 0;
+  let excludeStart: number | null = null;
   for (const e of statusEvents) {
     if (e.at < startedAt || e.at > completedAt) continue;
-    if (e.status === "DELAYED") {
-      delayStart = e.at;
-    } else if (delayStart !== null) {
-      delayedMs += e.at - delayStart;
-      delayStart = null;
+    if (e.status === "DELAYED" || e.status === "OTHER") {
+      if (excludeStart === null) excludeStart = e.at;
+    } else if (excludeStart !== null) {
+      excludedMs += e.at - excludeStart;
+      excludeStart = null;
     }
   }
 
-  const netMs = completedAt - startedAt - delayedMs;
+  const netMs = completedAt - startedAt - excludedMs;
   return netMs > 0 ? Math.round((netMs / 3_600_000) * 100) / 100 : null;
 }
 

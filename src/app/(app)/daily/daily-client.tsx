@@ -233,8 +233,14 @@ function TaskRow({
   const [pending, startTransition] = useTransition();
   const [dirty, setDirty] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [error, setError] = useState("");
 
   function save() {
+    if (status === "OTHER" && !delayReason.trim()) {
+      setError("A comment is required when status is Other.");
+      return;
+    }
+    setError("");
     startTransition(async () => {
       await updateTaskStatus(task.id, status, delayReason, actualQty);
       setDirty(false);
@@ -342,7 +348,7 @@ function TaskRow({
               placeholder="Actual"
             />
           )}
-          {status === "DELAYED" && (
+          {(status === "DELAYED" || status === "OTHER") && (
             <input
               type="text"
               value={delayReason}
@@ -350,7 +356,7 @@ function TaskRow({
                 setDelayReason(e.target.value);
                 setDirty(true);
               }}
-              placeholder="Delay reason"
+              placeholder={status === "DELAYED" ? "Delay reason" : "Comment (required)"}
               className="min-w-[160px] flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs text-foreground"
             />
           )}
@@ -361,6 +367,7 @@ function TaskRow({
           )}
         </div>
       )}
+      {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
 
       {showEdit && (
         <EditTaskModal task={task} employees={employees} onClose={() => setShowEdit(false)} />
