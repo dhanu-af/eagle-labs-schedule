@@ -44,6 +44,7 @@ export async function updateBayPurpose(
     purpose: DryingBayPurpose;
     assignedEmployeeId: string | null;
     department: string | null;
+    comments: string | null;
     expectedFinishTime: string | null;
   }
 ) {
@@ -55,6 +56,7 @@ export async function updateBayPurpose(
       purpose: data.purpose,
       assignedEmployeeId: data.assignedEmployeeId,
       department: data.department,
+      comments: data.comments,
       expectedFinishTime: data.expectedFinishTime ? new Date(data.expectedFinishTime) : null,
       updatedBy: session.fullName,
     },

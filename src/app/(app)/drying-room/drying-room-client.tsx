@@ -76,6 +76,7 @@ type Bay = {
   purpose: DryingBayPurpose;
   assignedEmployeeId: string | null;
   department: string | null;
+  comments: string | null;
   expectedFinishTime: string | null;
   updatedAt: string;
   batches: Batch[];
@@ -91,6 +92,7 @@ type MiscItem = {
   requiredAction: string | null;
   location: string | null;
   remarks: string | null;
+  updatedAt: string;
 };
 
 const PURPOSE_OPTIONS: DryingBayPurpose[] = [
@@ -106,6 +108,11 @@ const PURPOSE_OPTIONS: DryingBayPurpose[] = [
   "COATING",
   "RE_COATING",
   "QUARANTINE",
+  "SORTING_REQUIRED",
+  "COATING_REQUIRED",
+  "POLISHING_REQUIRED",
+  "MANUAL_PACKING_REQUIRED",
+  "CLEANED",
   "RND",
   "STORAGE",
   "SERVICE",
@@ -130,6 +137,11 @@ const STAGE_OPTIONS: DryingStage[] = [
   "COATING",
   "RE_COATING",
   "QUARANTINE",
+  "SORTING_REQUIRED",
+  "COATING_REQUIRED",
+  "POLISHING_REQUIRED",
+  "MANUAL_PACKING_REQUIRED",
+  "CLEANED",
 ];
 
 const TABS = ["dashboard", "bays", "misc", "report"] as const;
@@ -397,6 +409,7 @@ function BayDetailModal({
   const [purpose, setPurpose] = useState<DryingBayPurpose>(bay.purpose);
   const [assignedEmployeeId, setAssignedEmployeeId] = useState(bay.assignedEmployeeId ?? "");
   const [department, setDepartment] = useState(bay.department ?? "");
+  const [comments, setComments] = useState(bay.comments ?? "");
   const [expectedFinishTime, setExpectedFinishTime] = useState(
     bay.expectedFinishTime ? bay.expectedFinishTime.slice(0, 16) : ""
   );
@@ -410,6 +423,7 @@ function BayDetailModal({
           purpose,
           assignedEmployeeId: assignedEmployeeId || null,
           department: department || null,
+          comments: comments || null,
           expectedFinishTime: expectedFinishTime || null,
         });
         router.refresh();
@@ -520,6 +534,16 @@ function BayDetailModal({
                   type="datetime-local"
                   value={expectedFinishTime}
                   onChange={(e) => setExpectedFinishTime(e.target.value)}
+                  className="input"
+                />
+              </label>
+              <label className="col-span-2 block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Comments</span>
+                <textarea
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  rows={2}
+                  placeholder="Notes for this bay..."
                   className="input"
                 />
               </label>
@@ -1000,6 +1024,7 @@ function MiscStorageTab({ items, canManage }: { items: MiscItem[]; canManage: bo
                 <Th>Status</Th>
                 <Th>Required Action</Th>
                 <Th>Location</Th>
+                <Th>Updated</Th>
                 <Th></Th>
               </tr>
             </thead>
@@ -1013,6 +1038,7 @@ function MiscStorageTab({ items, canManage }: { items: MiscItem[]; canManage: bo
                   <td className="px-3 py-2 text-muted-foreground">{item.status ?? "—"}</td>
                   <td className="px-3 py-2 text-muted-foreground">{item.requiredAction ?? "—"}</td>
                   <td className="px-3 py-2 text-muted-foreground">{item.location ?? "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{formatBrisbaneDateTime(item.updatedAt)}</td>
                   <td className="px-3 py-2 text-right">
                     <button onClick={() => setEditing(item)} className="mr-2 font-medium text-primary hover:underline">
                       Edit

@@ -49,6 +49,7 @@ export default async function DryingRoomPage() {
         purpose: b.purpose,
         assignedEmployeeId: b.assignedEmployeeId,
         department: b.department,
+        comments: b.comments,
         expectedFinishTime: b.expectedFinishTime?.toISOString() ?? null,
         updatedAt: b.updatedAt.toISOString(),
         batches: b.batches.map((batch) => ({
@@ -88,6 +89,7 @@ export default async function DryingRoomPage() {
         requiredAction: m.requiredAction,
         location: m.location,
         remarks: m.remarks,
+        updatedAt: m.updatedAt.toISOString(),
       }))}
       employees={employees}
       whatsAppGroups={whatsAppGroups.map((g) => ({ id: g.id, name: g.name }))}

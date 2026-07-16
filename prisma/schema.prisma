@@ -1056,6 +1056,11 @@ enum DryingBayPurpose {
   COATING
   RE_COATING
   QUARANTINE
+  SORTING_REQUIRED
+  COATING_REQUIRED
+  POLISHING_REQUIRED
+  MANUAL_PACKING_REQUIRED
+  CLEANED
 }
 
 enum DryingStage {
@@ -1077,6 +1082,11 @@ enum DryingStage {
   COATING
   RE_COATING
   QUARANTINE
+  SORTING_REQUIRED
+  COATING_REQUIRED
+  POLISHING_REQUIRED
+  MANUAL_PACKING_REQUIRED
+  CLEANED
 }
 
 enum TrolleyQcStatus {
@@ -1091,6 +1101,7 @@ model DryingBay {
   purpose            DryingBayPurpose @default(EMPTY)
   assignedEmployeeId String?
   department         String?
+  comments           String?
   expectedFinishTime DateTime?
   updatedBy          String?
   updatedAt          DateTime @updatedAt

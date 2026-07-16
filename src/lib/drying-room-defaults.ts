@@ -25,6 +25,11 @@ export const PURPOSE_LABEL: Record<DryingBayPurpose, string> = {
   COATING: "Coating",
   RE_COATING: "Re Coating",
   QUARANTINE: "Quarantine",
+  SORTING_REQUIRED: "Sorting Required",
+  COATING_REQUIRED: "Coating Required",
+  POLISHING_REQUIRED: "Polishing Required",
+  MANUAL_PACKING_REQUIRED: "Manual Packing Required",
+  CLEANED: "Cleaned",
 };
 
 export const STAGE_LABEL: Record<DryingStage, string> = {
@@ -46,6 +51,11 @@ export const STAGE_LABEL: Record<DryingStage, string> = {
   COATING: "Coating",
   RE_COATING: "Re Coating",
   QUARANTINE: "Quarantine",
+  SORTING_REQUIRED: "Sorting Required",
+  COATING_REQUIRED: "Coating Required",
+  POLISHING_REQUIRED: "Polishing Required",
+  MANUAL_PACKING_REQUIRED: "Manual Packing Required",
+  CLEANED: "Cleaned",
 };
 
 /** Stage -> next stage, exactly matching the module spec's workflow table. Null = terminal (Complete). */
@@ -68,6 +78,11 @@ export const NEXT_STAGE: Record<DryingStage, DryingStage | null> = {
   COATING: null,
   RE_COATING: null,
   QUARANTINE: null,
+  SORTING_REQUIRED: null,
+  COATING_REQUIRED: null,
+  POLISHING_REQUIRED: null,
+  MANUAL_PACKING_REQUIRED: null,
+  CLEANED: null,
 };
 
 /** Bay status colour bucket, matching the module spec's "Bay Status Colours" legend. */
@@ -88,7 +103,12 @@ export type BayStatusKey =
   | "POLISHING"
   | "COATING"
   | "RE_COATING"
-  | "QUARANTINE";
+  | "QUARANTINE"
+  | "SORTING_REQUIRED"
+  | "COATING_REQUIRED"
+  | "POLISHING_REQUIRED"
+  | "MANUAL_PACKING_REQUIRED"
+  | "CLEANED";
 
 export const BAY_STATUS_LABEL: Record<BayStatusKey, string> = {
   EMPTY: "Empty",
@@ -108,6 +128,11 @@ export const BAY_STATUS_LABEL: Record<BayStatusKey, string> = {
   COATING: "Coating",
   RE_COATING: "Re Coating",
   QUARANTINE: "Quarantine",
+  SORTING_REQUIRED: "Sorting Required",
+  COATING_REQUIRED: "Coating Required",
+  POLISHING_REQUIRED: "Polishing Required",
+  MANUAL_PACKING_REQUIRED: "Manual Packing Required",
+  CLEANED: "Cleaned",
 };
 
 export const BAY_STATUS_CLASS: Record<BayStatusKey, string> = {
@@ -128,6 +153,11 @@ export const BAY_STATUS_CLASS: Record<BayStatusKey, string> = {
   COATING: "bg-orange-500/10 text-orange-500 border-orange-500/30",
   RE_COATING: "bg-orange-500/10 text-orange-500 border-orange-500/30",
   QUARANTINE: "bg-danger/10 text-danger border-danger/30",
+  SORTING_REQUIRED: "bg-warning/10 text-warning border-warning/30",
+  COATING_REQUIRED: "bg-warning/10 text-warning border-warning/30",
+  POLISHING_REQUIRED: "bg-warning/10 text-warning border-warning/30",
+  MANUAL_PACKING_REQUIRED: "bg-warning/10 text-warning border-warning/30",
+  CLEANED: "bg-success/10 text-success border-success/30",
 };
 
 const STAGE_TO_BAY_STATUS: Partial<Record<DryingStage, BayStatusKey>> = {
@@ -143,6 +173,11 @@ const STAGE_TO_BAY_STATUS: Partial<Record<DryingStage, BayStatusKey>> = {
   COATING: "COATING",
   RE_COATING: "RE_COATING",
   QUARANTINE: "QUARANTINE",
+  SORTING_REQUIRED: "SORTING_REQUIRED",
+  COATING_REQUIRED: "COATING_REQUIRED",
+  POLISHING_REQUIRED: "POLISHING_REQUIRED",
+  MANUAL_PACKING_REQUIRED: "MANUAL_PACKING_REQUIRED",
+  CLEANED: "CLEANED",
 };
 
 const PURPOSE_TO_BAY_STATUS: Record<DryingBayPurpose, BayStatusKey> = {
@@ -161,6 +196,11 @@ const PURPOSE_TO_BAY_STATUS: Record<DryingBayPurpose, BayStatusKey> = {
   COATING: "COATING",
   RE_COATING: "RE_COATING",
   QUARANTINE: "QUARANTINE",
+  SORTING_REQUIRED: "SORTING_REQUIRED",
+  COATING_REQUIRED: "COATING_REQUIRED",
+  POLISHING_REQUIRED: "POLISHING_REQUIRED",
+  MANUAL_PACKING_REQUIRED: "MANUAL_PACKING_REQUIRED",
+  CLEANED: "CLEANED",
 };
 
 /** Named quick-action buttons valid from each stage, matching the module spec's Quick Actions list. */
@@ -259,10 +299,19 @@ export function computeBatchAlerts(batch: {
   return alerts;
 }
 
+const PURPOSE_REQUIRES_ACTION: Partial<Record<DryingBayPurpose, string>> = {
+  CLEANING_REQUIRED: "Cleaning Required",
+  SORTING_REQUIRED: "Sorting Required",
+  COATING_REQUIRED: "Coating Required",
+  POLISHING_REQUIRED: "Polishing Required",
+  MANUAL_PACKING_REQUIRED: "Manual Packing Required",
+};
+
 export function computeBayAlerts(bayNumber: number, purpose: DryingBayPurpose, activeBatches: unknown[]): DryingAlert[] {
   const alerts: DryingAlert[] = [];
-  if (purpose === "CLEANING_REQUIRED") {
-    alerts.push({ key: "cleaning-required", label: `Bay ${bayNumber} — Cleaning Required`, severity: "warning" });
+  const requiredLabel = PURPOSE_REQUIRES_ACTION[purpose];
+  if (requiredLabel) {
+    alerts.push({ key: "action-required", label: `Bay ${bayNumber} — ${requiredLabel}`, severity: "warning" });
   }
   if (purpose === "EMPTY" && activeBatches.length === 0) {
     alerts.push({ key: "bay-empty", label: `Bay ${bayNumber} — Empty`, severity: "warning" });
