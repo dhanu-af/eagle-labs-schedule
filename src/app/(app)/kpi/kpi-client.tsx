@@ -504,10 +504,8 @@ function ProductionDetailsModal({
     getTaskActivity(teamId, product, dateStr).then((entries) => {
       if (cancelled) return;
       setActivity(entries);
-      if (existing?.productionTimeHours == null) {
-        const netHours = computeNetWorkingHours(entries);
-        if (netHours !== null) setProductionTimeHours(netHours);
-      }
+      const netHours = computeNetWorkingHours(entries);
+      if (netHours !== null) setProductionTimeHours(netHours);
     });
     return () => {
       cancelled = true;
