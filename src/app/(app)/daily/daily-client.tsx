@@ -33,12 +33,12 @@ export type Task = {
   plannedStart: string | null;
   plannedFinish: string | null;
   priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-  status: "NOT_STARTED" | "RUNNING" | "COMPLETED" | "DELAYED";
+  status: "NOT_STARTED" | "RUNNING" | "COMPLETED" | "DELAYED" | "OTHER";
   delayReason: string | null;
   notes: string | null;
 };
 
-const STATUS_OPTIONS = ["NOT_STARTED", "RUNNING", "COMPLETED", "DELAYED"] as const;
+const STATUS_OPTIONS = ["NOT_STARTED", "RUNNING", "COMPLETED", "DELAYED", "OTHER"] as const;
 const PRIORITY_OPTIONS = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
 
 export default function DailyPlannerClient({

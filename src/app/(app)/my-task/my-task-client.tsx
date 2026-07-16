@@ -30,7 +30,7 @@ export type MyTaskItem = {
   plannedStart: string | null;
   plannedFinish: string | null;
   priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-  status: "NOT_STARTED" | "RUNNING" | "COMPLETED" | "DELAYED";
+  status: "NOT_STARTED" | "RUNNING" | "COMPLETED" | "DELAYED" | "OTHER";
 };
 
 export type MyTaskKpi = { teamName: string; name: string; target: number; unit: string };

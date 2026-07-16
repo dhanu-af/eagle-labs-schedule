@@ -20,6 +20,7 @@ const COLUMNS: { key: Task["status"]; label: string; tint: string }[] = [
   { key: "RUNNING", label: "Running", tint: "var(--info)" },
   { key: "COMPLETED", label: "Completed", tint: "var(--success)" },
   { key: "DELAYED", label: "Delayed", tint: "var(--danger)" },
+  { key: "OTHER", label: "Other", tint: "var(--muted-foreground)" },
 ];
 const STATUS_OPTIONS = COLUMNS.map((c) => c.key);
 

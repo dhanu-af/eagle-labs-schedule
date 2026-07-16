@@ -5,6 +5,7 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   RUNNING: "Running",
   COMPLETED: "Completed",
   DELAYED: "Delayed",
+  OTHER: "Other",
 };
 
 export const STATUS_CLASS: Record<TaskStatus, string> = {
@@ -12,6 +13,7 @@ export const STATUS_CLASS: Record<TaskStatus, string> = {
   RUNNING: "bg-info/10 text-info border-info/30",
   COMPLETED: "bg-success/10 text-success border-success/30",
   DELAYED: "bg-danger/10 text-danger border-danger/30",
+  OTHER: "bg-surface-muted text-muted-foreground border-border",
 };
 
 export const PRIORITY_LABEL: Record<Priority, string> = {
