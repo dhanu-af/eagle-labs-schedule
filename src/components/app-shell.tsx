@@ -90,14 +90,11 @@ export default function AppShell({
             { href: "/checks", label: "Quality Checks", icon: icons.checks },
             { href: "/formulation-checker", label: "Formula Manager", icon: icons.formulationChecker },
             { href: "/batch-records", label: "Batch Records", icon: icons.batchRecords },
+            { href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom },
             ...(canSeeIngredientLibrary ? [{ href: "/ingredients", label: "Ingredient Library", icon: icons.ingredients }] : []),
             { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
             { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },
           ],
-        },
-        {
-          label: "Others",
-          items: [{ href: "/drying-room", label: "Drying / Production Storage Area", icon: icons.dryingRoom }],
         },
         ...(isManager
           ? [

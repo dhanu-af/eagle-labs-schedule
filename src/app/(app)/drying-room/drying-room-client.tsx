@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { DryingBayPurpose, DryingStage, TrolleyQcStatus } from "@/generated/prisma";
 import {
   PURPOSE_LABEL,
@@ -16,6 +16,7 @@ import {
 } from "@/lib/drying-room-defaults";
 import { generateMorningReportText } from "@/lib/generate-morning-report";
 import {
+  createBay,
   updateBayPurpose,
   createBatch,
   deleteBatch,
@@ -118,6 +119,12 @@ const STAGE_OPTIONS: DryingStage[] = [
   "READY_FOR_POUCHING",
   "POUCHING",
   "COMPLETE",
+  "SORTING",
+  "QA_QC_APPROVALS",
+  "POLISHING",
+  "COATING",
+  "RE_COATING",
+  "QUARANTINE",
 ];
 
 const TABS = ["dashboard", "bays", "misc", "report"] as const;
@@ -146,8 +153,10 @@ export default function DryingRoomClient({
   whatsAppGroups: WhatsAppGroupOpt[];
   canManage: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>("dashboard");
-  const [openBayId, setOpenBayId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const bayParam = searchParams.get("bay");
+  const [tab, setTab] = useState<Tab>(bayParam ? "bays" : "dashboard");
+  const [openBayId, setOpenBayId] = useState<string | null>(bayParam);
 
   const allBatches = useMemo(() => bays.flatMap((b) => b.batches), [bays]);
 
@@ -162,7 +171,7 @@ export default function DryingRoomClient({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Drying / Production Storage Area"
+        title="Production Staging Operations"
         subtitle="Live bay and batch status — replaces the daily WhatsApp drying room update."
       />
 
@@ -205,7 +214,7 @@ export default function DryingRoomClient({
       {tab === "dashboard" && <DashboardTab bays={bays} allBatches={allBatches} alerts={alerts} />}
 
       {tab === "bays" && (
-        <BaysGrid bays={bays} employees={employees} onOpenBay={setOpenBayId} />
+        <BaysGrid bays={bays} employees={employees} canManage={canManage} onOpenBay={setOpenBayId} />
       )}
 
       {tab === "misc" && <MiscStorageTab items={misc} canManage={canManage} />}
@@ -296,15 +305,35 @@ function DashboardTab({ bays, allBatches, alerts }: { bays: Bay[]; allBatches: B
 function BaysGrid({
   bays,
   employees,
+  canManage,
   onOpenBay,
 }: {
   bays: Bay[];
   employees: Employee[];
+  canManage: boolean;
   onOpenBay: (id: string) => void;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function addBay() {
+    startTransition(async () => {
+      await createBay();
+      router.refresh();
+    });
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {bays.map((bay) => {
+    <div className="space-y-3">
+      {canManage && (
+        <div className="flex justify-end">
+          <Button size="sm" variant="secondary" onClick={addBay} disabled={pending}>
+            {pending ? "Adding..." : "+ Add Bay"}
+          </Button>
+        </div>
+      )}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {bays.map((bay) => {
         const status = computeBayStatus(bay.purpose, bay.batches);
         const operatorName = employeeName(employees, bay.assignedEmployeeId);
         return (
@@ -329,7 +358,8 @@ function BaysGrid({
             {operatorName && <p className="mt-1.5 text-[11px] text-muted-foreground">Operator: {operatorName}</p>}
           </Card>
         );
-      })}
+        })}
+      </div>
     </div>
   );
 }

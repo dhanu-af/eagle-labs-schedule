@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import PostAnnouncementCard from "@/components/post-announcement-card";
+import BatchLookupCard from "@/components/batch-lookup-card";
 import ProgressRing from "@/components/progress-ring";
 import BrisbaneClock from "@/components/brisbane-clock";
 import { Card } from "@/components/ui/Card";
@@ -104,6 +105,8 @@ export default async function DashboardPage() {
           )
         }
       />
+
+      <BatchLookupCard />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Today's Tasks" value={tasks.length} icon={STAT_ICONS.tasks} tint="var(--info)" />

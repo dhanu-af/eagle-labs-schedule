@@ -31,6 +31,12 @@ export const STAGE_LABEL: Record<DryingStage, string> = {
   READY_FOR_POUCHING: "Ready for Pouching",
   POUCHING: "Pouching",
   COMPLETE: "Complete",
+  SORTING: "Sorting",
+  QA_QC_APPROVALS: "QA/QC Approvals",
+  POLISHING: "Polishing",
+  COATING: "Coating",
+  RE_COATING: "Re Coating",
+  QUARANTINE: "Quarantine",
 };
 
 /** Stage -> next stage, exactly matching the module spec's workflow table. Null = terminal (Complete). */
@@ -47,6 +53,12 @@ export const NEXT_STAGE: Record<DryingStage, DryingStage | null> = {
   READY_FOR_POUCHING: "POUCHING",
   POUCHING: "COMPLETE",
   COMPLETE: null,
+  SORTING: null,
+  QA_QC_APPROVALS: null,
+  POLISHING: null,
+  COATING: null,
+  RE_COATING: null,
+  QUARANTINE: null,
 };
 
 /** Bay status colour bucket, matching the module spec's "Bay Status Colours" legend. */
@@ -116,6 +128,12 @@ const STAGE_TO_BAY_STATUS: Partial<Record<DryingStage, BayStatusKey>> = {
   QC_HOLD: "QC_HOLD",
   WRAPPING: "WRAPPED",
   READY_FOR_POUCHING: "READY_FOR_POUCHING",
+  SORTING: "SORTING",
+  QA_QC_APPROVALS: "QA_QC_APPROVALS",
+  POLISHING: "POLISHING",
+  COATING: "COATING",
+  RE_COATING: "RE_COATING",
+  QUARANTINE: "QUARANTINE",
 };
 
 const PURPOSE_TO_BAY_STATUS: Record<DryingBayPurpose, BayStatusKey> = {
@@ -163,7 +181,19 @@ type BatchLike = { currentStage: DryingStage };
 export function computeBayStatus(purpose: DryingBayPurpose, activeBatches: BatchLike[]): BayStatusKey {
   if (activeBatches.length === 0) return PURPOSE_TO_BAY_STATUS[purpose];
 
-  const priority: BayStatusKey[] = ["QC_HOLD", "ROTATION_REQUIRED", "WAITING_QC", "READY_FOR_POUCHING", "WRAPPED"];
+  const priority: BayStatusKey[] = [
+    "QUARANTINE",
+    "QC_HOLD",
+    "ROTATION_REQUIRED",
+    "WAITING_QC",
+    "QA_QC_APPROVALS",
+    "READY_FOR_POUCHING",
+    "WRAPPED",
+    "SORTING",
+    "POLISHING",
+    "COATING",
+    "RE_COATING",
+  ];
   const statuses = activeBatches.map((b) => STAGE_TO_BAY_STATUS[b.currentStage] ?? "DRYING");
   for (const p of priority) {
     if (statuses.includes(p)) return p;

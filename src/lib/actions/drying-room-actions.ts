@@ -19,6 +19,25 @@ async function requireManagerAccess() {
   return session;
 }
 
+export async function createBay() {
+  const session = await requireManagerAccess();
+
+  const highest = await prisma.dryingBay.findFirst({ orderBy: { bayNumber: "desc" } });
+  const bayNumber = (highest?.bayNumber ?? 0) + 1;
+
+  const bay = await prisma.dryingBay.create({ data: { bayNumber, updatedBy: session.fullName } });
+
+  await logAudit(session, {
+    action: "CREATE_DRYING_BAY",
+    entityType: "DryingBay",
+    entityId: bay.id,
+    summary: `Added Bay ${bayNumber}`,
+  });
+
+  revalidatePath("/drying-room");
+  return { id: bay.id, bayNumber };
+}
+
 export async function updateBayPurpose(
   bayId: string,
   data: {
