@@ -290,6 +290,8 @@ model KpiDailyProduction {
   fillWeightMg        Float?
   capsulesPerBottle   Int?
   productionTimeHours Float?
+  plannedBatchSizeKg  Float?
+  totalInputWeightKg  Float?
   updatedBy           String?
   updatedAt           DateTime @updatedAt
 

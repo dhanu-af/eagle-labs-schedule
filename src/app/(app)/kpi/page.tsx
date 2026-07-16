@@ -146,6 +146,8 @@ export default async function KpiPage({
           fillWeightMg: entry.fillWeightMg,
           capsulesPerBottle: entry.capsulesPerBottle,
           productionTimeHours: entry.productionTimeHours,
+          plannedBatchSizeKg: entry.plannedBatchSizeKg,
+          totalInputWeightKg: entry.totalInputWeightKg,
         };
       }),
     ])

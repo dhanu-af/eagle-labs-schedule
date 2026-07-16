@@ -32,6 +32,8 @@ type ProductionEntry = {
   fillWeightMg: number | null;
   capsulesPerBottle: number | null;
   productionTimeHours: number | null;
+  plannedBatchSizeKg: number | null;
+  totalInputWeightKg: number | null;
 };
 
 type TaskActivityEntry = {
@@ -228,6 +230,7 @@ export default function KpiClient({
                 production={productionByKpi[k.id] ?? Array(7).fill(null)}
                 canEditProduction={canEditProduction}
                 isEncapsulation={k.teamName.toLowerCase().includes("encapsulation")}
+                isBlending={k.teamName.toLowerCase().includes("blending")}
               />
 
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
@@ -348,6 +351,7 @@ function DailyTargetsRow({
   production,
   canEditProduction,
   isEncapsulation,
+  isBlending,
 }: {
   kpiId: string;
   teamId: string;
@@ -360,6 +364,7 @@ function DailyTargetsRow({
   production: (ProductionEntry | null)[];
   canEditProduction: boolean;
   isEncapsulation: boolean;
+  isBlending: boolean;
 }) {
   const router = useRouter();
   const [values, setValues] = useState(targets);
@@ -459,6 +464,7 @@ function DailyTargetsRow({
           existing={production[openDay]}
           canEdit={canEditProduction}
           isEncapsulation={isEncapsulation}
+          isBlending={isBlending}
           onClose={() => setOpenDay(null)}
         />
       )}
@@ -477,6 +483,7 @@ function ProductionDetailsModal({
   existing,
   canEdit,
   isEncapsulation,
+  isBlending,
   onClose,
 }: {
   kpiId: string;
@@ -489,6 +496,7 @@ function ProductionDetailsModal({
   existing: ProductionEntry | null;
   canEdit: boolean;
   isEncapsulation: boolean;
+  isBlending: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -497,6 +505,8 @@ function ProductionDetailsModal({
   const [fillWeightMg, setFillWeightMg] = useState<number | "">(existing?.fillWeightMg ?? DEFAULT_FILL_WEIGHT_MG);
   const [capsulesPerBottle, setCapsulesPerBottle] = useState<number | "">(existing?.capsulesPerBottle ?? DEFAULT_CAPSULES_PER_BOTTLE);
   const [productionTimeHours, setProductionTimeHours] = useState<number | "">(existing?.productionTimeHours ?? "");
+  const [plannedBatchSizeKg, setPlannedBatchSizeKg] = useState<number | "">(existing?.plannedBatchSizeKg ?? "");
+  const [totalInputWeightKg, setTotalInputWeightKg] = useState<number | "">(existing?.totalInputWeightKg ?? "");
   const [activity, setActivity] = useState<TaskActivityEntry[] | null>(null);
 
   useEffect(() => {
@@ -521,14 +531,22 @@ function ProductionDetailsModal({
   const totalBottles = totalCapsules && perBottle ? Math.floor(totalCapsules / perBottle) : null;
   const productionRate = totalCapsules && timeHours ? Math.round(totalCapsules / timeHours) : null;
 
+  const inputWeight = Number(totalInputWeightKg) || null;
+  const plannedSize = Number(plannedBatchSizeKg) || null;
+  const materialLoss = inputWeight !== null ? inputWeight - actual : null;
+  const yieldPct = inputWeight ? (actual / inputWeight) * 100 : null;
+  const blendingRate = timeHours && actual ? actual / timeHours : null;
+
   function save() {
     setError("");
     startTransition(async () => {
       try {
         await setKpiDailyProduction(kpiId, dateStr, {
-          fillWeightMg: fillWeight,
-          capsulesPerBottle: perBottle,
+          fillWeightMg: isEncapsulation ? fillWeight : null,
+          capsulesPerBottle: isEncapsulation ? perBottle : null,
           productionTimeHours: timeHours,
+          plannedBatchSizeKg: isBlending ? plannedSize : null,
+          totalInputWeightKg: isBlending ? inputWeight : null,
         });
         router.refresh();
         onClose();
@@ -635,7 +653,87 @@ function ProductionDetailsModal({
           <p className="text-xs text-muted-foreground">No production details recorded for this day yet.</p>
         ))}
 
-        <div className={isEncapsulation ? "mt-4 border-t border-border pt-3" : ""}>
+        {isBlending && (canEdit ? (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+              End of Blending Performance
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Planned Batch Size (kg)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={plannedBatchSizeKg}
+                  onChange={(e) => setPlannedBatchSizeKg(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="input"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Total Input Weight (kg)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={totalInputWeightKg}
+                  onChange={(e) => setTotalInputWeightKg(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="input"
+                />
+              </label>
+              <label className="col-span-2 block">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">Blending Duration (hours)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={productionTimeHours}
+                  onChange={(e) => setProductionTimeHours(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="input"
+                />
+                <span className="mt-1 block text-[10px] text-muted-foreground">
+                  Auto-calculated from the activity log (first Running to last Completed, minus any Delayed time) — editable.
+                </span>
+              </label>
+            </div>
+
+            <div className="rounded-lg border border-border bg-surface-muted/40 p-3 text-xs">
+              <DetailLine label="Planned Batch Size" value={plannedSize !== null ? `${plannedSize} kg` : "—"} />
+              <DetailLine label="Total Input Weight" value={inputWeight !== null ? `${inputWeight} kg` : "—"} />
+              <DetailLine label="Final Batch Weight" value={`${actual} ${unit}`} />
+              <DetailLine label="Material Loss" value={materialLoss !== null ? `${materialLoss.toFixed(2)} kg` : "—"} />
+              <DetailLine label="Yield" value={yieldPct !== null ? `${yieldPct.toFixed(2)}%` : "—"} />
+              <DetailLine label="Blending Duration" value={timeHours !== null ? `${timeHours} hours` : "—"} />
+              <DetailLine label="Production Rate" value={blendingRate !== null ? `${blendingRate.toFixed(2)} kg/hour` : "—"} />
+            </div>
+
+            {error && <p className="text-xs text-danger">{error}</p>}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button onClick={save} disabled={pending}>
+                {pending ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        ) : existing ? (
+          <div className="rounded-lg border border-border bg-surface-muted/40 p-3 text-xs">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+              End of Blending Performance
+            </p>
+            <DetailLine label="Planned Batch Size" value={plannedSize !== null ? `${plannedSize} kg` : "—"} />
+            <DetailLine label="Total Input Weight" value={inputWeight !== null ? `${inputWeight} kg` : "—"} />
+            <DetailLine label="Final Batch Weight" value={`${actual} ${unit}`} />
+            <DetailLine label="Material Loss" value={materialLoss !== null ? `${materialLoss.toFixed(2)} kg` : "—"} />
+            <DetailLine label="Yield" value={yieldPct !== null ? `${yieldPct.toFixed(2)}%` : "—"} />
+            <DetailLine label="Blending Duration" value={timeHours !== null ? `${timeHours} hours` : "—"} />
+            <DetailLine label="Production Rate" value={blendingRate !== null ? `${blendingRate.toFixed(2)} kg/hour` : "—"} />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">No production details recorded for this day yet.</p>
+        ))}
+
+        <div className={isEncapsulation || isBlending ? "mt-4 border-t border-border pt-3" : ""}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
             Activity History
           </p>

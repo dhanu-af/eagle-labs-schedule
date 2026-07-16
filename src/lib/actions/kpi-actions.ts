@@ -107,6 +107,8 @@ export async function setKpiDailyProduction(
     fillWeightMg: number | null;
     capsulesPerBottle: number | null;
     productionTimeHours: number | null;
+    plannedBatchSizeKg: number | null;
+    totalInputWeightKg: number | null;
   }
 ) {
   const session = await requireProductionEditor();
