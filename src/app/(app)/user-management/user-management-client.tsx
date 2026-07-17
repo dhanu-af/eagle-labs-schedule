@@ -35,6 +35,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   QA: "QA",
   EMPLOYEE: "Operator",
   OTHERS: "Others",
+  EXTRA: "Extra",
 };
 
 export default function UserManagementClient({

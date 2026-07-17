@@ -18,6 +18,7 @@ enum Role {
   EMPLOYEE
   OPERATIONS
   OTHERS
+  EXTRA
 }
 
 enum PayRunStatus {

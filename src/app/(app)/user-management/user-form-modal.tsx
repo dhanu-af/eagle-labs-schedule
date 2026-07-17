@@ -8,7 +8,7 @@ import { ROLE_LABEL, type ManagedUser } from "./user-management-client";
 import { RESTRICTED_PAGE_OPTIONS, DEFAULT_RESTRICTED_HREF } from "@/lib/restricted-pages";
 import { Button } from "@/components/ui/Button";
 
-const ROLE_OPTIONS: Role[] = ["ADMIN", "SUPERVISOR", "OPERATIONS", "TEAM_LEAD", "QA", "EMPLOYEE", "OTHERS"];
+const ROLE_OPTIONS: Role[] = ["ADMIN", "SUPERVISOR", "OPERATIONS", "TEAM_LEAD", "QA", "EMPLOYEE", "OTHERS", "EXTRA"];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

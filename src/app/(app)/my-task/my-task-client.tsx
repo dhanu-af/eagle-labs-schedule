@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "OPERATIONS" | "TEAM_LEAD" | "QA" | "EMPLOYEE" | "OTHERS";
+type Role = "SUPER_ADMIN" | "ADMIN" | "SUPERVISOR" | "OPERATIONS" | "TEAM_LEAD" | "QA" | "EMPLOYEE" | "OTHERS" | "EXTRA";
 
 export type MyTaskEmployee = {
   id: string;

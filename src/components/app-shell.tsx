@@ -24,6 +24,7 @@ const ROLE_DISPLAY: Record<string, string> = {
   QA: "qa",
   EMPLOYEE: "operator",
   OTHERS: "others",
+  EXTRA: "extra",
 };
 
 const icons = {
@@ -71,11 +72,19 @@ export default function AppShell({
   const isManager = isAdmin || user.role === "SUPERVISOR";
   const isSuperAdmin = user.role === "SUPER_ADMIN";
   const isRestrictedRole = user.role === "OTHERS";
+  const isStagingOnlyRole = user.role === "EXTRA";
   const restrictedPage =
     RESTRICTED_PAGE_OPTIONS.find((p) => p.href === user.restrictedToHref) ?? RESTRICTED_PAGE_OPTIONS[0];
   const canSeeIngredientLibrary = isSuperAdmin || user.ingredientLibraryAccess;
 
-  const groups: NavGroup[] = isRestrictedRole
+  const groups: NavGroup[] = isStagingOnlyRole
+    ? [
+        {
+          label: "Operations",
+          items: [{ href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom }],
+        },
+      ]
+    : isRestrictedRole
     ? [
         {
           label: "Operations",
