@@ -3,6 +3,7 @@ import PDFDocument from "pdfkit";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { PURPOSE_LABEL, STAGE_LABEL } from "@/lib/drying-room-defaults";
+import { formatBrisbaneDateTime } from "@/lib/ui";
 
 const MARGIN = 36;
 const COLOR = {
@@ -35,10 +36,6 @@ function statusPill(doc: PDFKit.PDFDocument, x: number, y: number, label: string
   return width;
 }
 
-function fmtDate(d: Date) {
-  return d.toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" });
-}
-
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authorized" }, { status: 403 });
@@ -57,7 +54,7 @@ export async function GET() {
   const done = new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
   doc.font("Helvetica-Bold").fontSize(18).fillColor(COLOR.text).text("Drying Room Status Report", { align: "center" });
-  doc.font("Helvetica").fontSize(9).fillColor(COLOR.muted).text(`Generated ${fmtDate(new Date())}`, { align: "center" });
+  doc.font("Helvetica").fontSize(9).fillColor(COLOR.muted).text(`Generated ${formatBrisbaneDateTime(new Date())}`, { align: "center" });
   doc.moveDown(1);
   doc.fillColor(COLOR.text);
 
