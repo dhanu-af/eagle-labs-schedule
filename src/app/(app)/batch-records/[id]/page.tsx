@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getSession, canActAsOperator, canActAsSupervisor } from "@/lib/auth";
+import { getSession, canActAsOperator, canActAsSupervisor, canRequestMaterials } from "@/lib/auth";
 import { getBatchRecord } from "@/lib/actions/batch-record-actions";
 import BatchRecordClient from "./batch-record-client";
 
@@ -13,6 +13,7 @@ export default async function BatchRecordPage({ params }: { params: Promise<{ id
     <BatchRecordClient
       canEdit={!!session && canActAsOperator(session.role) && !batch.locked}
       canLock={!!session && canActAsSupervisor(session.role)}
+      canRequestWarehouse={!!session && canRequestMaterials(session.role)}
       currentUserName={session?.fullName ?? ""}
       batch={{
         id: batch.id,

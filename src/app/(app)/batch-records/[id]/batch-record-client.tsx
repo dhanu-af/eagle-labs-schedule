@@ -16,6 +16,8 @@ import {
   type WarehouseReturnLineInput,
   type MaterialRequestLineInput,
 } from "@/lib/actions/batch-record-actions";
+import { createWarehouseRequestFromBatchRecord } from "@/lib/actions/warehouse-requests-actions";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -167,10 +169,23 @@ const BLENDING_INSTRUCTIONS = [
   "Leave the blending room clean, tidy, and ready for the next production batch.",
 ];
 
-export default function BatchRecordClient({ canEdit, canLock, currentUserName, batch }: { canEdit: boolean; canLock: boolean; currentUserName: string; batch: Batch }) {
+export default function BatchRecordClient({
+  canEdit,
+  canLock,
+  canRequestWarehouse,
+  currentUserName,
+  batch,
+}: {
+  canEdit: boolean;
+  canLock: boolean;
+  canRequestWarehouse: boolean;
+  currentUserName: string;
+  batch: Batch;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const [warehouseRequestNumber, setWarehouseRequestNumber] = useState<string | null>(null);
 
   const [header, setHeader] = useState<BatchHeaderInput>({
     writtenByName: batch.writtenByName ?? "",
@@ -331,6 +346,19 @@ export default function BatchRecordClient({ canEdit, canLock, currentUserName, b
     window.open(`/api/batch-records/${batch.id}/pdf`, "_blank");
   }
 
+  function createWarehouseRequest() {
+    setError("");
+    setWarehouseRequestNumber(null);
+    startTransition(async () => {
+      try {
+        const requestNumber = await createWarehouseRequestFromBatchRecord(batch.id);
+        setWarehouseRequestNumber(requestNumber);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't create warehouse request.");
+      }
+    });
+  }
+
   return (
     <div className="space-y-4 pb-10">
       <PageHeader
@@ -342,6 +370,11 @@ export default function BatchRecordClient({ canEdit, canLock, currentUserName, b
             <Button variant="secondary" onClick={downloadPdf}>
               Download PDF
             </Button>
+            {canRequestWarehouse && (
+              <Button variant="secondary" onClick={createWarehouseRequest} disabled={pending}>
+                {pending ? "Creating..." : "Create Warehouse Request"}
+              </Button>
+            )}
             {canEdit && (
               <Button onClick={save} disabled={pending}>
                 {pending ? "Saving..." : "Save"}
@@ -366,6 +399,15 @@ export default function BatchRecordClient({ canEdit, canLock, currentUserName, b
         </div>
       )}
       {error && <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-xs text-danger">{error}</div>}
+      {warehouseRequestNumber && (
+        <div className="rounded-xl border border-success/30 bg-success/10 px-4 py-2.5 text-xs text-success">
+          Created material request {warehouseRequestNumber} —{" "}
+          <Link href="/warehouse" className="font-medium underline">
+            view it in Warehouse Management
+          </Link>
+          .
+        </div>
+      )}
 
       {/* Header sign-off */}
       <Card>

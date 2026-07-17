@@ -91,6 +91,62 @@ export async function createMaterialRequest(data: {
   revalidatePath("/warehouse");
 }
 
+/** Formula Manager integration: builds a request straight from a Batch Record's own already-scaled
+ * ingredient list (BatchMaterialRequestLine.kgPerBatch) — the same figures already printed on that
+ * batch's PDF/signed off by QA — rather than re-deriving quantities from the formulation. */
+export async function createWarehouseRequestFromBatchRecord(batchRecordId: string) {
+  const session = await requireRequesterAccess();
+
+  const batch = await prisma.batchRecord.findUnique({
+    where: { id: batchRecordId },
+    include: { materialRequests: { orderBy: { order: "asc" } } },
+  });
+  if (!batch) throw new Error("Batch record not found");
+
+  const existing = await prisma.warehouseMaterialRequest.findFirst({ where: { batchReference: batch.batchNumber } });
+  if (existing) {
+    throw new Error(
+      `A material request (${existing.requestNumber}) already exists for batch ${batch.batchNumber} — check the Production Requests tab in Warehouse Management.`
+    );
+  }
+
+  const lines = batch.materialRequests
+    .filter((m) => m.kgPerBatch && m.kgPerBatch > 0)
+    .map((m) => ({ ingredientNameFreeText: m.ingredientName, requestedQty: m.kgPerBatch!, unit: "kg" }));
+  if (lines.length === 0) {
+    throw new Error("This batch record has no ingredient quantities to pull from yet — fill in the Material Request table first.");
+  }
+
+  const count = await prisma.warehouseMaterialRequest.count();
+  const requestNumber = nextRequestNumber(count);
+
+  const request = await prisma.warehouseMaterialRequest.create({
+    data: {
+      requestNumber,
+      batchReference: batch.batchNumber,
+      batchSize: batch.numberOfMixes * batch.batchSizePerMix,
+      batchSizeUnit: batch.batchSizeUnit,
+      priority: "MEDIUM",
+      requestedByName: session.fullName,
+      formulationId: batch.formulationId,
+      comments: `Auto-created from Batch Record ${batch.batchNumber}`,
+      lines: { create: lines },
+    },
+  });
+
+  await logAudit(session, {
+    action: "CREATE_MATERIAL_REQUEST_FROM_BATCH_RECORD",
+    entityType: "WarehouseMaterialRequest",
+    entityId: request.id,
+    summary: `Auto-created material request ${requestNumber} from Batch Record ${batch.batchNumber} (${lines.length} ingredient${lines.length === 1 ? "" : "s"})`,
+  });
+
+  revalidatePath("/warehouse");
+  revalidatePath(`/batch-records/${batchRecordId}`);
+
+  return requestNumber;
+}
+
 /** Step 2 — Warehouse Material Release. No stock deduction: writes a RESERVE entry per line (AVAILABLE -> RESERVED). */
 export async function releaseRequestToProduction(
   requestId: string,
