@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createUser, updateUser } from "@/lib/actions/user-management-actions";
 import type { Role } from "@/generated/prisma";
 import { ROLE_LABEL, type ManagedUser } from "./user-management-client";
+import { RESTRICTED_PAGE_OPTIONS, DEFAULT_RESTRICTED_HREF } from "@/lib/restricted-pages";
 import { Button } from "@/components/ui/Button";
 
 const ROLE_OPTIONS: Role[] = ["ADMIN", "SUPERVISOR", "OPERATIONS", "TEAM_LEAD", "QA", "EMPLOYEE", "OTHERS"];
@@ -28,20 +29,23 @@ export default function UserFormModal({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const isEdit = !!user;
+  const [role, setRole] = useState<Role>(user?.role ?? "EMPLOYEE");
 
   function submit(formData: FormData) {
     const fullName = String(formData.get("fullName") ?? "");
     const role = formData.get("role") as Role;
     const department = String(formData.get("department") ?? "");
+    const restrictedToHref = role === "OTHERS" ? String(formData.get("restrictedToHref") ?? DEFAULT_RESTRICTED_HREF) : null;
 
     startTransition(async () => {
       try {
         if (isEdit) {
-          await updateUser(user!.id, { fullName, role, department });
+          await updateUser(user!.id, { fullName, role, department, restrictedToHref });
         } else {
           const username = String(formData.get("username") ?? "");
           const password = String(formData.get("password") ?? "");
           const disabled = formData.get("status") === "Disabled";
+          // New OTHERS users default to Dhanu AI; set a different restricted page via Edit afterwards.
           await createUser({ fullName, username, password, role, department, disabled });
         }
         router.refresh();
@@ -95,7 +99,8 @@ export default function UserFormModal({
             <Field label="Role">
               <select
                 name="role"
-                defaultValue={user?.role ?? "EMPLOYEE"}
+                value={role}
+                onChange={(e) => setRole(e.target.value as Role)}
                 className="input"
               >
                 {ROLE_OPTIONS.map((r) => (
@@ -113,6 +118,20 @@ export default function UserFormModal({
               />
             </Field>
           </div>
+          {role === "OTHERS" && (
+            <Field label="Restricted Page">
+              <select name="restrictedToHref" defaultValue={user?.restrictedToHref ?? DEFAULT_RESTRICTED_HREF} className="input">
+                {RESTRICTED_PAGE_OPTIONS.map((p) => (
+                  <option key={p.href} value={p.href}>
+                    {p.icon} {p.label}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[11px] text-muted-foreground">
+                &quot;Others&quot; role users see only this one page in their nav.
+              </span>
+            </Field>
+          )}
           {!isEdit && (
             <Field label="Status">
               <select

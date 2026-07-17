@@ -22,6 +22,7 @@ export type ManagedUser = {
   disabled: boolean;
   locked: boolean;
   isPermanent: boolean;
+  restrictedToHref: string | null;
   createdAt: string;
 };
 

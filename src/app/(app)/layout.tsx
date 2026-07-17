@@ -19,12 +19,17 @@ export default async function AppLayout({
           take: 20,
         })
       : Promise.resolve([]),
-    prisma.user.findUnique({ where: { id: session.userId }, select: { ingredientLibraryAccess: true } }),
+    prisma.user.findUnique({ where: { id: session.userId }, select: { ingredientLibraryAccess: true, restrictedToHref: true } }),
   ]);
 
   return (
     <AppShell
-      user={{ name: session.fullName, role: session.role, ingredientLibraryAccess: user?.ingredientLibraryAccess ?? false }}
+      user={{
+        name: session.fullName,
+        role: session.role,
+        ingredientLibraryAccess: user?.ingredientLibraryAccess ?? false,
+        restrictedToHref: user?.restrictedToHref ?? null,
+      }}
       notifications={notifications.map((n) => ({
         id: n.id,
         title: n.title,

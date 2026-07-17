@@ -67,14 +67,19 @@ export async function createUser(data: {
 
 export async function updateUser(
   id: string,
-  data: { fullName: string; role: Role; department?: string }
+  data: { fullName: string; role: Role; department?: string; restrictedToHref?: string | null }
 ) {
   const session = await requireSuperAdmin();
   const target = await requireEditableTarget(id);
 
   await prisma.user.update({
     where: { id },
-    data: { fullName: data.fullName.trim(), role: data.role, department: data.department || null },
+    data: {
+      fullName: data.fullName.trim(),
+      role: data.role,
+      department: data.department || null,
+      restrictedToHref: data.role === "OTHERS" ? data.restrictedToHref || null : null,
+    },
   });
 
   if (target.employeeId) {

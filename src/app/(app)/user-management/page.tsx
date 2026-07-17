@@ -21,6 +21,7 @@ export default async function UserManagementPage() {
         disabled: u.disabled,
         locked: u.locked,
         isPermanent: u.isPermanent,
+        restrictedToHref: u.restrictedToHref,
         createdAt: u.createdAt.toISOString(),
       }))}
     />

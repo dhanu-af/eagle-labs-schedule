@@ -10,6 +10,7 @@ import { logoutAction } from "@/lib/actions/auth-actions";
 import { initials } from "@/lib/ui";
 import { Button } from "@/components/ui/Button";
 import IdleLogout from "@/components/idle-logout";
+import { RESTRICTED_PAGE_OPTIONS } from "@/lib/restricted-pages";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode };
 type NavGroup = { label: string; items: NavItem[] };
@@ -60,7 +61,7 @@ export default function AppShell({
   notifications,
   children,
 }: {
-  user: { name: string; role: string; ingredientLibraryAccess: boolean };
+  user: { name: string; role: string; ingredientLibraryAccess: boolean; restrictedToHref: string | null };
   notifications: Notification[];
   children: React.ReactNode;
 }) {
@@ -69,14 +70,16 @@ export default function AppShell({
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const isManager = isAdmin || user.role === "SUPERVISOR";
   const isSuperAdmin = user.role === "SUPER_ADMIN";
-  const isRestrictedToDhanuAi = user.role === "OTHERS";
+  const isRestrictedRole = user.role === "OTHERS";
+  const restrictedPage =
+    RESTRICTED_PAGE_OPTIONS.find((p) => p.href === user.restrictedToHref) ?? RESTRICTED_PAGE_OPTIONS[0];
   const canSeeIngredientLibrary = isSuperAdmin || user.ingredientLibraryAccess;
 
-  const groups: NavGroup[] = isRestrictedToDhanuAi
+  const groups: NavGroup[] = isRestrictedRole
     ? [
         {
           label: "Operations",
-          items: [{ href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu }],
+          items: [{ href: restrictedPage.href, label: restrictedPage.label, icon: restrictedPage.icon }],
         },
       ]
     : [
