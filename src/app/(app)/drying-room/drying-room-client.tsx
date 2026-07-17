@@ -1272,11 +1272,18 @@ function MorningReportTab({
 
   const canSend = sendMode === "group" ? !!groupId : phoneNumber.trim().length > 0;
 
+  function downloadPdf() {
+    window.open("/api/drying-room/report/pdf", "_blank");
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-foreground">Reports</h2>
         <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={downloadPdf}>
+            Download PDF
+          </Button>
           <div className="flex gap-1 rounded-md border border-border bg-surface p-0.5">
             <button
               onClick={() => setSendMode("group")}
