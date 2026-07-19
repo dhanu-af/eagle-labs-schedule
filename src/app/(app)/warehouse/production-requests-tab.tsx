@@ -26,12 +26,14 @@ export default function ProductionRequestsTab({
   locations,
   canManage,
   canRequest,
+  isSuperAdmin,
 }: {
   requests: MaterialRequestRow[];
   items: WarehouseItemRow[];
   locations: WarehouseLocationRow[];
   canManage: boolean;
   canRequest: boolean;
+  isSuperAdmin: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -43,7 +45,11 @@ export default function ProductionRequestsTab({
   const openRequest = requests.find((r) => r.id === openRequestId) ?? null;
 
   function remove(r: MaterialRequestRow) {
-    if (!confirm(`Delete request ${r.requestNumber}? This cannot be undone.`)) return;
+    const message =
+      r.status !== "REQUESTED"
+        ? `${r.requestNumber} is already past "Requested" — deleting it will also erase the ledger history it created. This cannot be undone. Continue?`
+        : `Delete request ${r.requestNumber}? This cannot be undone.`;
+    if (!confirm(message)) return;
     setError("");
     startTransition(async () => {
       try {
@@ -131,7 +137,7 @@ export default function ProductionRequestsTab({
                     <td className="px-3 py-2 text-muted-foreground">{r.requestedByName}</td>
                     {canManage && (
                       <td className="px-3 py-2 text-right">
-                        {r.status === "REQUESTED" && (
+                        {(isSuperAdmin || r.status === "REQUESTED") && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

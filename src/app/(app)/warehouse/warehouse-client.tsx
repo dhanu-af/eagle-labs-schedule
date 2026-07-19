@@ -135,6 +135,7 @@ export default function WarehouseClient({
   canManage,
   canRequest,
   canQaRelease,
+  isSuperAdmin,
 }: {
   items: WarehouseItemRow[];
   locations: WarehouseLocationRow[];
@@ -143,6 +144,7 @@ export default function WarehouseClient({
   canManage: boolean;
   canRequest: boolean;
   canQaRelease: boolean;
+  isSuperAdmin: boolean;
 }) {
   const [tab, setTab] = useState<TabKey>("dashboard");
 
@@ -172,7 +174,12 @@ export default function WarehouseClient({
       {tab === "dashboard" && <DashboardTab items={items} requests={requests} receivings={receivings} />}
 
       {tab === "stock-overview" && (
-        <StockOverviewTab items={items} locations={locations} receivings={receivings} canManage={canManage} />
+        <StockOverviewTab
+          items={items}
+          locations={locations}
+          receivings={receivings}
+          canManage={canManage}
+        />
       )}
 
       {tab === "goods-receiving" && (
@@ -182,6 +189,7 @@ export default function WarehouseClient({
           locations={locations}
           canManage={canManage}
           canQaRelease={canQaRelease}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
 
@@ -192,6 +200,7 @@ export default function WarehouseClient({
           locations={locations}
           canManage={canManage}
           canRequest={canRequest}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
     </div>

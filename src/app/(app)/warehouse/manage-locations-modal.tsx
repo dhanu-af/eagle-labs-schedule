@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { WarehouseZone } from "@/generated/prisma";
 import { ZONE_LABEL } from "@/lib/warehouse-defaults";
-import { createWarehouseLocation, updateWarehouseLocation } from "@/lib/actions/warehouse-actions";
+import { createWarehouseLocation, updateWarehouseLocation, deleteWarehouseLocation } from "@/lib/actions/warehouse-actions";
 import { Button } from "@/components/ui/Button";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 import type { WarehouseLocationRow } from "./warehouse-client";
@@ -69,6 +69,19 @@ export default function ManageLocationsModal({
     });
   }
 
+  function remove(loc: WarehouseLocationRow) {
+    if (!confirm(`Delete location "${loc.code}"?`)) return;
+    setError("");
+    startTransition(async () => {
+      try {
+        await deleteWarehouseLocation(loc.id);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't delete.");
+      }
+    });
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="card-elevated max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-surface p-5">
@@ -101,6 +114,13 @@ export default function ManageLocationsModal({
                       className="text-xs font-medium text-primary hover:opacity-80"
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => remove(l)}
+                      disabled={pending}
+                      className="ml-2 text-xs font-medium text-danger hover:opacity-80"
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>

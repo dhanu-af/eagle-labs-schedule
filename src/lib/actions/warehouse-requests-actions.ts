@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canManageWarehouse, canRequestMaterials } from "@/lib/auth";
+import { getSession, canManageWarehouse, canRequestMaterials, canEdit } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { getAvailableBalance } from "@/lib/warehouse-ledger";
 import type { Priority, ReceiptOutcome, StockBucket } from "@/generated/prisma";
@@ -91,23 +91,31 @@ export async function createMaterialRequest(data: {
   revalidatePath("/warehouse");
 }
 
-/** Only safe to delete before anything has been released -- a RESERVE (or later) ledger entry
- * references this request, and the ledger is append-only, so deleting it would corrupt the audit trail. */
+/** Normally only safe to delete before anything has been released -- a RESERVE (or later) ledger entry
+ * references this request, and the ledger is append-only, so deleting it would corrupt the audit trail.
+ * Super Admin can force-delete at any stage, which also wipes the ledger entries this request created
+ * (e.g. to clean up test data) -- this permanently erases that history, unlike the normal guarded path. */
 export async function deleteMaterialRequest(requestId: string) {
   const session = await requireWarehouseManagerAccess();
 
   const request = await prisma.warehouseMaterialRequest.findUniqueOrThrow({ where: { id: requestId } });
-  if (request.status !== "REQUESTED") {
+  const isForce = canEdit(session.role);
+  if (request.status !== "REQUESTED" && !isForce) {
     throw new Error("Can't delete — this request has already been released to production.");
   }
 
+  if (isForce) {
+    await prisma.materialLedgerEntry.deleteMany({ where: { requestId } });
+  }
   await prisma.warehouseMaterialRequest.delete({ where: { id: requestId } });
 
   await logAudit(session, {
     action: "DELETE_MATERIAL_REQUEST",
     entityType: "WarehouseMaterialRequest",
     entityId: requestId,
-    summary: `Deleted material request ${request.requestNumber} for batch ${request.batchReference} (never released)`,
+    summary: isForce
+      ? `Force-deleted material request ${request.requestNumber} for batch ${request.batchReference} (status ${request.status}) — associated ledger entries removed`
+      : `Deleted material request ${request.requestNumber} for batch ${request.batchReference} (never released)`,
   });
 
   revalidatePath("/warehouse");

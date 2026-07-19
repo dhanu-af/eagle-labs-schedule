@@ -281,12 +281,14 @@ export default function GoodsReceivingTab({
   locations,
   canManage,
   canQaRelease,
+  isSuperAdmin,
 }: {
   receivings: GoodsReceivingRow[];
   items: WarehouseItemRow[];
   locations: WarehouseLocationRow[];
   canManage: boolean;
   canQaRelease: boolean;
+  isSuperAdmin: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -294,7 +296,11 @@ export default function GoodsReceivingTab({
   const [error, setError] = useState("");
 
   function remove(r: GoodsReceivingRow) {
-    if (!confirm(`Delete this receiving from ${r.supplierName}? This cannot be undone.`)) return;
+    const hasReleased = r.lines.some((l) => l.status === "RELEASED");
+    const message = hasReleased
+      ? `"${r.supplierName}" has already-released stock — deleting it will also erase the ledger history it created. This cannot be undone. Continue?`
+      : `Delete this receiving from ${r.supplierName}? This cannot be undone.`;
+    if (!confirm(message)) return;
     setError("");
     startTransition(async () => {
       try {
@@ -322,7 +328,7 @@ export default function GoodsReceivingTab({
       ) : (
         <div className="space-y-3">
           {receivings.map((r) => {
-            const deletable = r.lines.every((l) => l.status !== "RELEASED");
+            const deletable = isSuperAdmin || r.lines.every((l) => l.status !== "RELEASED");
             return (
             <Card key={r.id} padding="sm">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

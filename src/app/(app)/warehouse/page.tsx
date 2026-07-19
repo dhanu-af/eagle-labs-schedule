@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getSession, canManageWarehouse, canRequestMaterials, canQaReleaseStock } from "@/lib/auth";
+import { getSession, canManageWarehouse, canRequestMaterials, canQaReleaseStock, canEdit } from "@/lib/auth";
 import { getItemStockSummary } from "@/lib/warehouse-ledger";
 import WarehouseClient from "./warehouse-client";
 
@@ -121,6 +121,7 @@ export default async function WarehousePage() {
       canManage={!!session && canManageWarehouse(session.role)}
       canRequest={!!session && canRequestMaterials(session.role)}
       canQaRelease={!!session && canQaReleaseStock(session.role)}
+      isSuperAdmin={!!session && canEdit(session.role)}
     />
   );
 }

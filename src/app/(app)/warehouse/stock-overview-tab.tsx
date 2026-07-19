@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CATEGORY_LABEL, isLowStock, expiryIndicator } from "@/lib/warehouse-defaults";
+import { deleteWarehouseItem } from "@/lib/actions/warehouse-actions";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -33,12 +35,28 @@ export default function StockOverviewTab({
   receivings: GoodsReceivingRow[];
   canManage: boolean;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [editingItem, setEditingItem] = useState<WarehouseItemRow | null>(null);
   const [showAddItem, setShowAddItem] = useState(false);
   const [showLocations, setShowLocations] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "LOW_STOCK" | "QUARANTINE">("ALL");
+  const [error, setError] = useState("");
 
   const locationById = useMemo(() => new Map(locations.map((l) => [l.id, l])), [locations]);
+
+  function remove(item: WarehouseItemRow) {
+    if (!confirm(`Delete item "${item.name}" (${item.itemCode})?`)) return;
+    setError("");
+    startTransition(async () => {
+      try {
+        await deleteWarehouseItem(item.id);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't delete.");
+      }
+    });
+  }
 
   const filtered = items.filter((i) => {
     if (filter === "LOW_STOCK") return i.stock && isLowStock(i.stock.AVAILABLE, i.minimumStock);
@@ -73,6 +91,7 @@ export default function StockOverviewTab({
           </div>
         )}
       </div>
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       {filtered.length === 0 ? (
         <EmptyState title="No items match" description="Try a different filter, or add a warehouse item." />
@@ -139,6 +158,13 @@ export default function StockOverviewTab({
                           className="text-xs font-medium text-primary hover:opacity-80"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => remove(item)}
+                          disabled={pending}
+                          className="ml-2 text-xs font-medium text-danger hover:opacity-80"
+                        >
+                          Delete
                         </button>
                       </td>
                     )}
