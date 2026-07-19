@@ -128,6 +128,28 @@ export async function qaReleaseGoodsReceivingLine(lineId: string, locationId: st
   revalidatePath("/warehouse");
 }
 
+/** Only safe to delete while nothing has been QA released -- a RELEASED line has a RECEIPT ledger
+ * entry referencing it, and the ledger is append-only, so deleting it would corrupt the audit trail. */
+export async function deleteGoodsReceiving(id: string) {
+  const session = await requireWarehouseManagerAccess();
+
+  const receiving = await prisma.goodsReceiving.findUniqueOrThrow({ where: { id }, include: { lines: true } });
+  if (receiving.lines.some((l) => l.status === "RELEASED")) {
+    throw new Error("Can't delete — at least one line has already been QA released into stock.");
+  }
+
+  await prisma.goodsReceiving.delete({ where: { id } });
+
+  await logAudit(session, {
+    action: "DELETE_GOODS_RECEIVING",
+    entityType: "GoodsReceiving",
+    entityId: id,
+    summary: `Deleted goods receiving from ${receiving.supplierName} (never QA released)`,
+  });
+
+  revalidatePath("/warehouse");
+}
+
 export async function rejectGoodsReceivingLine(lineId: string, reason: string) {
   const session = await requireQaAccess();
   if (!reason) throw new Error("A rejection reason is required");

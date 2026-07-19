@@ -91,6 +91,28 @@ export async function createMaterialRequest(data: {
   revalidatePath("/warehouse");
 }
 
+/** Only safe to delete before anything has been released -- a RESERVE (or later) ledger entry
+ * references this request, and the ledger is append-only, so deleting it would corrupt the audit trail. */
+export async function deleteMaterialRequest(requestId: string) {
+  const session = await requireWarehouseManagerAccess();
+
+  const request = await prisma.warehouseMaterialRequest.findUniqueOrThrow({ where: { id: requestId } });
+  if (request.status !== "REQUESTED") {
+    throw new Error("Can't delete — this request has already been released to production.");
+  }
+
+  await prisma.warehouseMaterialRequest.delete({ where: { id: requestId } });
+
+  await logAudit(session, {
+    action: "DELETE_MATERIAL_REQUEST",
+    entityType: "WarehouseMaterialRequest",
+    entityId: requestId,
+    summary: `Deleted material request ${request.requestNumber} for batch ${request.batchReference} (never released)`,
+  });
+
+  revalidatePath("/warehouse");
+}
+
 /** Formula Manager integration: builds a request straight from a Batch Record's own already-scaled
  * ingredient list (BatchMaterialRequestLine.kgPerBatch) — the same figures already printed on that
  * batch's PDF/signed off by QA — rather than re-deriving quantities from the formulation. */

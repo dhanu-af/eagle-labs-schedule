@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { REQUEST_STATUS_LABEL, REQUEST_STATUS_CLASS } from "@/lib/warehouse-defaults";
+import { deleteMaterialRequest } from "@/lib/actions/warehouse-requests-actions";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -31,11 +33,27 @@ export default function ProductionRequestsTab({
   canManage: boolean;
   canRequest: boolean;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [view, setView] = useState<ViewKey>("all");
   const [showNew, setShowNew] = useState(false);
   const [openRequestId, setOpenRequestId] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   const openRequest = requests.find((r) => r.id === openRequestId) ?? null;
+
+  function remove(r: MaterialRequestRow) {
+    if (!confirm(`Delete request ${r.requestNumber}? This cannot be undone.`)) return;
+    setError("");
+    startTransition(async () => {
+      try {
+        await deleteMaterialRequest(r.id);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't delete.");
+      }
+    });
+  }
 
   const issueLogRows = requests.flatMap((r) =>
     r.lines
@@ -85,6 +103,7 @@ export default function ProductionRequestsTab({
                   <Th>Status</Th>
                   <Th>Required Date</Th>
                   <Th>Requested By</Th>
+                  {canManage && <Th></Th>}
                 </tr>
               </thead>
               <tbody>
@@ -110,12 +129,29 @@ export default function ProductionRequestsTab({
                       {r.requiredDate ? new Date(r.requiredDate).toLocaleDateString() : "—"}
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{r.requestedByName}</td>
+                    {canManage && (
+                      <td className="px-3 py-2 text-right">
+                        {r.status === "REQUESTED" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              remove(r);
+                            }}
+                            disabled={pending}
+                            className="text-xs font-medium text-danger hover:opacity-80"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </Card>
         ))}
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       {view === "issue-log" &&
         (issueLogRows.length === 0 ? (

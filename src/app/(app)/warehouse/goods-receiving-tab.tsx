@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { GR_LINE_STATUS_LABEL, expiryIndicator } from "@/lib/warehouse-defaults";
-import { createGoodsReceiving, qaReleaseGoodsReceivingLine, rejectGoodsReceivingLine } from "@/lib/actions/warehouse-receiving-actions";
+import { createGoodsReceiving, qaReleaseGoodsReceivingLine, rejectGoodsReceivingLine, deleteGoodsReceiving } from "@/lib/actions/warehouse-receiving-actions";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -288,7 +288,23 @@ export default function GoodsReceivingTab({
   canManage: boolean;
   canQaRelease: boolean;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [showNew, setShowNew] = useState(false);
+  const [error, setError] = useState("");
+
+  function remove(r: GoodsReceivingRow) {
+    if (!confirm(`Delete this receiving from ${r.supplierName}? This cannot be undone.`)) return;
+    setError("");
+    startTransition(async () => {
+      try {
+        await deleteGoodsReceiving(r.id);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't delete.");
+      }
+    });
+  }
 
   return (
     <div className="space-y-3">
@@ -299,12 +315,15 @@ export default function GoodsReceivingTab({
           </Button>
         </div>
       )}
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       {receivings.length === 0 ? (
         <EmptyState title="No goods receiving records yet" description="Log a new delivery to get started." />
       ) : (
         <div className="space-y-3">
-          {receivings.map((r) => (
+          {receivings.map((r) => {
+            const deletable = r.lines.every((l) => l.status !== "RELEASED");
+            return (
             <Card key={r.id} padding="sm">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -314,6 +333,15 @@ export default function GoodsReceivingTab({
                     Delivered {new Date(r.deliveryDate).toLocaleDateString()} · Received by {r.receivedByName}
                   </p>
                 </div>
+                {canManage && deletable && (
+                  <button
+                    onClick={() => remove(r)}
+                    disabled={pending}
+                    className="text-xs font-medium text-danger hover:opacity-80"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -369,7 +397,8 @@ export default function GoodsReceivingTab({
                 </table>
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
