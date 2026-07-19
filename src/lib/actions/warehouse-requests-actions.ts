@@ -147,11 +147,15 @@ export async function createWarehouseRequestFromBatchRecord(batchRecordId: strin
   return requestNumber;
 }
 
-/** Step 2 — Warehouse Material Release. No stock deduction: writes a RESERVE entry per line (AVAILABLE -> RESERVED). */
+/** Step 2 — Warehouse Material Release. No stock deduction: writes a RESERVE entry per line (AVAILABLE -> RESERVED).
+ * A line created with only a free-text ingredient name (e.g. auto-imported from a Batch Record) has no
+ * WarehouseItem yet -- linkItemId lets the warehouse operator link one at release time instead of being
+ * stuck with no way to ever release that line. */
 export async function releaseRequestToProduction(
   requestId: string,
   lines: {
     lineId: string;
+    linkItemId?: string | null;
     releasedQty: number;
     releaseLotNumber: string | null;
     releaseExpiry: string | null;
@@ -172,12 +176,14 @@ export async function releaseRequestToProduction(
   for (const line of lines) {
     const requestLine = lineById.get(line.lineId);
     if (!requestLine) throw new Error("Request line not found");
-    if (!requestLine.itemId) throw new Error(`Line for "${requestLine.ingredientNameFreeText ?? "ingredient"}" has no linked warehouse item — link an item before releasing`);
+    const itemId = requestLine.itemId ?? line.linkItemId ?? null;
+    if (!itemId) throw new Error(`Line for "${requestLine.ingredientNameFreeText ?? "ingredient"}" has no linked warehouse item — link an item before releasing`);
 
     ops.push(
       prisma.warehouseRequestLine.update({
         where: { id: line.lineId },
         data: {
+          itemId,
           releasedQty: line.releasedQty,
           releaseLotNumber: line.releaseLotNumber,
           releaseExpiry: line.releaseExpiry ? new Date(line.releaseExpiry) : null,
@@ -189,12 +195,12 @@ export async function releaseRequestToProduction(
       })
     );
 
-    const resultingBalance = await tracker.apply(requestLine.itemId, line.releaseLotNumber, "AVAILABLE", "RESERVED", line.releasedQty);
+    const resultingBalance = await tracker.apply(itemId, line.releaseLotNumber, "AVAILABLE", "RESERVED", line.releasedQty);
     ops.push(
       prisma.materialLedgerEntry.create({
         data: {
           entryType: "RESERVE",
-          itemId: requestLine.itemId,
+          itemId,
           lotNumber: line.releaseLotNumber,
           quantity: line.releasedQty,
           unit: requestLine.unit,

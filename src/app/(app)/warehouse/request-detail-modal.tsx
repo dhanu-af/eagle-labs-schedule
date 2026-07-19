@@ -14,7 +14,7 @@ import {
 } from "@/lib/actions/warehouse-requests-actions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import type { MaterialRequestRow, WarehouseLocationRow } from "./warehouse-client";
+import type { MaterialRequestRow, WarehouseLocationRow, WarehouseItemRow } from "./warehouse-client";
 
 const RELEASE_STATUSES = new Set(["REQUESTED", "WAREHOUSE_PREPARING"]);
 const RECEIVE_STATUSES = new Set(["RELEASED", "WAITING_PRODUCTION_CONFIRMATION", "PARTIALLY_RECEIVED"]);
@@ -25,7 +25,17 @@ function lineLabel(l: MaterialRequestRow["lines"][number]) {
   return l.itemName ?? l.ingredientNameFreeText ?? "Ingredient";
 }
 
-function ReleaseStep({ request, locations, onClose }: { request: MaterialRequestRow; locations: WarehouseLocationRow[]; onClose: () => void }) {
+function ReleaseStep({
+  request,
+  locations,
+  items,
+  onClose,
+}: {
+  request: MaterialRequestRow;
+  locations: WarehouseLocationRow[];
+  items: WarehouseItemRow[];
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -33,7 +43,7 @@ function ReleaseStep({ request, locations, onClose }: { request: MaterialRequest
     Object.fromEntries(
       request.lines.map((l) => [
         l.id,
-        { releasedQty: String(l.requestedQty), releaseLotNumber: "", releaseExpiry: "", releaseLocationId: "", releaseComments: "" },
+        { linkItemId: "", releasedQty: String(l.requestedQty), releaseLotNumber: "", releaseExpiry: "", releaseLocationId: "", releaseComments: "" },
       ])
     )
   );
@@ -48,12 +58,17 @@ function ReleaseStep({ request, locations, onClose }: { request: MaterialRequest
       setError("Every line needs a released quantity and lot number.");
       return;
     }
+    if (request.lines.some((l) => !l.itemId && !rows[l.id].linkItemId)) {
+      setError("Every line needs a linked warehouse item before it can be released.");
+      return;
+    }
     startTransition(async () => {
       try {
         await releaseRequestToProduction(
           request.id,
           request.lines.map((l) => ({
             lineId: l.id,
+            linkItemId: rows[l.id].linkItemId || null,
             releasedQty: Number(rows[l.id].releasedQty),
             releaseLotNumber: rows[l.id].releaseLotNumber || null,
             releaseExpiry: rows[l.id].releaseExpiry || null,
@@ -76,6 +91,25 @@ function ReleaseStep({ request, locations, onClose }: { request: MaterialRequest
           <p className="mb-2 text-sm font-medium text-foreground">
             {lineLabel(l)} <span className="text-muted-foreground">— requested {l.requestedQty} {l.unit}</span>
           </p>
+          {!l.itemId && (
+            <div className="mb-2">
+              <select
+                className="input border-warning/40"
+                value={rows[l.id].linkItemId}
+                onChange={(e) => update(l.id, { linkItemId: e.target.value })}
+              >
+                <option value="">Link to warehouse item...</option>
+                {items.map((it) => (
+                  <option key={it.id} value={it.id}>
+                    {it.itemCode} — {it.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-warning">
+                This line has no linked warehouse item yet — pick one to enable release.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <input
               className="input"
@@ -369,12 +403,14 @@ function CompletedStep({ request }: { request: MaterialRequestRow }) {
 export default function RequestDetailModal({
   request,
   locations,
+  items,
   canManage,
   canRequest,
   onClose,
 }: {
   request: MaterialRequestRow;
   locations: WarehouseLocationRow[];
+  items: WarehouseItemRow[];
   canManage: boolean;
   canRequest: boolean;
   onClose: () => void;
@@ -406,7 +442,7 @@ export default function RequestDetailModal({
 
         {RELEASE_STATUSES.has(request.status) &&
           (canManage ? (
-            <ReleaseStep request={request} locations={locations} onClose={onClose} />
+            <ReleaseStep request={request} locations={locations} items={items} onClose={onClose} />
           ) : (
             <p className="text-sm text-muted-foreground">Waiting for the warehouse to release these materials.</p>
           ))}

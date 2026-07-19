@@ -192,6 +192,7 @@ export default function ProductionRequestsTab({
         <RequestDetailModal
           request={openRequest}
           locations={locations}
+          items={items}
           canManage={canManage}
           canRequest={canRequest}
           onClose={() => setOpenRequestId(null)}
