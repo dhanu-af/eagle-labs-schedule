@@ -98,7 +98,7 @@ export default function QcSamplesClient({
     <div className="space-y-4">
       <PageHeader
         title="QC Samples"
-        subtitle="Production → sampling → laboratory → retention → expiry/disposal traceability."
+        subtitle="Complete QC sample lifecycle with full batch traceability."
       />
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-2">
