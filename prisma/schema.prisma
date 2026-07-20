@@ -862,6 +862,7 @@ model BatchRecord {
   mixes            BatchMix[]
   warehouseReturns BatchWarehouseReturnLine[]
   materialRequests BatchMaterialRequestLine[]
+  qcSamples        QcSample[]
 
   @@index([formulationId])
   @@index([batchNumber])
@@ -1111,7 +1112,8 @@ model DryingBay {
   updatedBy          String?
   updatedAt          DateTime @updatedAt
 
-  batches DryingBatch[]
+  batches   DryingBatch[]
+  qcSamples QcSample[]
 }
 
 model DryingBatch {
@@ -1219,6 +1221,7 @@ model WarehouseLocation {
   requestLinesReturnedHere  WarehouseRequestLine[]      @relation("ReturnLocation")
   ledgerEntriesFrom         MaterialLedgerEntry[]       @relation("LedgerFrom")
   ledgerEntriesTo           MaterialLedgerEntry[]       @relation("LedgerTo")
+  qcSamples                 QcSample[]
 
   @@index([zone])
   @@index([parentId])
@@ -1461,4 +1464,129 @@ model MaterialLedgerEntry {
   @@index([requestId])
   @@index([entryType])
   @@index([createdAt])
+}
+
+enum QcSampleType {
+  FINISHED_PRODUCT
+  STABILITY
+  RETENTION
+  INVESTIGATION
+  COMPLAINT
+}
+
+enum QcSampleStatus {
+  WAITING_COLLECTION
+  COLLECTED
+  WAITING_LAB
+  IN_LABORATORY
+  TESTING
+  WAITING_RESULTS
+  APPROVED
+  REJECTED
+  RETENTION
+  EXPIRED
+  DISPOSED
+}
+
+/// GMP/TGA-style QC sample traceability: production -> sampling -> laboratory -> retention -> expiry/disposal.
+/// sampleId (e.g. QC-2026-000124) is derived from `sequence` at creation time and then stored so it never changes.
+model QcSample {
+  id       String @id @default(cuid())
+  sequence Int    @default(autoincrement()) @unique
+  sampleId String @unique
+
+  productName   String
+  batchNumber   String
+  batchRecordId String?
+  batchRecord   BatchRecord? @relation(fields: [batchRecordId], references: [id])
+
+  manufacturingDate DateTime?
+  expiryDate        DateTime?
+
+  sampleType QcSampleType
+  quantity   Float
+  unit       String
+
+  collectedByName String?
+  collectionDate  DateTime?
+  collectionTime  String?
+
+  bayId String?
+  bay   DryingBay? @relation(fields: [bayId], references: [id])
+
+  warehouseLocationId String?
+  warehouseLocation   WarehouseLocation? @relation(fields: [warehouseLocationId], references: [id])
+
+  storageTemperature String?
+  storageCondition   String?
+
+  sentToLab         Boolean   @default(false)
+  sentDate          DateTime?
+  courierOrInternal String?
+  receivedByQcName  String?
+  receivedDate      DateTime?
+
+  status  QcSampleStatus @default(WAITING_COLLECTION)
+  remarks String?
+
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  labTest         QcLabTest?
+  retentionRecord QcRetentionRecord?
+
+  @@index([batchNumber])
+  @@index([status])
+  @@index([sampleType])
+  @@index([bayId])
+  @@index([warehouseLocationId])
+}
+
+model QcLabTest {
+  id       String   @id @default(cuid())
+  sampleId String   @unique
+  sample   QcSample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  appearance           String?
+  weightCheck          String?
+  moisture             String?
+  hardness             String?
+  disintegration       String?
+  microbiology         String?
+  heavyMetals          String?
+  activeIngredients    String?
+  packagingInspection  String?
+  labelInspection      String?
+
+  photographUrls String?
+  coaReference   String?
+  qcNotes        String?
+
+  testedByName String?
+  testedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model QcRetentionRecord {
+  id       String   @id @default(cuid())
+  sampleId String   @unique
+  sample   QcSample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  shelf             String?
+  cabinet           String?
+  boxNumber         String?
+  position          String?
+  quantityRemaining Float?
+  opened            Boolean   @default(false)
+  lastChecked       DateTime?
+  expiryDate        DateTime?
+  destroyDate       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiryDate])
 }

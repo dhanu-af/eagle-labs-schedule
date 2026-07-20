@@ -163,6 +163,34 @@ export function canQaReleaseStock(role: Role) {
   return role === "QA" || role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
+/** QC Sample Management: manager tier — record edits, retention management, delete (pre-lab-result only). */
+export function canManageQcSamples(role: Role) {
+  return (
+    role === "QA" ||
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
+/** QC Sample Management: any production-floor operator can generate/collect a sample and mark it sent to lab. */
+export function canCollectQcSamples(role: Role) {
+  return (
+    role === "EMPLOYEE" ||
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "QA" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
+/** QC Sample Management: entering lab test results and approving/rejecting a sample is QA-only. */
+export function canRunLabTesting(role: Role) {
+  return role === "QA" || role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }
