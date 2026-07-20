@@ -174,7 +174,9 @@ export function canManageQcSamples(role: Role) {
   );
 }
 
-/** QC Sample Management: any production-floor operator can generate/collect a sample and mark it sent to lab. */
+/** QC Sample Management: any production-floor operator can generate/collect a sample and mark it sent to lab.
+ * Includes EXTRA -- that role's nav is otherwise limited to Production Staging Operations only, but its
+ * account (e.g. "Wood") also handles QC sampling duties on the floor. */
 export function canCollectQcSamples(role: Role) {
   return (
     role === "EMPLOYEE" ||
@@ -182,7 +184,8 @@ export function canCollectQcSamples(role: Role) {
     role === "OPERATIONS" ||
     role === "QA" ||
     role === "ADMIN" ||
-    role === "SUPER_ADMIN"
+    role === "SUPER_ADMIN" ||
+    role === "EXTRA"
   );
 }
 

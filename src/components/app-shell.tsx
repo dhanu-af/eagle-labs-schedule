@@ -82,7 +82,10 @@ export default function AppShell({
     ? [
         {
           label: "Operations",
-          items: [{ href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom }],
+          items: [
+            { href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom },
+            { href: "/qc-samples", label: "QC Samples", icon: icons.qcSamples },
+          ],
         },
       ]
     : isRestrictedRole
