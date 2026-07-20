@@ -161,7 +161,7 @@ function NewSampleModal({
                 ))}
               </select>
             </Field>
-            <Field label="Warehouse Location">
+            <Field label="Sample Storage Location">
               <select className="input" value={warehouseLocationId} onChange={(e) => setWarehouseLocationId(e.target.value)}>
                 <option value="">None</option>
                 {locations.map((l) => (

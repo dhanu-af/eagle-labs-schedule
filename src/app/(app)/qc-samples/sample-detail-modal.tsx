@@ -282,7 +282,7 @@ export default function SampleDetailModal({
                   ))}
                 </select>
               </Field>
-              <Field label="Warehouse Location">
+              <Field label="Sample Storage Location">
                 <select className="input" value={form.warehouseLocationId} onChange={(e) => setForm((f) => ({ ...f, warehouseLocationId: e.target.value }))}>
                   <option value="">None</option>
                   {locations.map((l) => (
@@ -323,7 +323,7 @@ export default function SampleDetailModal({
               <DetailRow label="Collected By" value={sample.collectedByName} />
               <DetailRow label="Collection Date" value={sample.collectionDate ? new Date(sample.collectionDate).toLocaleDateString() : null} />
               <DetailRow label="Bay" value={sample.bayNumber ? `Bay ${sample.bayNumber}` : null} />
-              <DetailRow label="Warehouse Location" value={sample.warehouseLocationLabel} />
+              <DetailRow label="Sample Storage Location" value={sample.warehouseLocationLabel} />
               <DetailRow label="Storage Temp" value={sample.storageTemperature} />
               <DetailRow label="Storage Condition" value={sample.storageCondition} />
               <DetailRow label="Sent to Lab" value={sample.sentDate ? new Date(sample.sentDate).toLocaleDateString() : null} />
