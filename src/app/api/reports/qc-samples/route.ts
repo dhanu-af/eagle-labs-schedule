@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { SAMPLE_STATUS_LABEL, SAMPLE_TYPE_LABEL, IN_LAB_STATUSES } from "@/lib/qc-sample-defaults";
+import { SAMPLE_STATUS_LABEL, SAMPLE_TYPE_LABEL, PRODUCT_CATEGORY_LABEL, IN_LAB_STATUSES } from "@/lib/qc-sample-defaults";
 
 const SAMPLE_COLUMNS = [
   { header: "Sample ID", key: "sampleId", width: 18 },
@@ -36,6 +36,102 @@ export async function GET(request: NextRequest) {
 
   const type = request.nextUrl.searchParams.get("type");
   const workbook = new ExcelJS.Workbook();
+
+  if (type === "detail") {
+    const id = request.nextUrl.searchParams.get("id");
+    const sample = await prisma.qcSample.findUnique({
+      where: { id: id ?? "" },
+      include: { labTest: { include: { items: { orderBy: { sortOrder: "asc" } } } }, retentionRecord: true },
+    });
+    if (!sample) return NextResponse.json({ error: "Sample not found" }, { status: 404 });
+
+    const auditLog = await prisma.auditLog.findMany({
+      where: { entityType: "QcSample", entityId: sample.id },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const detailSheet = workbook.addWorksheet("Sample Details");
+    detailSheet.columns = [
+      { header: "Field", key: "field", width: 22 },
+      { header: "Value", key: "value", width: 40 },
+    ];
+    detailSheet.getRow(1).font = { bold: true };
+    const detailRows: [string, string][] = [
+      ["Sample ID", sample.sampleId],
+      ["Product", sample.productName],
+      ["Batch", sample.batchNumber],
+      ["Type", SAMPLE_TYPE_LABEL[sample.sampleType]],
+      ["Product Category", sample.productCategory ? PRODUCT_CATEGORY_LABEL[sample.productCategory] : ""],
+      ["Quantity", `${sample.quantity} ${sample.unit}`],
+      ["Manufacturing Date", sample.manufacturingDate ? sample.manufacturingDate.toISOString().slice(0, 10) : ""],
+      ["Expiry Date", sample.expiryDate ? sample.expiryDate.toISOString().slice(0, 10) : ""],
+      ["Collected By", sample.collectedByName ?? ""],
+      ["Collection Date", sample.collectionDate ? sample.collectionDate.toISOString().slice(0, 10) : ""],
+      ["Production Room / Bay", sample.productionRoom ?? ""],
+      ["Sample Storage Location", sample.sampleStorageLocation ?? ""],
+      ["Storage Temperature", sample.storageTemperature ?? ""],
+      ["Storage Condition", sample.storageCondition ?? ""],
+      ["Sent to Lab", sample.sentDate ? sample.sentDate.toISOString().slice(0, 10) : ""],
+      ["Courier / Internal", sample.courierOrInternal ?? ""],
+      ["Laboratory Name", sample.laboratoryName ?? ""],
+      ["Laboratory Location", sample.laboratoryLocation ?? ""],
+      ["Received by QC", sample.receivedByQcName ?? ""],
+      ["Status", SAMPLE_STATUS_LABEL[sample.status]],
+      ["Remarks", sample.remarks ?? ""],
+    ];
+    detailRows.forEach(([field, value]) => detailSheet.addRow({ field, value }));
+
+    if (sample.labTest && sample.labTest.items.length > 0) {
+      const labSheet = workbook.addWorksheet("Laboratory Testing");
+      labSheet.columns = [
+        { header: "Section", key: "section", width: 20 },
+        { header: "Parameter", key: "parameter", width: 28 },
+        { header: "Result", key: "result", width: 10 },
+        { header: "Details", key: "details", width: 40 },
+      ];
+      labSheet.getRow(1).font = { bold: true };
+      sample.labTest.items.forEach((it) =>
+        labSheet.addRow({ section: it.section, parameter: it.parameter, result: it.result ?? "", details: it.details ?? "" })
+      );
+    }
+
+    if (sample.retentionRecord) {
+      const retentionSheet = workbook.addWorksheet("Retention");
+      retentionSheet.columns = [
+        { header: "Field", key: "field", width: 22 },
+        { header: "Value", key: "value", width: 40 },
+      ];
+      retentionSheet.getRow(1).font = { bold: true };
+      const r = sample.retentionRecord;
+      [
+        ["Shelf", r.shelf ?? ""],
+        ["Cabinet", r.cabinet ?? ""],
+        ["Box Number", r.boxNumber ?? ""],
+        ["Position", r.position ?? ""],
+        ["Quantity Remaining", r.quantityRemaining !== null ? `${r.quantityRemaining} ${sample.unit}` : ""],
+        ["Opened", r.opened ? "Yes" : "No"],
+        ["Expiry Date", r.expiryDate ? r.expiryDate.toISOString().slice(0, 10) : ""],
+        ["Destroy Date", r.destroyDate ? r.destroyDate.toISOString().slice(0, 10) : ""],
+      ].forEach(([field, value]) => retentionSheet.addRow({ field, value }));
+    }
+
+    const auditSheet = workbook.addWorksheet("Audit Trail");
+    auditSheet.columns = [
+      { header: "Timestamp", key: "timestamp", width: 22 },
+      { header: "Actor", key: "actor", width: 18 },
+      { header: "Summary", key: "summary", width: 60 },
+    ];
+    auditSheet.getRow(1).font = { bold: true };
+    auditLog.forEach((a) => auditSheet.addRow({ timestamp: a.createdAt.toLocaleString("en-AU"), actor: a.actorName, summary: a.summary }));
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${sample.sampleId}.xlsx"`,
+      },
+    });
+  }
 
   if (type === "filtered") {
     const ids = (request.nextUrl.searchParams.get("ids") ?? "").split(",").filter(Boolean);

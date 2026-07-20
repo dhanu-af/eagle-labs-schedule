@@ -216,9 +216,20 @@ export default function SampleDetailModal({
             <h2 className="text-base font-semibold text-foreground">{sample.sampleId}</h2>
             <Badge tone={SAMPLE_STATUS_TONE[sample.status]}>{SAMPLE_STATUS_LABEL[sample.status]}</Badge>
           </div>
-          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
-            ✕
-          </button>
+          <div className="flex items-center gap-3">
+            <a
+              href={`/api/reports/qc-samples?type=detail&id=${sample.id}`}
+              className="text-xs font-medium text-primary hover:opacity-80"
+            >
+              Download Excel
+            </a>
+            <a href={`/api/reports/qc-samples/pdf?id=${sample.id}`} className="text-xs font-medium text-primary hover:opacity-80">
+              Download PDF
+            </a>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
         </div>
 
         {error && <p className="mb-3 text-xs text-danger">{error}</p>}
