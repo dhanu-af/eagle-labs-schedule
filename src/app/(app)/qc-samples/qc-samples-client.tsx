@@ -63,6 +63,7 @@ export type QcSampleRow = {
 };
 
 export type BatchRecordOption = { id: string; productName: string; batchNumber: string };
+export type WhatsAppGroupOption = { id: string; name: string };
 
 const TABS = [
   { key: "dashboard", label: "Dashboard" },
@@ -76,6 +77,7 @@ export default function QcSamplesClient({
   batchRecords,
   bayOptions,
   locationOptions,
+  whatsAppGroups,
   canCollect,
   canManage,
   canRunLabTesting,
@@ -85,6 +87,7 @@ export default function QcSamplesClient({
   batchRecords: BatchRecordOption[];
   bayOptions: string[];
   locationOptions: string[];
+  whatsAppGroups: WhatsAppGroupOption[];
   canCollect: boolean;
   canManage: boolean;
   canRunLabTesting: boolean;
@@ -130,7 +133,7 @@ export default function QcSamplesClient({
         />
       )}
 
-      {tab === "reports" && <ReportsTab samples={samples} />}
+      {tab === "reports" && <ReportsTab samples={samples} whatsAppGroups={whatsAppGroups} />}
 
       {selected && (
         <SampleDetailModal

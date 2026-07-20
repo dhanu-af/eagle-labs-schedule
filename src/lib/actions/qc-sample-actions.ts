@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canManageQcSamples, canCollectQcSamples, canRunLabTesting, canEdit } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { formatSampleId } from "@/lib/qc-sample-defaults";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { generateQcSummaryReportText } from "@/lib/generate-qc-summary-report";
 import type { QcSampleType, QcProductCategory, QcTestResult } from "@/generated/prisma";
 
 async function requireManageAccess() {
@@ -42,6 +44,74 @@ export async function getQcSampleAuditTrail(sampleId: string) {
     summary: e.summary,
     createdAt: e.createdAt.toISOString(),
   }));
+}
+
+/**
+ * Sends the QC Sample Summary Report (month + status counts, matching the "Monthly Sample
+ * Summary" Excel export) over WhatsApp -- mirrors the Drying Room Morning Report send
+ * (`sendMorningReportToWhatsApp`). Target is either a saved WhatsApp group or an ad hoc phone
+ * number; `sendWhatsAppMessage` itself falls back to recording the intent in the Audit Trail
+ * when WhatsApp Cloud API credentials aren't configured.
+ */
+export async function sendQcSummaryToWhatsApp(target: { groupId: string | null; phoneNumber: string | null }) {
+  const session = await getSession();
+  if (!session) throw new Error("Not authorized");
+
+  let targetLabel: string;
+  let phoneNumber: string;
+  if (target.groupId) {
+    const group = await prisma.whatsAppGroup.findUnique({ where: { id: target.groupId } });
+    if (!group) throw new Error("WhatsApp group not found");
+    if (!group.identifier) {
+      throw new Error(
+        `"${group.name}" has no phone number set — WhatsApp's Business API can only message individual numbers, not real groups. Add a number for this target first.`
+      );
+    }
+    targetLabel = group.name;
+    phoneNumber = group.identifier;
+  } else if (target.phoneNumber) {
+    targetLabel = target.phoneNumber;
+    phoneNumber = target.phoneNumber;
+  } else {
+    throw new Error("Select a group or enter a phone number");
+  }
+
+  const samples = await prisma.qcSample.findMany({
+    orderBy: { createdAt: "asc" },
+    select: { createdAt: true, status: true },
+  });
+  const reportText = generateQcSummaryReportText(samples);
+  const result = await sendWhatsAppMessage(phoneNumber, reportText);
+
+  if (result.sent) {
+    await logAudit(session, {
+      action: "SEND_QC_SUMMARY_WHATSAPP",
+      entityType: target.groupId ? "WhatsAppGroup" : "WhatsAppNumber",
+      entityId: target.groupId ?? undefined,
+      summary: `Sent QC Sample Summary Report to "${targetLabel}" via WhatsApp:\n${reportText}`,
+    });
+    return { ok: true, target: targetLabel, reportText, sent: true };
+  }
+
+  if (result.reason === "api_error") {
+    await logAudit(session, {
+      action: "SEND_QC_SUMMARY_WHATSAPP_FAILED",
+      entityType: target.groupId ? "WhatsAppGroup" : "WhatsAppNumber",
+      entityId: target.groupId ?? undefined,
+      summary: `Failed to send QC Sample Summary Report to "${targetLabel}": ${result.error}`,
+    });
+    throw new Error(`WhatsApp send failed: ${result.error}`);
+  }
+
+  // Not configured yet -- record the intent instead of a real send.
+  await logAudit(session, {
+    action: "SEND_QC_SUMMARY_WHATSAPP",
+    entityType: target.groupId ? "WhatsAppGroup" : "WhatsAppNumber",
+    entityId: target.groupId ?? undefined,
+    summary: `Sent QC Sample Summary Report to "${targetLabel}" (stub — no WhatsApp integration configured yet):\n${reportText}`,
+  });
+
+  return { ok: true, target: targetLabel, reportText, sent: false };
 }
 
 type NewQcSample = {

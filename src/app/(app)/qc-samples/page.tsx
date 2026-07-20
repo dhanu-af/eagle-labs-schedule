@@ -5,7 +5,7 @@ import QcSamplesClient from "./qc-samples-client";
 export default async function QcSamplesPage() {
   const session = await getSession();
 
-  const [samples, batchRecords, bays, locations] = await Promise.all([
+  const [samples, batchRecords, bays, locations, whatsAppGroups] = await Promise.all([
     prisma.qcSample.findMany({
       orderBy: { createdAt: "desc" },
       include: { labTest: { include: { items: { orderBy: { sortOrder: "asc" } } } }, retentionRecord: true },
@@ -21,6 +21,7 @@ export default async function QcSamplesPage() {
       orderBy: { code: "asc" },
       select: { code: true, label: true },
     }),
+    prisma.whatsAppGroup.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
 
   const bayOptions = bays.map((b) => `Bay ${b.bayNumber}`);
@@ -87,6 +88,7 @@ export default async function QcSamplesPage() {
       batchRecords={batchRecords}
       bayOptions={bayOptions}
       locationOptions={locationOptions}
+      whatsAppGroups={whatsAppGroups.map((g) => ({ id: g.id, name: g.name }))}
       canCollect={!!session && canCollectQcSamples(session.role)}
       canManage={!!session && canManageQcSamples(session.role)}
       canRunLabTesting={!!session && canRunLabTesting(session.role)}
