@@ -192,9 +192,11 @@ export function canCollectQcSamples(role: Role) {
   );
 }
 
-/** QC Sample Management: entering lab test results and approving/rejecting a sample is QA-only. */
+/** QC Sample Management: entering lab test results and approving/rejecting a sample -- normally QA-only,
+ * but EXTRA is included too per explicit request so that role gets every workflow action on this module,
+ * not just collection and general edits. */
 export function canRunLabTesting(role: Role) {
-  return role === "QA" || role === "ADMIN" || role === "SUPER_ADMIN";
+  return role === "QA" || role === "ADMIN" || role === "SUPER_ADMIN" || role === "EXTRA";
 }
 
 export async function hashPassword(password: string) {
