@@ -163,14 +163,17 @@ export function canQaReleaseStock(role: Role) {
   return role === "QA" || role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
-/** QC Sample Management: manager tier — record edits, retention management, delete (pre-lab-result only). */
+/** QC Sample Management: manager tier — record edits, retention management, delete (pre-lab-result only).
+ * Includes EXTRA -- that role's nav is otherwise limited to Production Staging Operations and QC Samples,
+ * but its account (e.g. "Wood") is trusted with full edit access on QC records, not just collection. */
 export function canManageQcSamples(role: Role) {
   return (
     role === "QA" ||
     role === "SUPERVISOR" ||
     role === "OPERATIONS" ||
     role === "ADMIN" ||
-    role === "SUPER_ADMIN"
+    role === "SUPER_ADMIN" ||
+    role === "EXTRA"
   );
 }
 

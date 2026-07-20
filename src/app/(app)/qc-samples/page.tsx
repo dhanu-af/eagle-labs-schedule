@@ -8,25 +8,23 @@ export default async function QcSamplesPage() {
   const [samples, batchRecords, bays, locations] = await Promise.all([
     prisma.qcSample.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
-        labTest: true,
-        retentionRecord: true,
-        bay: { select: { id: true, bayNumber: true } },
-        warehouseLocation: { select: { id: true, code: true, label: true } },
-      },
+      include: { labTest: true, retentionRecord: true },
     }),
     prisma.batchRecord.findMany({
       orderBy: { createdAt: "desc" },
       take: 300,
       select: { id: true, productName: true, batchNumber: true },
     }),
-    prisma.dryingBay.findMany({ orderBy: { bayNumber: "asc" }, select: { id: true, bayNumber: true } }),
+    prisma.dryingBay.findMany({ orderBy: { bayNumber: "asc" }, select: { bayNumber: true } }),
     prisma.warehouseLocation.findMany({
       where: { active: true },
       orderBy: { code: "asc" },
-      select: { id: true, code: true, label: true },
+      select: { code: true, label: true },
     }),
   ]);
+
+  const bayOptions = bays.map((b) => `Bay ${b.bayNumber}`);
+  const locationOptions = locations.map((l) => `${l.code} — ${l.label}`);
 
   return (
     <QcSamplesClient
@@ -44,15 +42,15 @@ export default async function QcSamplesPage() {
         collectedByName: s.collectedByName,
         collectionDate: s.collectionDate?.toISOString() ?? null,
         collectionTime: s.collectionTime,
-        bayId: s.bayId,
-        bayNumber: s.bay?.bayNumber ?? null,
-        warehouseLocationId: s.warehouseLocationId,
-        warehouseLocationLabel: s.warehouseLocation ? `${s.warehouseLocation.code} — ${s.warehouseLocation.label}` : null,
+        productionRoom: s.productionRoom,
+        sampleStorageLocation: s.sampleStorageLocation,
         storageTemperature: s.storageTemperature,
         storageCondition: s.storageCondition,
         sentToLab: s.sentToLab,
         sentDate: s.sentDate?.toISOString() ?? null,
         courierOrInternal: s.courierOrInternal,
+        laboratoryName: s.laboratoryName,
+        laboratoryLocation: s.laboratoryLocation,
         receivedByQcName: s.receivedByQcName,
         receivedDate: s.receivedDate?.toISOString() ?? null,
         status: s.status,
@@ -93,8 +91,8 @@ export default async function QcSamplesPage() {
           : null,
       }))}
       batchRecords={batchRecords}
-      bays={bays}
-      locations={locations}
+      bayOptions={bayOptions}
+      locationOptions={locationOptions}
       canCollect={!!session && canCollectQcSamples(session.role)}
       canManage={!!session && canManageQcSamples(session.role)}
       canRunLabTesting={!!session && canRunLabTesting(session.role)}

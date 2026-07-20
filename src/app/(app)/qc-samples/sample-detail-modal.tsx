@@ -22,7 +22,7 @@ import {
 } from "@/lib/actions/qc-sample-actions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import type { QcSampleRow, BatchRecordOption, BayOption, LocationOption } from "./qc-samples-client";
+import type { QcSampleRow, BatchRecordOption } from "./qc-samples-client";
 
 const SAMPLE_TYPES: QcSampleType[] = ["FINISHED_PRODUCT", "STABILITY", "RETENTION", "INVESTIGATION", "COMPLAINT"];
 const LAB_TEST_FIELDS: { key: string; label: string }[] = [
@@ -68,8 +68,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function SampleDetailModal({
   sample,
   batchRecords,
-  bays,
-  locations,
+  bayOptions,
+  locationOptions,
   canManage,
   canRunLabTesting,
   isSuperAdmin,
@@ -77,8 +77,8 @@ export default function SampleDetailModal({
 }: {
   sample: QcSampleRow;
   batchRecords: BatchRecordOption[];
-  bays: BayOption[];
-  locations: LocationOption[];
+  bayOptions: string[];
+  locationOptions: string[];
   canManage: boolean;
   canRunLabTesting: boolean;
   isSuperAdmin: boolean;
@@ -109,8 +109,8 @@ export default function SampleDetailModal({
     expiryDate: sample.expiryDate?.slice(0, 10) ?? "",
     quantity: String(sample.quantity),
     unit: sample.unit,
-    bayId: sample.bayId ?? "",
-    warehouseLocationId: sample.warehouseLocationId ?? "",
+    productionRoom: sample.productionRoom ?? "",
+    sampleStorageLocation: sample.sampleStorageLocation ?? "",
     storageTemperature: sample.storageTemperature ?? "",
     storageCondition: sample.storageCondition ?? "",
     remarks: sample.remarks ?? "",
@@ -118,6 +118,8 @@ export default function SampleDetailModal({
 
   const [sentDate, setSentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [courier, setCourier] = useState("");
+  const [laboratoryName, setLaboratoryName] = useState("");
+  const [laboratoryLocation, setLaboratoryLocation] = useState("");
 
   const [labForm, setLabForm] = useState({
     appearance: sample.labTest?.appearance ?? "",
@@ -176,8 +178,8 @@ export default function SampleDetailModal({
         unit: form.unit,
         collectionDate: sample.collectionDate,
         collectionTime: sample.collectionTime,
-        bayId: form.bayId || null,
-        warehouseLocationId: form.warehouseLocationId || null,
+        productionRoom: form.productionRoom || null,
+        sampleStorageLocation: form.sampleStorageLocation || null,
         storageTemperature: form.storageTemperature || null,
         storageCondition: form.storageCondition || null,
         remarks: form.remarks || null,
@@ -273,24 +275,32 @@ export default function SampleDetailModal({
                 <input className="input" value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} />
               </Field>
               <Field label="Production Room / Bay">
-                <select className="input" value={form.bayId} onChange={(e) => setForm((f) => ({ ...f, bayId: e.target.value }))}>
-                  <option value="">None</option>
-                  {bays.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      Bay {b.bayNumber}
-                    </option>
+                <input
+                  className="input"
+                  list="edit-bay-options"
+                  placeholder="Type or pick a suggestion..."
+                  value={form.productionRoom}
+                  onChange={(e) => setForm((f) => ({ ...f, productionRoom: e.target.value }))}
+                />
+                <datalist id="edit-bay-options">
+                  {bayOptions.map((b) => (
+                    <option key={b} value={b} />
                   ))}
-                </select>
+                </datalist>
               </Field>
               <Field label="Sample Storage Location">
-                <select className="input" value={form.warehouseLocationId} onChange={(e) => setForm((f) => ({ ...f, warehouseLocationId: e.target.value }))}>
-                  <option value="">None</option>
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.code} — {l.label}
-                    </option>
+                <input
+                  className="input"
+                  list="edit-location-options"
+                  placeholder="Type or pick a suggestion..."
+                  value={form.sampleStorageLocation}
+                  onChange={(e) => setForm((f) => ({ ...f, sampleStorageLocation: e.target.value }))}
+                />
+                <datalist id="edit-location-options">
+                  {locationOptions.map((l) => (
+                    <option key={l} value={l} />
                   ))}
-                </select>
+                </datalist>
               </Field>
               <Field label="Storage Temperature">
                 <input className="input" value={form.storageTemperature} onChange={(e) => setForm((f) => ({ ...f, storageTemperature: e.target.value }))} />
@@ -322,12 +332,14 @@ export default function SampleDetailModal({
               <DetailRow label="Expiry Date" value={sample.expiryDate ? new Date(sample.expiryDate).toLocaleDateString() : null} />
               <DetailRow label="Collected By" value={sample.collectedByName} />
               <DetailRow label="Collection Date" value={sample.collectionDate ? new Date(sample.collectionDate).toLocaleDateString() : null} />
-              <DetailRow label="Bay" value={sample.bayNumber ? `Bay ${sample.bayNumber}` : null} />
-              <DetailRow label="Sample Storage Location" value={sample.warehouseLocationLabel} />
+              <DetailRow label="Production Room / Bay" value={sample.productionRoom} />
+              <DetailRow label="Sample Storage Location" value={sample.sampleStorageLocation} />
               <DetailRow label="Storage Temp" value={sample.storageTemperature} />
               <DetailRow label="Storage Condition" value={sample.storageCondition} />
               <DetailRow label="Sent to Lab" value={sample.sentDate ? new Date(sample.sentDate).toLocaleDateString() : null} />
               <DetailRow label="Courier / Internal" value={sample.courierOrInternal} />
+              <DetailRow label="Laboratory Name" value={sample.laboratoryName} />
+              <DetailRow label="Laboratory Location" value={sample.laboratoryLocation} />
               <DetailRow label="Received by QC" value={sample.receivedByQcName} />
               <DetailRow label="Remarks" value={sample.remarks} />
             </div>
@@ -359,7 +371,32 @@ export default function SampleDetailModal({
                       value={courier}
                       onChange={(e) => setCourier(e.target.value)}
                     />
-                    <Button size="sm" onClick={() => run(() => markSentToLab(sample.id, { sentDate, courierOrInternal: courier || null }))} disabled={pending}>
+                    <input
+                      className="input w-40"
+                      placeholder="Laboratory Name"
+                      value={laboratoryName}
+                      onChange={(e) => setLaboratoryName(e.target.value)}
+                    />
+                    <input
+                      className="input w-40"
+                      placeholder="Laboratory Location"
+                      value={laboratoryLocation}
+                      onChange={(e) => setLaboratoryLocation(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        run(() =>
+                          markSentToLab(sample.id, {
+                            sentDate,
+                            courierOrInternal: courier || null,
+                            laboratoryName: laboratoryName || null,
+                            laboratoryLocation: laboratoryLocation || null,
+                          })
+                        )
+                      }
+                      disabled={pending}
+                    >
                       Send to Lab
                     </Button>
                   </div>

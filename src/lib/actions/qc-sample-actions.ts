@@ -55,8 +55,8 @@ type NewQcSample = {
   unit: string;
   collectionDate: string | null;
   collectionTime: string | null;
-  bayId: string | null;
-  warehouseLocationId: string | null;
+  productionRoom: string | null;
+  sampleStorageLocation: string | null;
   storageTemperature: string | null;
   storageCondition: string | null;
   remarks: string | null;
@@ -83,8 +83,8 @@ export async function createQcSample(data: NewQcSample) {
         collectedByName: session.fullName,
         collectionDate: data.collectionDate ? new Date(data.collectionDate) : null,
         collectionTime: data.collectionTime,
-        bayId: data.bayId,
-        warehouseLocationId: data.warehouseLocationId,
+        productionRoom: data.productionRoom,
+        sampleStorageLocation: data.sampleStorageLocation,
         storageTemperature: data.storageTemperature,
         storageCondition: data.storageCondition,
         remarks: data.remarks,
@@ -127,8 +127,8 @@ export async function updateQcSample(id: string, data: NewQcSample) {
       unit: data.unit,
       collectionDate: data.collectionDate ? new Date(data.collectionDate) : null,
       collectionTime: data.collectionTime,
-      bayId: data.bayId,
-      warehouseLocationId: data.warehouseLocationId,
+      productionRoom: data.productionRoom,
+      sampleStorageLocation: data.sampleStorageLocation,
       storageTemperature: data.storageTemperature,
       storageCondition: data.storageCondition,
       remarks: data.remarks,
@@ -169,7 +169,10 @@ export async function markCollected(id: string) {
   revalidatePath("/qc-samples");
 }
 
-export async function markSentToLab(id: string, data: { sentDate: string; courierOrInternal: string | null }) {
+export async function markSentToLab(
+  id: string,
+  data: { sentDate: string; courierOrInternal: string | null; laboratoryName: string | null; laboratoryLocation: string | null }
+) {
   const session = await requireCollectAccess();
   const sample = await prisma.qcSample.findUniqueOrThrow({ where: { id } });
   if (sample.status !== "COLLECTED") throw new Error("Sample must be collected before it can be sent to the lab");
@@ -181,6 +184,8 @@ export async function markSentToLab(id: string, data: { sentDate: string; courie
       sentToLab: true,
       sentDate: new Date(data.sentDate),
       courierOrInternal: data.courierOrInternal,
+      laboratoryName: data.laboratoryName,
+      laboratoryLocation: data.laboratoryLocation,
     },
   });
 

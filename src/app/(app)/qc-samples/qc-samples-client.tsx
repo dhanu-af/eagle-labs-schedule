@@ -52,15 +52,15 @@ export type QcSampleRow = {
   collectedByName: string | null;
   collectionDate: string | null;
   collectionTime: string | null;
-  bayId: string | null;
-  bayNumber: number | null;
-  warehouseLocationId: string | null;
-  warehouseLocationLabel: string | null;
+  productionRoom: string | null;
+  sampleStorageLocation: string | null;
   storageTemperature: string | null;
   storageCondition: string | null;
   sentToLab: boolean;
   sentDate: string | null;
   courierOrInternal: string | null;
+  laboratoryName: string | null;
+  laboratoryLocation: string | null;
   receivedByQcName: string | null;
   receivedDate: string | null;
   status: QcSampleStatus;
@@ -72,8 +72,6 @@ export type QcSampleRow = {
 };
 
 export type BatchRecordOption = { id: string; productName: string; batchNumber: string };
-export type BayOption = { id: string; bayNumber: number };
-export type LocationOption = { id: string; code: string; label: string };
 
 const TABS = [
   { key: "dashboard", label: "Dashboard" },
@@ -85,8 +83,8 @@ type TabKey = (typeof TABS)[number]["key"];
 export default function QcSamplesClient({
   samples,
   batchRecords,
-  bays,
-  locations,
+  bayOptions,
+  locationOptions,
   canCollect,
   canManage,
   canRunLabTesting,
@@ -94,8 +92,8 @@ export default function QcSamplesClient({
 }: {
   samples: QcSampleRow[];
   batchRecords: BatchRecordOption[];
-  bays: BayOption[];
-  locations: LocationOption[];
+  bayOptions: string[];
+  locationOptions: string[];
   canCollect: boolean;
   canManage: boolean;
   canRunLabTesting: boolean;
@@ -134,8 +132,8 @@ export default function QcSamplesClient({
         <SamplesTab
           samples={samples}
           batchRecords={batchRecords}
-          bays={bays}
-          locations={locations}
+          bayOptions={bayOptions}
+          locationOptions={locationOptions}
           canCollect={canCollect}
           onSelect={setSelectedId}
         />
@@ -147,8 +145,8 @@ export default function QcSamplesClient({
         <SampleDetailModal
           sample={selected}
           batchRecords={batchRecords}
-          bays={bays}
-          locations={locations}
+          bayOptions={bayOptions}
+          locationOptions={locationOptions}
           canManage={canManage}
           canRunLabTesting={canRunLabTesting}
           isSuperAdmin={isSuperAdmin}

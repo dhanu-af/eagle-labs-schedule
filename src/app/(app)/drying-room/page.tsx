@@ -67,6 +67,7 @@ export default async function DryingRoomPage() {
           stageUpdatedAt: batch.stageUpdatedAt.toISOString(),
           assignedEmployeeId: batch.assignedEmployeeId,
           priorityRank: batch.priorityRank,
+          remarks: batch.remarks,
           trolleys: batch.trolleys.map((t) => ({
             id: t.id,
             trolleyNumber: t.trolleyNumber,

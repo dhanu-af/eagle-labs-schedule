@@ -26,6 +26,7 @@ import {
   moveBatchToBay,
   updateBatchStage,
   updateBatchPriority,
+  updateBatchRemarks,
   updateTrolley,
   upsertMiscStorageItem,
   deleteMiscStorageItem,
@@ -67,6 +68,7 @@ type Batch = {
   stageUpdatedAt: string;
   assignedEmployeeId: string | null;
   priorityRank: number | null;
+  remarks: string | null;
   trolleys: Trolley[];
 };
 
@@ -533,6 +535,18 @@ function BayDetailModal({
     });
   }
 
+  function setRemarks(batchId: string, remarks: string | null) {
+    setError("");
+    startTransition(async () => {
+      try {
+        await updateBatchRemarks(batchId, remarks);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't save remarks.");
+      }
+    });
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="card-elevated max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-surface p-5">
@@ -632,6 +646,7 @@ function BayDetailModal({
                     onRemove={removeBatch}
                     onMoveBay={moveBatch}
                     onSetPriority={setPriority}
+                    onSetRemarks={setRemarks}
                     onRefresh={() => router.refresh()}
                   />
                 ))}
@@ -667,6 +682,7 @@ function BatchCard({
   onRemove,
   onMoveBay,
   onSetPriority,
+  onSetRemarks,
   onRefresh,
 }: {
   batch: Batch;
@@ -677,11 +693,13 @@ function BatchCard({
   onRemove: (batchId: string) => void;
   onMoveBay: (batchId: string, bayId: string) => void;
   onSetPriority: (batchId: string, priorityRank: number | null) => void;
+  onSetRemarks: (batchId: string, remarks: string | null) => void;
   onRefresh: () => void;
 }) {
   const [showTrolleys, setShowTrolleys] = useState(false);
   const [moveTarget, setMoveTarget] = useState("");
   const [stageTarget, setStageTarget] = useState("");
+  const [remarksDraft, setRemarksDraft] = useState(batch.remarks ?? "");
   const actions = STAGE_ACTIONS[batch.currentStage] ?? [];
   const alerts = computeBatchAlerts(batch);
   const days = daysSinceProduction(batch.dateEnteredDryingRoom);
@@ -799,6 +817,23 @@ function BatchCard({
           </Button>
         </div>
       )}
+
+      <div className="mt-2">
+        <textarea
+          value={remarksDraft}
+          onChange={(e) => setRemarksDraft(e.target.value)}
+          placeholder="Remarks / comments..."
+          rows={2}
+          className="input py-1 text-[11px]"
+        />
+        {remarksDraft !== (batch.remarks ?? "") && (
+          <div className="mt-1 text-right">
+            <Button size="sm" variant="secondary" onClick={() => onSetRemarks(batch.id, remarksDraft || null)}>
+              Save Remarks
+            </Button>
+          </div>
+        )}
+      </div>
 
       <button
         onClick={() => setShowTrolleys((s) => !s)}

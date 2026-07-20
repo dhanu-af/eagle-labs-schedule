@@ -167,6 +167,21 @@ export async function updateBatchPriority(batchId: string, priorityRank: number 
   revalidatePath("/drying-room");
 }
 
+export async function updateBatchRemarks(batchId: string, remarks: string | null) {
+  const session = await requireOperatorAccess();
+
+  await prisma.dryingBatch.update({ where: { id: batchId }, data: { remarks, updatedBy: session.fullName } });
+
+  await logAudit(session, {
+    action: "UPDATE_DRYING_BATCH_REMARKS",
+    entityType: "DryingBatch",
+    entityId: batchId,
+    summary: `Updated remarks on batch ${batchId}`,
+  });
+
+  revalidatePath("/drying-room");
+}
+
 export async function updateBatchStage(batchId: string, stage: DryingStage) {
   const session = await requireOperatorAccess();
 

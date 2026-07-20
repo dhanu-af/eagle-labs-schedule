@@ -1112,8 +1112,7 @@ model DryingBay {
   updatedBy          String?
   updatedAt          DateTime @updatedAt
 
-  batches   DryingBatch[]
-  qcSamples QcSample[]
+  batches DryingBatch[]
 }
 
 model DryingBatch {
@@ -1131,6 +1130,7 @@ model DryingBatch {
   stageUpdatedAt        DateTime @default(now())
   assignedEmployeeId    String?
   priorityRank          Int?
+  remarks               String?
   completedAt           DateTime?
   updatedBy             String?
   createdAt             DateTime @default(now())
@@ -1221,7 +1221,6 @@ model WarehouseLocation {
   requestLinesReturnedHere  WarehouseRequestLine[]      @relation("ReturnLocation")
   ledgerEntriesFrom         MaterialLedgerEntry[]       @relation("LedgerFrom")
   ledgerEntriesTo           MaterialLedgerEntry[]       @relation("LedgerTo")
-  qcSamples                 QcSample[]
 
   @@index([zone])
   @@index([parentId])
@@ -1511,20 +1510,19 @@ model QcSample {
   collectionDate  DateTime?
   collectionTime  String?
 
-  bayId String?
-  bay   DryingBay? @relation(fields: [bayId], references: [id])
-
-  warehouseLocationId String?
-  warehouseLocation   WarehouseLocation? @relation(fields: [warehouseLocationId], references: [id])
+  productionRoom        String?
+  sampleStorageLocation String?
 
   storageTemperature String?
   storageCondition   String?
 
-  sentToLab         Boolean   @default(false)
-  sentDate          DateTime?
-  courierOrInternal String?
-  receivedByQcName  String?
-  receivedDate      DateTime?
+  sentToLab          Boolean   @default(false)
+  sentDate           DateTime?
+  courierOrInternal  String?
+  laboratoryName     String?
+  laboratoryLocation String?
+  receivedByQcName   String?
+  receivedDate       DateTime?
 
   status  QcSampleStatus @default(WAITING_COLLECTION)
   remarks String?
@@ -1539,8 +1537,6 @@ model QcSample {
   @@index([batchNumber])
   @@index([status])
   @@index([sampleType])
-  @@index([bayId])
-  @@index([warehouseLocationId])
 }
 
 model QcLabTest {
