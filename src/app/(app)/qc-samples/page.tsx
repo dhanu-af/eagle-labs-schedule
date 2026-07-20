@@ -8,7 +8,7 @@ export default async function QcSamplesPage() {
   const [samples, batchRecords, bays, locations] = await Promise.all([
     prisma.qcSample.findMany({
       orderBy: { createdAt: "desc" },
-      include: { labTest: true, retentionRecord: true },
+      include: { labTest: { include: { items: { orderBy: { sortOrder: "asc" } } } }, retentionRecord: true },
     }),
     prisma.batchRecord.findMany({
       orderBy: { createdAt: "desc" },
@@ -37,6 +37,7 @@ export default async function QcSamplesPage() {
         manufacturingDate: s.manufacturingDate?.toISOString() ?? null,
         expiryDate: s.expiryDate?.toISOString() ?? null,
         sampleType: s.sampleType,
+        productCategory: s.productCategory,
         quantity: s.quantity,
         unit: s.unit,
         collectedByName: s.collectedByName,
@@ -59,21 +60,14 @@ export default async function QcSamplesPage() {
         createdAt: s.createdAt.toISOString(),
         labTest: s.labTest
           ? {
-              appearance: s.labTest.appearance,
-              weightCheck: s.labTest.weightCheck,
-              moisture: s.labTest.moisture,
-              hardness: s.labTest.hardness,
-              disintegration: s.labTest.disintegration,
-              microbiology: s.labTest.microbiology,
-              heavyMetals: s.labTest.heavyMetals,
-              activeIngredients: s.labTest.activeIngredients,
-              packagingInspection: s.labTest.packagingInspection,
-              labelInspection: s.labTest.labelInspection,
-              photographUrls: s.labTest.photographUrls,
-              coaReference: s.labTest.coaReference,
-              qcNotes: s.labTest.qcNotes,
               testedByName: s.labTest.testedByName,
               testedAt: s.labTest.testedAt?.toISOString() ?? null,
+              items: s.labTest.items.map((it) => ({
+                section: it.section,
+                parameter: it.parameter,
+                result: it.result,
+                details: it.details,
+              })),
             }
           : null,
         retentionRecord: s.retentionRecord

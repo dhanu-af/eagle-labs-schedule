@@ -87,11 +87,18 @@ export async function GET(request: NextRequest) {
       destroyDate: r.retentionRecord?.destroyDate ? r.retentionRecord.destroyDate.toISOString().slice(0, 10) : "",
     }));
   } else if (type === "coa") {
-    const rows = await prisma.qcSample.findMany({ where: { labTest: { isNot: null } }, include: { labTest: true }, orderBy: { createdAt: "desc" } });
+    const rows = await prisma.qcSample.findMany({
+      where: { labTest: { isNot: null } },
+      include: { labTest: { include: { items: true } } },
+      orderBy: { createdAt: "desc" },
+    });
     const sheet = workbook.addWorksheet("COA Report");
-    sheet.columns = [...SAMPLE_COLUMNS, { header: "COA Reference", key: "coaReference", width: 30 }, { header: "Tested By", key: "testedByName", width: 18 }];
+    sheet.columns = [...SAMPLE_COLUMNS, { header: "COA Upload", key: "coaReference", width: 30 }, { header: "Tested By", key: "testedByName", width: 18 }];
     sheet.getRow(1).font = { bold: true };
-    rows.forEach((r) => sheet.addRow({ ...baseRow(r), coaReference: r.labTest?.coaReference ?? "", testedByName: r.labTest?.testedByName ?? "" }));
+    rows.forEach((r) => {
+      const coaItem = r.labTest?.items.find((it) => it.parameter === "COA Upload");
+      sheet.addRow({ ...baseRow(r), coaReference: coaItem?.details ?? (coaItem?.result ?? ""), testedByName: r.labTest?.testedByName ?? "" });
+    });
   } else if (type === "history-by-batch") {
     const rows = await prisma.qcSample.findMany({ orderBy: [{ batchNumber: "asc" }, { createdAt: "asc" }] });
     const sheet = workbook.addWorksheet("Sample History by Batch");

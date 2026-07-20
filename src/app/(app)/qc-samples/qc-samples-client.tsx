@@ -1,29 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import type { QcSampleType, QcSampleStatus } from "@/generated/prisma";
+import type { QcSampleType, QcSampleStatus, QcProductCategory, QcTestResult } from "@/generated/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import DashboardTab from "./dashboard-tab";
 import SamplesTab from "./samples-tab";
 import ReportsTab from "./reports-tab";
 import SampleDetailModal from "./sample-detail-modal";
 
+export type QcLabTestItemRow = { section: string; parameter: string; result: QcTestResult | null; details: string | null };
+
 export type QcLabTestRow = {
-  appearance: string | null;
-  weightCheck: string | null;
-  moisture: string | null;
-  hardness: string | null;
-  disintegration: string | null;
-  microbiology: string | null;
-  heavyMetals: string | null;
-  activeIngredients: string | null;
-  packagingInspection: string | null;
-  labelInspection: string | null;
-  photographUrls: string | null;
-  coaReference: string | null;
-  qcNotes: string | null;
   testedByName: string | null;
   testedAt: string | null;
+  items: QcLabTestItemRow[];
 };
 
 export type QcRetentionRow = {
@@ -47,6 +37,7 @@ export type QcSampleRow = {
   manufacturingDate: string | null;
   expiryDate: string | null;
   sampleType: QcSampleType;
+  productCategory: QcProductCategory | null;
   quantity: number;
   unit: string;
   collectedByName: string | null;

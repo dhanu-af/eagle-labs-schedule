@@ -63,7 +63,8 @@ export default function DashboardTab({
         alerts.push({ text: `${s.sampleId} — lab testing overdue (${daysInLab} days)`, sampleId: s.id });
       }
     }
-    if ((s.status === "APPROVED" || s.status === "RETENTION") && !s.labTest?.coaReference) {
+    const coaItem = s.labTest?.items.find((it) => it.parameter === "COA Upload");
+    if ((s.status === "APPROVED" || s.status === "RETENTION") && !coaItem?.details && !coaItem?.result) {
       alerts.push({ text: `${s.sampleId} — missing COA`, sampleId: s.id });
     }
     if (s.status === "RETENTION" && s.retentionRecord?.quantityRemaining !== null && s.retentionRecord && s.retentionRecord.quantityRemaining! < LOW_QUANTITY_THRESHOLD) {

@@ -2,8 +2,14 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { QcSampleType } from "@/generated/prisma";
-import { SAMPLE_STATUS_LABEL, SAMPLE_STATUS_TONE, SAMPLE_TYPE_LABEL } from "@/lib/qc-sample-defaults";
+import type { QcSampleType, QcProductCategory } from "@/generated/prisma";
+import {
+  SAMPLE_STATUS_LABEL,
+  SAMPLE_STATUS_TONE,
+  SAMPLE_TYPE_LABEL,
+  PRODUCT_CATEGORY_LABEL,
+  TEST_SECTIONS_BY_CATEGORY,
+} from "@/lib/qc-sample-defaults";
 import {
   updateQcSample,
   markCollected,
@@ -22,21 +28,18 @@ import {
 } from "@/lib/actions/qc-sample-actions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import type { QcSampleRow, BatchRecordOption } from "./qc-samples-client";
+import type { QcSampleRow, BatchRecordOption, QcLabTestItemRow } from "./qc-samples-client";
 
 const SAMPLE_TYPES: QcSampleType[] = ["FINISHED_PRODUCT", "STABILITY", "RETENTION", "INVESTIGATION", "COMPLAINT"];
-const LAB_TEST_FIELDS: { key: string; label: string }[] = [
-  { key: "appearance", label: "Appearance" },
-  { key: "weightCheck", label: "Weight Check" },
-  { key: "moisture", label: "Moisture" },
-  { key: "hardness", label: "Hardness" },
-  { key: "disintegration", label: "Disintegration" },
-  { key: "microbiology", label: "Microbiology" },
-  { key: "heavyMetals", label: "Heavy Metals" },
-  { key: "activeIngredients", label: "Active Ingredients" },
-  { key: "packagingInspection", label: "Packaging Inspection" },
-  { key: "labelInspection", label: "Label Inspection" },
-];
+const PRODUCT_CATEGORIES: QcProductCategory[] = ["CAPSULE", "GUMMY"];
+
+function buildInitialLabItems(sample: QcSampleRow): QcLabTestItemRow[] {
+  if (sample.labTest && sample.labTest.items.length > 0) return sample.labTest.items;
+  if (!sample.productCategory) return [];
+  return TEST_SECTIONS_BY_CATEGORY[sample.productCategory].flatMap((s) =>
+    s.items.map((parameter) => ({ section: s.section, parameter, result: null, details: null }))
+  );
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -105,6 +108,7 @@ export default function SampleDetailModal({
     productName: sample.productName,
     batchNumber: sample.batchNumber,
     sampleType: sample.sampleType,
+    productCategory: sample.productCategory ?? ("" as QcProductCategory | ""),
     manufacturingDate: sample.manufacturingDate?.slice(0, 10) ?? "",
     expiryDate: sample.expiryDate?.slice(0, 10) ?? "",
     quantity: String(sample.quantity),
@@ -121,21 +125,16 @@ export default function SampleDetailModal({
   const [laboratoryName, setLaboratoryName] = useState("");
   const [laboratoryLocation, setLaboratoryLocation] = useState("");
 
-  const [labForm, setLabForm] = useState({
-    appearance: sample.labTest?.appearance ?? "",
-    weightCheck: sample.labTest?.weightCheck ?? "",
-    moisture: sample.labTest?.moisture ?? "",
-    hardness: sample.labTest?.hardness ?? "",
-    disintegration: sample.labTest?.disintegration ?? "",
-    microbiology: sample.labTest?.microbiology ?? "",
-    heavyMetals: sample.labTest?.heavyMetals ?? "",
-    activeIngredients: sample.labTest?.activeIngredients ?? "",
-    packagingInspection: sample.labTest?.packagingInspection ?? "",
-    labelInspection: sample.labTest?.labelInspection ?? "",
-    photographUrls: sample.labTest?.photographUrls ?? "",
-    coaReference: sample.labTest?.coaReference ?? "",
-    qcNotes: sample.labTest?.qcNotes ?? "",
-  });
+  const [labItems, setLabItems] = useState<QcLabTestItemRow[]>(() => buildInitialLabItems(sample));
+  const [labItemsSyncedWith, setLabItemsSyncedWith] = useState(sample);
+  if (labItemsSyncedWith !== sample) {
+    setLabItemsSyncedWith(sample);
+    setLabItems(buildInitialLabItems(sample));
+  }
+
+  function setLabItem(index: number, patch: Partial<QcLabTestItemRow>) {
+    setLabItems((items) => items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+  }
 
   const [retentionForm, setRetentionForm] = useState({
     shelf: sample.retentionRecord?.shelf ?? "",
@@ -174,6 +173,7 @@ export default function SampleDetailModal({
         manufacturingDate: form.manufacturingDate || null,
         expiryDate: form.expiryDate || null,
         sampleType: form.sampleType,
+        productCategory: form.productCategory || null,
         quantity: Number(form.quantity),
         unit: form.unit,
         collectionDate: sample.collectionDate,
@@ -262,6 +262,20 @@ export default function SampleDetailModal({
                   ))}
                 </select>
               </Field>
+              <Field label="Product Category">
+                <select
+                  className="input"
+                  value={form.productCategory}
+                  onChange={(e) => setForm((f) => ({ ...f, productCategory: e.target.value as QcProductCategory | "" }))}
+                >
+                  <option value="">Select...</option>
+                  {PRODUCT_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {PRODUCT_CATEGORY_LABEL[c]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
               <Field label="Manufacturing Date">
                 <input type="date" className="input" value={form.manufacturingDate} onChange={(e) => setForm((f) => ({ ...f, manufacturingDate: e.target.value }))} />
               </Field>
@@ -327,6 +341,7 @@ export default function SampleDetailModal({
               <DetailRow label="Product" value={sample.productName} />
               <DetailRow label="Batch" value={sample.batchNumber} />
               <DetailRow label="Type" value={SAMPLE_TYPE_LABEL[sample.sampleType]} />
+              <DetailRow label="Product Category" value={sample.productCategory ? PRODUCT_CATEGORY_LABEL[sample.productCategory] : null} />
               <DetailRow label="Quantity" value={`${sample.quantity} ${sample.unit}`} />
               <DetailRow label="Manufacturing Date" value={sample.manufacturingDate ? new Date(sample.manufacturingDate).toLocaleDateString() : null} />
               <DetailRow label="Expiry Date" value={sample.expiryDate ? new Date(sample.expiryDate).toLocaleDateString() : null} />
@@ -443,57 +458,102 @@ export default function SampleDetailModal({
 
             {(inLabPhase || sample.status === "WAITING_RESULTS" || sample.labTest) && (
               <Section title="Laboratory Testing">
-                {(inLabPhase && canRunLabTesting) ? (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {LAB_TEST_FIELDS.map((f) => (
-                        <Field key={f.key} label={f.label}>
-                          <input
-                            className="input"
-                            value={(labForm as Record<string, string>)[f.key]}
-                            onChange={(e) => setLabForm((s) => ({ ...s, [f.key]: e.target.value }))}
-                          />
-                        </Field>
+                {inLabPhase && canRunLabTesting ? (
+                  !sample.productCategory ? (
+                    <p className="text-xs text-muted-foreground">
+                      Set a Product Category on the sample record (Edit Details) to load its test checklist.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {[...new Set(labItems.map((it) => it.section))].map((section) => (
+                        <div key={section}>
+                          <p className="mb-1 text-xs font-semibold text-foreground">{section}</p>
+                          <div className="space-y-1">
+                            {labItems.map((item, idx) =>
+                              item.section === section ? (
+                                <div
+                                  key={idx}
+                                  className="grid grid-cols-[1fr_auto_2fr] items-center gap-2 border-b border-border pb-1 text-xs last:border-0"
+                                >
+                                  <span className="text-foreground">{item.parameter}</span>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant={item.result === "PASS" ? "success" : "secondary"}
+                                      onClick={() => setLabItem(idx, { result: item.result === "PASS" ? null : "PASS" })}
+                                    >
+                                      Pass
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant={item.result === "FAIL" ? "danger" : "secondary"}
+                                      onClick={() => setLabItem(idx, { result: item.result === "FAIL" ? null : "FAIL" })}
+                                    >
+                                      Fail
+                                    </Button>
+                                  </div>
+                                  <input
+                                    className="input py-1 text-[11px]"
+                                    placeholder="Details..."
+                                    value={item.details ?? ""}
+                                    onChange={(e) => setLabItem(idx, { details: e.target.value })}
+                                  />
+                                </div>
+                              ) : null
+                            )}
+                          </div>
+                        </div>
                       ))}
-                      <Field label="Photographs (links)">
-                        <input className="input" value={labForm.photographUrls} onChange={(e) => setLabForm((s) => ({ ...s, photographUrls: e.target.value }))} />
-                      </Field>
-                      <Field label="COA (link)">
-                        <input className="input" value={labForm.coaReference} onChange={(e) => setLabForm((s) => ({ ...s, coaReference: e.target.value }))} />
-                      </Field>
+                      <div className="text-right">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            run(() =>
+                              recordLabTestResults(
+                                sample.id,
+                                labItems.map((it) => ({
+                                  section: it.section,
+                                  parameter: it.parameter,
+                                  result: it.result,
+                                  details: it.details || null,
+                                }))
+                              )
+                            )
+                          }
+                          disabled={pending}
+                        >
+                          Save Test Results
+                        </Button>
+                      </div>
                     </div>
-                    <Field label="QC Notes">
-                      <textarea className="input" rows={2} value={labForm.qcNotes} onChange={(e) => setLabForm((s) => ({ ...s, qcNotes: e.target.value }))} />
-                    </Field>
-                    <div className="text-right">
-                      <Button size="sm" onClick={() => run(() => recordLabTestResults(sample.id, {
-                        appearance: labForm.appearance || null,
-                        weightCheck: labForm.weightCheck || null,
-                        moisture: labForm.moisture || null,
-                        hardness: labForm.hardness || null,
-                        disintegration: labForm.disintegration || null,
-                        microbiology: labForm.microbiology || null,
-                        heavyMetals: labForm.heavyMetals || null,
-                        activeIngredients: labForm.activeIngredients || null,
-                        packagingInspection: labForm.packagingInspection || null,
-                        labelInspection: labForm.labelInspection || null,
-                        photographUrls: labForm.photographUrls || null,
-                        coaReference: labForm.coaReference || null,
-                        qcNotes: labForm.qcNotes || null,
-                      }))} disabled={pending}>
-                        Save Test Results
-                      </Button>
-                    </div>
-                  </div>
-                ) : sample.labTest ? (
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
-                    {LAB_TEST_FIELDS.map((f) => (
-                      <DetailRow key={f.key} label={f.label} value={(sample.labTest as Record<string, string | null>)[f.key]} />
+                  )
+                ) : sample.labTest && sample.labTest.items.length > 0 ? (
+                  <div className="space-y-3">
+                    {[...new Set(sample.labTest.items.map((it) => it.section))].map((section) => (
+                      <div key={section}>
+                        <p className="mb-1 text-xs font-semibold text-foreground">{section}</p>
+                        <div className="space-y-1">
+                          {sample.labTest!.items
+                            .filter((it) => it.section === section)
+                            .map((it, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center justify-between gap-2 border-b border-border pb-1 text-xs last:border-0"
+                              >
+                                <span className="text-foreground">{it.parameter}</span>
+                                <div className="flex items-center gap-2">
+                                  {it.result && <Badge tone={it.result === "PASS" ? "success" : "danger"}>{it.result}</Badge>}
+                                  {it.details && <span className="text-muted-foreground">{it.details}</span>}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
                     ))}
-                    <DetailRow label="Photographs" value={sample.labTest.photographUrls} />
-                    <DetailRow label="COA" value={sample.labTest.coaReference} />
-                    <DetailRow label="Tested By" value={sample.labTest.testedByName} />
-                    {sample.labTest.qcNotes && <DetailRow label="QC Notes" value={sample.labTest.qcNotes} />}
+                    <p className="text-xs text-muted-foreground">
+                      Tested by {sample.labTest.testedByName}
+                      {sample.labTest.testedAt ? ` on ${new Date(sample.labTest.testedAt).toLocaleString()}` : ""}
+                    </p>
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">No test results recorded yet.</p>

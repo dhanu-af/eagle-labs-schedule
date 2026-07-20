@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { QcSampleType } from "@/generated/prisma";
-import { SAMPLE_STATUS_LABEL, SAMPLE_STATUS_TONE, SAMPLE_TYPE_LABEL } from "@/lib/qc-sample-defaults";
+import type { QcSampleType, QcProductCategory } from "@/generated/prisma";
+import { SAMPLE_STATUS_LABEL, SAMPLE_STATUS_TONE, SAMPLE_TYPE_LABEL, PRODUCT_CATEGORY_LABEL } from "@/lib/qc-sample-defaults";
 import { createQcSample } from "@/lib/actions/qc-sample-actions";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import type { QcSampleRow, BatchRecordOption } from "./qc-samples-client";
 
 const SAMPLE_TYPES: QcSampleType[] = ["FINISHED_PRODUCT", "STABILITY", "RETENTION", "INVESTIGATION", "COMPLAINT"];
+const PRODUCT_CATEGORIES: QcProductCategory[] = ["CAPSULE", "GUMMY"];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -44,6 +45,7 @@ function NewSampleModal({
   const [manufacturingDate, setManufacturingDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [sampleType, setSampleType] = useState<QcSampleType>("FINISHED_PRODUCT");
+  const [productCategory, setProductCategory] = useState<QcProductCategory | "">("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
   const [collectionDate, setCollectionDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -78,6 +80,7 @@ function NewSampleModal({
           manufacturingDate: manufacturingDate || null,
           expiryDate: expiryDate || null,
           sampleType,
+          productCategory: productCategory || null,
           quantity: Number(quantity),
           unit,
           collectionDate: collectionDate || null,
@@ -129,6 +132,16 @@ function NewSampleModal({
                 {SAMPLE_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {SAMPLE_TYPE_LABEL[t]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Product Category">
+              <select className="input" value={productCategory} onChange={(e) => setProductCategory(e.target.value as QcProductCategory | "")}>
+                <option value="">Select...</option>
+                {PRODUCT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {PRODUCT_CATEGORY_LABEL[c]}
                   </option>
                 ))}
               </select>

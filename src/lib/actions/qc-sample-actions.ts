@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canManageQcSamples, canCollectQcSamples, canRunLabTesting, canEdit } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { formatSampleId } from "@/lib/qc-sample-defaults";
-import type { QcSampleType } from "@/generated/prisma";
+import type { QcSampleType, QcProductCategory, QcTestResult } from "@/generated/prisma";
 
 async function requireManageAccess() {
   const session = await getSession();
@@ -51,6 +51,7 @@ type NewQcSample = {
   manufacturingDate: string | null;
   expiryDate: string | null;
   sampleType: QcSampleType;
+  productCategory: QcProductCategory | null;
   quantity: number;
   unit: string;
   collectionDate: string | null;
@@ -78,6 +79,7 @@ export async function createQcSample(data: NewQcSample) {
         manufacturingDate: data.manufacturingDate ? new Date(data.manufacturingDate) : null,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
         sampleType: data.sampleType,
+        productCategory: data.productCategory,
         quantity: data.quantity,
         unit: data.unit,
         collectedByName: session.fullName,
@@ -123,6 +125,7 @@ export async function updateQcSample(id: string, data: NewQcSample) {
       manufacturingDate: data.manufacturingDate ? new Date(data.manufacturingDate) : null,
       expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
       sampleType: data.sampleType,
+      productCategory: data.productCategory,
       quantity: data.quantity,
       unit: data.unit,
       collectionDate: data.collectionDate ? new Date(data.collectionDate) : null,
@@ -236,37 +239,39 @@ export async function markTestingStarted(id: string) {
   revalidatePath("/qc-samples");
 }
 
-type LabTestInput = {
-  appearance: string | null;
-  weightCheck: string | null;
-  moisture: string | null;
-  hardness: string | null;
-  disintegration: string | null;
-  microbiology: string | null;
-  heavyMetals: string | null;
-  activeIngredients: string | null;
-  packagingInspection: string | null;
-  labelInspection: string | null;
-  photographUrls: string | null;
-  coaReference: string | null;
-  qcNotes: string | null;
-};
+type LabTestItemInput = { section: string; parameter: string; result: QcTestResult | null; details: string | null };
 
-export async function recordLabTestResults(id: string, data: LabTestInput) {
+/** Saves the full product-category checklist in one go -- rows are always replaced wholesale since the
+ * template (and therefore the row set) is derived from the sample's productCategory, not edited piecemeal. */
+export async function recordLabTestResults(id: string, items: LabTestItemInput[]) {
   const session = await requireLabAccess();
   const sample = await prisma.qcSample.findUniqueOrThrow({ where: { id } });
   if (sample.status !== "TESTING" && sample.status !== "IN_LABORATORY") {
     throw new Error("Sample must be in the laboratory before test results can be recorded");
   }
+  if (!sample.productCategory) {
+    throw new Error("Set a Product Category on the sample record before recording test results");
+  }
 
-  await prisma.$transaction([
-    prisma.qcLabTest.upsert({
+  await prisma.$transaction(async (tx) => {
+    const labTest = await tx.qcLabTest.upsert({
       where: { sampleId: id },
-      create: { sampleId: id, ...data, testedByName: session.fullName, testedAt: new Date() },
-      update: { ...data, testedByName: session.fullName, testedAt: new Date() },
-    }),
-    prisma.qcSample.update({ where: { id }, data: { status: "WAITING_RESULTS" } }),
-  ]);
+      create: { sampleId: id, testedByName: session.fullName, testedAt: new Date() },
+      update: { testedByName: session.fullName, testedAt: new Date() },
+    });
+    await tx.qcLabTestItem.deleteMany({ where: { labTestId: labTest.id } });
+    await tx.qcLabTestItem.createMany({
+      data: items.map((it, i) => ({
+        labTestId: labTest.id,
+        section: it.section,
+        parameter: it.parameter,
+        result: it.result,
+        details: it.details,
+        sortOrder: i,
+      })),
+    });
+    await tx.qcSample.update({ where: { id }, data: { status: "WAITING_RESULTS" } });
+  });
 
   await logAudit(session, {
     action: "RECORD_QC_LAB_TEST_RESULTS",

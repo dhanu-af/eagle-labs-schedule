@@ -1487,6 +1487,16 @@ enum QcSampleStatus {
   DISPOSED
 }
 
+enum QcProductCategory {
+  CAPSULE
+  GUMMY
+}
+
+enum QcTestResult {
+  PASS
+  FAIL
+}
+
 /// GMP/TGA-style QC sample traceability: production -> sampling -> laboratory -> retention -> expiry/disposal.
 /// sampleId (e.g. QC-2026-000124) is derived from `sequence` at creation time and then stored so it never changes.
 model QcSample {
@@ -1502,9 +1512,10 @@ model QcSample {
   manufacturingDate DateTime?
   expiryDate        DateTime?
 
-  sampleType QcSampleType
-  quantity   Float
-  unit       String
+  sampleType      QcSampleType
+  productCategory QcProductCategory?
+  quantity        Float
+  unit            String
 
   collectedByName String?
   collectionDate  DateTime?
@@ -1539,31 +1550,35 @@ model QcSample {
   @@index([sampleType])
 }
 
+/// Header record for a sample's lab testing pass -- the actual checklist rows are QcLabTestItem,
+/// generated from the CAPSULE/GUMMY template in qc-sample-defaults.ts for the sample's productCategory.
 model QcLabTest {
   id       String   @id @default(cuid())
   sampleId String   @unique
   sample   QcSample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
-
-  appearance           String?
-  weightCheck          String?
-  moisture             String?
-  hardness             String?
-  disintegration       String?
-  microbiology         String?
-  heavyMetals          String?
-  activeIngredients    String?
-  packagingInspection  String?
-  labelInspection      String?
-
-  photographUrls String?
-  coaReference   String?
-  qcNotes        String?
 
   testedByName String?
   testedAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  items QcLabTestItem[]
+}
+
+/// One row of the product-category test checklist (e.g. section "Physical Testing", parameter "Appearance").
+model QcLabTestItem {
+  id        String    @id @default(cuid())
+  labTestId String
+  labTest   QcLabTest @relation(fields: [labTestId], references: [id], onDelete: Cascade)
+
+  section   String
+  parameter String
+  result    QcTestResult?
+  details   String?
+  sortOrder Int
+
+  @@index([labTestId])
 }
 
 model QcRetentionRecord {
