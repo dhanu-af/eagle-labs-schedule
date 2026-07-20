@@ -287,11 +287,25 @@ export default function SamplesTab({
             onChange={(e) => setCollectionDateFilter(e.target.value)}
           />
         </div>
-        {canCollect && (
-          <Button size="sm" onClick={() => setShowNew(true)}>
-            + Generate Sample
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={`/api/reports/qc-samples?type=filtered&ids=${encodeURIComponent(filtered.map((s) => s.id).join(","))}`}
+            className="inline-flex items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted"
+          >
+            Download Excel
+          </a>
+          <a
+            href={`/api/reports/qc-samples/pdf?ids=${encodeURIComponent(filtered.map((s) => s.id).join(","))}`}
+            className="inline-flex items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted"
+          >
+            Download PDF
+          </a>
+          {canCollect && (
+            <Button size="sm" onClick={() => setShowNew(true)}>
+              + Generate Sample
+            </Button>
+          )}
+        </div>
       </div>
 
       {filtered.length === 0 ? (

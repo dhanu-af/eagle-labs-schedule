@@ -12,6 +12,7 @@ const SAMPLE_COLUMNS = [
   { header: "Status", key: "status", width: 16 },
   { header: "Collected By", key: "collectedByName", width: 18 },
   { header: "Collection Date", key: "collectionDate", width: 14 },
+  { header: "Production Room / Bay", key: "productionRoom", width: 20 },
   { header: "Quantity", key: "quantity", width: 12 },
 ];
 
@@ -24,6 +25,7 @@ function baseRow(s: Awaited<ReturnType<typeof prisma.qcSample.findMany>>[number]
     status: SAMPLE_STATUS_LABEL[s.status],
     collectedByName: s.collectedByName ?? "",
     collectionDate: s.collectionDate ? s.collectionDate.toISOString().slice(0, 10) : "",
+    productionRoom: s.productionRoom ?? "",
     quantity: `${s.quantity} ${s.unit}`,
   };
 }
@@ -35,7 +37,14 @@ export async function GET(request: NextRequest) {
   const type = request.nextUrl.searchParams.get("type");
   const workbook = new ExcelJS.Workbook();
 
-  if (type === "daily-collection") {
+  if (type === "filtered") {
+    const ids = (request.nextUrl.searchParams.get("ids") ?? "").split(",").filter(Boolean);
+    const rows = await prisma.qcSample.findMany({ where: { id: { in: ids } }, orderBy: { createdAt: "desc" } });
+    const sheet = workbook.addWorksheet("QC Samples");
+    sheet.columns = SAMPLE_COLUMNS;
+    sheet.getRow(1).font = { bold: true };
+    rows.forEach((r) => sheet.addRow(baseRow(r)));
+  } else if (type === "daily-collection") {
     const dateParam = request.nextUrl.searchParams.get("date");
     const day = dateParam ? new Date(dateParam) : new Date();
     const start = new Date(day.getFullYear(), day.getMonth(), day.getDate());
