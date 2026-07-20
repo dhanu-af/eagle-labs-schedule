@@ -189,7 +189,7 @@ export default function DryingRoomClient({
     <div className="space-y-4">
       <PageHeader
         title="Production Staging Operations"
-        subtitle="Live bay and batch status — replaces the daily WhatsApp drying room update."
+        subtitle="Monitor production bays, batch progress, and live operational status."
       />
 
       <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
