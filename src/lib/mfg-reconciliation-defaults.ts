@@ -67,3 +67,23 @@ export function computeYieldPct(actual: number | null | undefined, expected: num
   if (actual == null || expected == null || expected === 0) return null;
   return (actual / expected) * 100;
 }
+
+/** Capsule count = weight (kg) converted to mg, divided by the average weight per capsule (mg).
+ * The core "x 1,000,000 / avg weight" formula used throughout both real Capsule/Bottle Reconciliation
+ * spreadsheets these two stages mirror field-for-field. */
+export function capsulesFromKg(weightKg: number | null | undefined, avgWeightMg: number | null | undefined): number | null {
+  if (weightKg == null || avgWeightMg == null || avgWeightMg === 0) return null;
+  return (weightKg * 1_000_000) / avgWeightMg;
+}
+
+/** A reconciliation %% check against its spec limit, as printed on the real forms (e.g. "Limits 98 - 102%",
+ * "Below 1.5%"). `pass` is null when the %% itself couldn't be computed (a required input is missing). */
+export type ReconciliationCheck = { label: string; pct: number | null; limitLabel: string; pass: boolean | null };
+
+export function checkRange(label: string, pct: number | null, min: number, max: number): ReconciliationCheck {
+  return { label, pct, limitLabel: `Limits ${min} - ${max}%`, pass: pct === null ? null : pct >= min && pct <= max };
+}
+
+export function checkBelow(label: string, pct: number | null, max: number): ReconciliationCheck {
+  return { label, pct, limitLabel: `Below ${max}%`, pass: pct === null ? null : pct <= max };
+}

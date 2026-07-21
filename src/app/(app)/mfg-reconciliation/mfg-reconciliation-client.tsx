@@ -13,8 +13,18 @@ export type MfgBatchRow = {
   status: MfgBatchStatus;
   createdAt: string;
   blending: { totalTheoreticalWeightKg: number | null; totalBlendProducedKg: number | null } | null;
-  encapsulation: { expectedCapsules: number | null; goodCapsules: number | null } | null;
-  bottling: { expectedBottles: number | null; filledBottles: number | null } | null;
+  encapsulation: {
+    issuedBulkBlendKg: number | null;
+    targetCapsuleFillWeightMg: number | null;
+    capsulesProducedKg: number | null;
+    avgCapsuleFullWeightMg: number | null;
+  } | null;
+  bottling: {
+    capsuleReceivedKg: number | null;
+    avgCapsuleFullWeightMg: number | null;
+    targetCapsulesPerBottle: number | null;
+    bottlesProduced: number | null;
+  } | null;
   qaReleased: boolean;
 };
 

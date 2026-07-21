@@ -269,41 +269,40 @@ export async function saveBlending(batchId: string, data: BlendingInput) {
   revalidatePath(`/mfg-reconciliation/${batchId}`);
 }
 
+/** Mirrors the real "CAPSULE RECONCILIATION" form's raw input cells -- see MfgEncapsulation in schema.prisma. */
 type EncapsulationInput = {
-  blendReceivedKg: number | null;
-  blendUsedKg: number | null;
-  blendRemainingKg: number | null;
-  blendReturnedKg: number | null;
-  powderWasteKg: number | null;
-  samplingKg: number | null;
-  capsuleSize: string | null;
-  capsuleColour: string | null;
-  capsuleLot: string | null;
-  capsulesIssued: number | null;
-  capsulesUsed: number | null;
-  brokenCapsules: number | null;
-  machineRejects: number | null;
-  capsulesReturned: number | null;
-  targetFillWeightMg: number | null;
-  finishedCapsuleWeightKg: number | null;
-  expectedCapsules: number | null;
-  goodCapsules: number | null;
-  rejectedCapsules: number | null;
-  sampleCapsules: number | null;
-  retentionCapsules: number | null;
-  encapsulatedByName: string | null;
-  encapsulatedAt: string | null;
-  remarks: string | null;
+  targetCapsuleFillWeightMg: number | null;
+  avgCapsuleFullWeightMg: number | null;
+  issuedBulkBlendKg: number | null;
+  capsulesProducedKg: number | null;
+  capsuleSamplesKg: number | null;
+  rejectCapsulesKg: number | null;
+  rejectPowderKg: number | null;
+  avgCapsuleFillWeightMg: number | null;
+  avgCapsuleLengthMm: number | null;
+  avgDisintegrationMinutes: number | null;
+  avgDisintegrationSeconds: number | null;
+  disintegrationResult: string | null;
+  completedByName: string | null;
+  completedAt: string | null;
+  checkedByName: string | null;
+  checkedAt: string | null;
+  comments: string | null;
 };
 
 export async function saveEncapsulation(batchId: string, data: EncapsulationInput) {
   const session = await requireAccess();
   const batch = await prisma.mfgBatch.findUniqueOrThrow({ where: { id: batchId } });
 
+  const values = {
+    ...data,
+    completedAt: data.completedAt ? new Date(data.completedAt) : null,
+    checkedAt: data.checkedAt ? new Date(data.checkedAt) : null,
+  };
   await prisma.mfgEncapsulation.upsert({
     where: { mfgBatchId: batchId },
-    create: { mfgBatchId: batchId, ...data, encapsulatedAt: data.encapsulatedAt ? new Date(data.encapsulatedAt) : null },
-    update: { ...data, encapsulatedAt: data.encapsulatedAt ? new Date(data.encapsulatedAt) : null },
+    create: { mfgBatchId: batchId, ...values },
+    update: values,
   });
 
   await logAudit(session, {
@@ -316,42 +315,37 @@ export async function saveEncapsulation(batchId: string, data: EncapsulationInpu
   revalidatePath(`/mfg-reconciliation/${batchId}`);
 }
 
+/** Mirrors the real "BOTTLE RECONCILIATION" form's raw input cells -- see MfgBottling in schema.prisma. */
 type BottlingInput = {
-  capsulesReceived: number | null;
-  capsulesUsed: number | null;
-  capsulesRemaining: number | null;
-  bottlesIssued: number | null;
-  bottlesUsed: number | null;
-  damagedBottles: number | null;
-  bottlesReturned: number | null;
-  capsIssued: number | null;
-  capsUsed: number | null;
-  damagedCaps: number | null;
-  capsReturned: number | null;
-  desiccantsIssued: number | null;
+  totalCapsuleBulkWeightKg: number | null;
+  avgCapsuleFullWeightMg: number | null;
+  plannedQuantityBottles: number | null;
+  capsuleReceivedKg: number | null;
+  bottlesProduced: number | null;
+  bottleUsed: number | null;
   desiccantsUsed: number | null;
-  damagedDesiccants: number | null;
-  desiccantsReturned: number | null;
-  bottleSize: string | null;
+  capsUsed: number | null;
   targetCapsulesPerBottle: number | null;
-  expectedBottles: number | null;
-  filledBottles: number | null;
-  rejectedBottles: number | null;
-  qcSampleBottles: number | null;
-  retentionBottles: number | null;
-  bottledByName: string | null;
-  bottledAt: string | null;
-  remarks: string | null;
+  completedByName: string | null;
+  completedAt: string | null;
+  checkedByName: string | null;
+  checkedAt: string | null;
+  comments: string | null;
 };
 
 export async function saveBottling(batchId: string, data: BottlingInput) {
   const session = await requireAccess();
   const batch = await prisma.mfgBatch.findUniqueOrThrow({ where: { id: batchId } });
 
+  const values = {
+    ...data,
+    completedAt: data.completedAt ? new Date(data.completedAt) : null,
+    checkedAt: data.checkedAt ? new Date(data.checkedAt) : null,
+  };
   await prisma.mfgBottling.upsert({
     where: { mfgBatchId: batchId },
-    create: { mfgBatchId: batchId, ...data, bottledAt: data.bottledAt ? new Date(data.bottledAt) : null },
-    update: { ...data, bottledAt: data.bottledAt ? new Date(data.bottledAt) : null },
+    create: { mfgBatchId: batchId, ...values },
+    update: values,
   });
 
   await logAudit(session, {

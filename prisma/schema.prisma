@@ -1730,78 +1730,64 @@ model MfgBlending {
   updatedAt DateTime @updatedAt
 }
 
+/// Mirrors the real "CAPSULE RECONCILIATION" paper form (xlsx) field-for-field and formula-for-formula.
+/// Derived figures (theoretical/produced/sample/reject capsule counts, blend accounted/unaccounted for,
+/// and the 4 reconciliation %%s) are never stored -- computed at render time from these raw inputs,
+/// exactly like every other yield/balance figure in this module.
 model MfgEncapsulation {
   id         String   @id @default(cuid())
   mfgBatchId String   @unique
   mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
 
-  blendReceivedKg  Float?
-  blendUsedKg      Float?
-  blendRemainingKg Float?
-  blendReturnedKg  Float?
-  powderWasteKg    Float?
-  samplingKg       Float?
+  targetCapsuleFillWeightMg Float? // "Target Capsule Fill Weight" -- powder only
+  avgCapsuleFullWeightMg    Float? // "Average Capsule Full Weight" -- shell + powder
 
-  capsuleSize      String?
-  capsuleColour    String?
-  capsuleLot       String?
-  capsulesIssued   Int?
-  capsulesUsed     Int?
-  brokenCapsules   Int?
-  machineRejects   Int?
-  capsulesReturned Int?
+  issuedBulkBlendKg  Float? // "Issued Bulk Blend"
+  capsulesProducedKg Float? // "Capsules Produced" (weighed)
+  capsuleSamplesKg   Float? // "Capsules Samples"
+  rejectCapsulesKg   Float? // "Reject Capsules"
+  rejectPowderKg     Float? // "Reject Powder"
 
-  targetFillWeightMg    Float?
-  finishedCapsuleWeightKg Float?
-  expectedCapsules      Int?
-  goodCapsules           Int?
-  rejectedCapsules       Int?
-  sampleCapsules         Int?
-  retentionCapsules      Int?
+  avgCapsuleFillWeightMg Float? // "Average Capsule Fill Weight" (Capsule Properties) -- measured, powder only
+  avgCapsuleLengthMm     Float?
+  avgDisintegrationMinutes Int?
+  avgDisintegrationSeconds Int?
+  disintegrationResult     String? // "Pass" | "Fail"
 
-  encapsulatedByName String?
-  encapsulatedAt     DateTime?
-  remarks            String?
+  completedByName String?
+  completedAt     DateTime?
+  checkedByName   String?
+  checkedAt       DateTime?
+  comments        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+/// Mirrors the real "BOTTLE RECONCILIATION" paper form (xlsx) field-for-field and formula-for-formula.
+/// Derived figures (capsules required/theoretical/used/reject, theoretical bottles, reject bottles/
+/// desiccants/caps, and the 5 reconciliation %%s) are never stored -- computed at render time.
 model MfgBottling {
   id         String   @id @default(cuid())
   mfgBatchId String   @unique
   mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
 
-  capsulesReceived  Int?
-  capsulesUsed      Int?
-  capsulesRemaining Int?
+  totalCapsuleBulkWeightKg Float? // "Total Capsule Bulk Weight"
+  avgCapsuleFullWeightMg   Float? // "Average Capsule Full Weight"
 
-  bottlesIssued   Int?
-  bottlesUsed     Int?
-  damagedBottles  Int?
-  bottlesReturned Int?
+  plannedQuantityBottles  Int? // "Planned Quantity"
+  capsuleReceivedKg       Float? // "Capsule Received"
+  bottlesProduced         Int? // "Bottles Produced"
+  bottleUsed              Int? // "Bottle Used" (empty bottles issued)
+  desiccantsUsed          Int?
+  capsUsed                Int?
+  targetCapsulesPerBottle Int? // the sheet's hardcoded "31" -- kept per-batch instead
 
-  capsIssued   Int?
-  capsUsed     Int?
-  damagedCaps  Int?
-  capsReturned Int?
-
-  desiccantsIssued   Int?
-  desiccantsUsed     Int?
-  damagedDesiccants  Int?
-  desiccantsReturned Int?
-
-  bottleSize              String?
-  targetCapsulesPerBottle Int?
-  expectedBottles         Int?
-  filledBottles           Int?
-  rejectedBottles         Int?
-  qcSampleBottles         Int?
-  retentionBottles        Int?
-
-  bottledByName String?
-  bottledAt     DateTime?
-  remarks       String?
+  completedByName String?
+  completedAt     DateTime?
+  checkedByName   String?
+  checkedAt       DateTime?
+  comments        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

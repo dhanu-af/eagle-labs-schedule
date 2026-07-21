@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { computeYieldPct } from "@/lib/mfg-reconciliation-defaults";
+import { capsulesFromKg, computeYieldPct } from "@/lib/mfg-reconciliation-defaults";
 import type { MfgBatchRow } from "./mfg-reconciliation-client";
 
 /** Flag a stage's yield when it drops below this -- a simple starting heuristic, tune once there's real usage data. */
@@ -30,13 +30,18 @@ export default function DashboardTab({ batches }: { batches: MfgBatchRow[] }) {
     if (blendYield !== null && blendYield < LOW_YIELD_WARNING_PCT) {
       alerts.push({ text: `${b.batchNumber} — Blend Yield ${blendYield.toFixed(1)}%`, batchId: b.id });
     }
-    const capsuleYield = b.encapsulation ? computeYieldPct(b.encapsulation.goodCapsules, b.encapsulation.expectedCapsules) : null;
+    const theoreticalCapsules = b.encapsulation ? capsulesFromKg(b.encapsulation.issuedBulkBlendKg, b.encapsulation.targetCapsuleFillWeightMg) : null;
+    const capsulesProduced = b.encapsulation ? capsulesFromKg(b.encapsulation.capsulesProducedKg, b.encapsulation.avgCapsuleFullWeightMg) : null;
+    const capsuleYield = computeYieldPct(capsulesProduced, theoreticalCapsules);
     if (capsuleYield !== null && capsuleYield < LOW_YIELD_WARNING_PCT) {
-      alerts.push({ text: `${b.batchNumber} — Capsule Yield ${capsuleYield.toFixed(1)}%`, batchId: b.id });
+      alerts.push({ text: `${b.batchNumber} — Capsule Process Yield ${capsuleYield.toFixed(1)}%`, batchId: b.id });
     }
-    const bottlingYield = b.bottling ? computeYieldPct(b.bottling.filledBottles, b.bottling.expectedBottles) : null;
+    const theoreticalCapsulesForBottling = b.bottling ? capsulesFromKg(b.bottling.capsuleReceivedKg, b.bottling.avgCapsuleFullWeightMg) : null;
+    const theoreticalBottles =
+      theoreticalCapsulesForBottling !== null && b.bottling?.targetCapsulesPerBottle ? theoreticalCapsulesForBottling / b.bottling.targetCapsulesPerBottle : null;
+    const bottlingYield = computeYieldPct(b.bottling?.bottlesProduced, theoreticalBottles);
     if (bottlingYield !== null && bottlingYield < LOW_YIELD_WARNING_PCT) {
-      alerts.push({ text: `${b.batchNumber} — Bottling Yield ${bottlingYield.toFixed(1)}%`, batchId: b.id });
+      alerts.push({ text: `${b.batchNumber} — Bottling Process Yield ${bottlingYield.toFixed(1)}%`, batchId: b.id });
     }
   }
 

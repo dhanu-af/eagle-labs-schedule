@@ -34,9 +34,21 @@ export default async function MfgReconciliationPage() {
           ? { totalTheoreticalWeightKg: b.blending.totalTheoreticalWeightKg, totalBlendProducedKg: b.blending.totalBlendProducedKg }
           : null,
         encapsulation: b.encapsulation
-          ? { expectedCapsules: b.encapsulation.expectedCapsules, goodCapsules: b.encapsulation.goodCapsules }
+          ? {
+              issuedBulkBlendKg: b.encapsulation.issuedBulkBlendKg,
+              targetCapsuleFillWeightMg: b.encapsulation.targetCapsuleFillWeightMg,
+              capsulesProducedKg: b.encapsulation.capsulesProducedKg,
+              avgCapsuleFullWeightMg: b.encapsulation.avgCapsuleFullWeightMg,
+            }
           : null,
-        bottling: b.bottling ? { expectedBottles: b.bottling.expectedBottles, filledBottles: b.bottling.filledBottles } : null,
+        bottling: b.bottling
+          ? {
+              capsuleReceivedKg: b.bottling.capsuleReceivedKg,
+              avgCapsuleFullWeightMg: b.bottling.avgCapsuleFullWeightMg,
+              targetCapsulesPerBottle: b.bottling.targetCapsulesPerBottle,
+              bottlesProduced: b.bottling.bottlesProduced,
+            }
+          : null,
         qaReleased: b.finishedGoodsWarehouse?.qaReleased ?? false,
       }))}
       batchRecords={batchRecords}

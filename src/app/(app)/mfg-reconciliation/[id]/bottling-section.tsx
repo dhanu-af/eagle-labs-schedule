@@ -3,40 +3,54 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveBottling } from "@/lib/actions/mfg-reconciliation-actions";
-import { computeYieldPct } from "@/lib/mfg-reconciliation-defaults";
+import { capsulesFromKg, checkBelow, checkRange, type ReconciliationCheck } from "@/lib/mfg-reconciliation-defaults";
 import { Button } from "@/components/ui/Button";
 import { Field, Section } from "./mfg-batch-detail-client";
 
+/// Mirrors the real "BOTTLE RECONCILIATION" form -- see MfgBottling in schema.prisma for the
+/// field-by-field mapping and mfg-reconciliation-defaults.ts for the shared calculation helpers.
 export type BottlingData = {
-  capsulesReceived: number | null;
-  capsulesUsed: number | null;
-  capsulesRemaining: number | null;
-  bottlesIssued: number | null;
-  bottlesUsed: number | null;
-  damagedBottles: number | null;
-  bottlesReturned: number | null;
-  capsIssued: number | null;
-  capsUsed: number | null;
-  damagedCaps: number | null;
-  capsReturned: number | null;
-  desiccantsIssued: number | null;
+  totalCapsuleBulkWeightKg: number | null;
+  avgCapsuleFullWeightMg: number | null;
+  plannedQuantityBottles: number | null;
+  capsuleReceivedKg: number | null;
+  bottlesProduced: number | null;
+  bottleUsed: number | null;
   desiccantsUsed: number | null;
-  damagedDesiccants: number | null;
-  desiccantsReturned: number | null;
-  bottleSize: string | null;
+  capsUsed: number | null;
   targetCapsulesPerBottle: number | null;
-  expectedBottles: number | null;
-  filledBottles: number | null;
-  rejectedBottles: number | null;
-  qcSampleBottles: number | null;
-  retentionBottles: number | null;
-  bottledByName: string | null;
-  bottledAt: string | null;
-  remarks: string | null;
+  completedByName: string | null;
+  completedAt: string | null;
+  checkedByName: string | null;
+  checkedAt: string | null;
+  comments: string | null;
 };
 
 function num(v: number | null | undefined) {
   return v?.toString() ?? "";
+}
+
+function n(v: string): number | null {
+  return v === "" ? null : Number(v);
+}
+
+function ReconciliationRow({ check }: { check: ReconciliationCheck }) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-t border-border py-2 first:border-0 first:pt-0">
+      <span className="text-sm text-foreground">{check.label}</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">{check.limitLabel}</span>
+        <span className="w-16 text-right text-sm font-medium tabular-nums text-foreground">
+          {check.pct !== null ? `${check.pct.toFixed(1)}%` : "—"}
+        </span>
+        {check.pass !== null && (
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${check.pass ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
+            {check.pass ? "Pass" : "Fail"}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function BottlingSection({ batchId, data, canManage }: { batchId: string; data: BottlingData | null; canManage: boolean }) {
@@ -45,69 +59,80 @@ export default function BottlingSection({ batchId, data, canManage }: { batchId:
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
-    capsulesReceived: num(data?.capsulesReceived),
-    capsulesUsed: num(data?.capsulesUsed),
-    capsulesRemaining: num(data?.capsulesRemaining),
-    bottlesIssued: num(data?.bottlesIssued),
-    bottlesUsed: num(data?.bottlesUsed),
-    damagedBottles: num(data?.damagedBottles),
-    bottlesReturned: num(data?.bottlesReturned),
-    capsIssued: num(data?.capsIssued),
-    capsUsed: num(data?.capsUsed),
-    damagedCaps: num(data?.damagedCaps),
-    capsReturned: num(data?.capsReturned),
-    desiccantsIssued: num(data?.desiccantsIssued),
+    totalCapsuleBulkWeightKg: num(data?.totalCapsuleBulkWeightKg),
+    avgCapsuleFullWeightMg: num(data?.avgCapsuleFullWeightMg),
+    plannedQuantityBottles: num(data?.plannedQuantityBottles),
+    capsuleReceivedKg: num(data?.capsuleReceivedKg),
+    bottlesProduced: num(data?.bottlesProduced),
+    bottleUsed: num(data?.bottleUsed),
     desiccantsUsed: num(data?.desiccantsUsed),
-    damagedDesiccants: num(data?.damagedDesiccants),
-    desiccantsReturned: num(data?.desiccantsReturned),
-    bottleSize: data?.bottleSize ?? "",
+    capsUsed: num(data?.capsUsed),
     targetCapsulesPerBottle: num(data?.targetCapsulesPerBottle),
-    expectedBottles: num(data?.expectedBottles),
-    filledBottles: num(data?.filledBottles),
-    rejectedBottles: num(data?.rejectedBottles),
-    qcSampleBottles: num(data?.qcSampleBottles),
-    retentionBottles: num(data?.retentionBottles),
-    bottledByName: data?.bottledByName ?? "",
-    bottledAt: data?.bottledAt?.slice(0, 10) ?? "",
-    remarks: data?.remarks ?? "",
+    completedByName: data?.completedByName ?? "",
+    completedAt: data?.completedAt?.slice(0, 10) ?? "",
+    checkedByName: data?.checkedByName ?? "",
+    checkedAt: data?.checkedAt?.slice(0, 10) ?? "",
+    comments: data?.comments ?? "",
   });
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  const yieldPct = computeYieldPct(form.filledBottles === "" ? null : Number(form.filledBottles), form.expectedBottles === "" ? null : Number(form.expectedBottles));
+  const avgFullWeight = n(form.avgCapsuleFullWeightMg);
+  const plannedQuantityBottles = n(form.plannedQuantityBottles);
+  const capsuleReceivedKg = n(form.capsuleReceivedKg);
+  const bottlesProduced = n(form.bottlesProduced);
+  const bottleUsed = n(form.bottleUsed);
+  const desiccantsUsed = n(form.desiccantsUsed);
+  const capsUsed = n(form.capsUsed);
+  const targetCapsulesPerBottle = n(form.targetCapsulesPerBottle);
+
+  // Batch Calculations -- mirrors the spreadsheet's "Batch Calculations" column exactly.
+  const capsulesRequired = plannedQuantityBottles !== null && targetCapsulesPerBottle !== null ? plannedQuantityBottles * targetCapsulesPerBottle : null;
+  const theoreticalCapsules = capsulesFromKg(capsuleReceivedKg, avgFullWeight);
+  const theoreticalBottles = theoreticalCapsules !== null && targetCapsulesPerBottle ? theoreticalCapsules / targetCapsulesPerBottle : null;
+  const capsulesUsed = bottlesProduced !== null && targetCapsulesPerBottle !== null ? bottlesProduced * targetCapsulesPerBottle : null;
+  const rejectCapsules = theoreticalCapsules !== null && capsulesUsed !== null ? theoreticalCapsules - capsulesUsed : null;
+  const rejectBottlesFromCapsuleLoss = rejectCapsules !== null && targetCapsulesPerBottle ? rejectCapsules / targetCapsulesPerBottle : null;
+  const rejectBottles = bottleUsed !== null && bottlesProduced !== null ? bottleUsed - bottlesProduced : null;
+  const rejectDesiccants = desiccantsUsed !== null && bottlesProduced !== null ? desiccantsUsed - bottlesProduced : null;
+  const rejectCaps = capsUsed !== null && bottlesProduced !== null ? capsUsed - bottlesProduced : null;
+
+  // Reconciliation -- mirrors the spreadsheet's "Reconciliation" section exactly.
+  const capsuleReconciliationPct = capsulesUsed !== null && theoreticalCapsules ? (capsulesUsed / theoreticalCapsules) * 100 : null;
+  const capsReconciliationPct = bottlesProduced !== null && capsUsed ? (bottlesProduced / capsUsed) * 100 : null;
+  const bottleReconciliationPct = bottlesProduced !== null && bottleUsed ? (bottlesProduced / bottleUsed) * 100 : null;
+  const processYieldPct = bottlesProduced !== null && theoreticalBottles ? (bottlesProduced / theoreticalBottles) * 100 : null;
+  const rejectionLossPct = rejectCapsules !== null && theoreticalCapsules ? (rejectCapsules / theoreticalCapsules) * 100 : null;
+
+  const checks: ReconciliationCheck[] = [
+    checkRange("Capsule Reconciliation", capsuleReconciliationPct, 98, 102),
+    checkRange("Caps Reconciliation", capsReconciliationPct, 98, 102),
+    checkRange("Bottle Reconciliation", bottleReconciliationPct, 98, 102),
+    checkRange("Process Yield", processYieldPct, 95, 102),
+    checkBelow("Rejection & Loss", rejectionLossPct, 2),
+  ];
 
   function save() {
     setError("");
     startTransition(async () => {
       try {
         await saveBottling(batchId, {
-          capsulesReceived: form.capsulesReceived === "" ? null : Number(form.capsulesReceived),
-          capsulesUsed: form.capsulesUsed === "" ? null : Number(form.capsulesUsed),
-          capsulesRemaining: form.capsulesRemaining === "" ? null : Number(form.capsulesRemaining),
-          bottlesIssued: form.bottlesIssued === "" ? null : Number(form.bottlesIssued),
-          bottlesUsed: form.bottlesUsed === "" ? null : Number(form.bottlesUsed),
-          damagedBottles: form.damagedBottles === "" ? null : Number(form.damagedBottles),
-          bottlesReturned: form.bottlesReturned === "" ? null : Number(form.bottlesReturned),
-          capsIssued: form.capsIssued === "" ? null : Number(form.capsIssued),
-          capsUsed: form.capsUsed === "" ? null : Number(form.capsUsed),
-          damagedCaps: form.damagedCaps === "" ? null : Number(form.damagedCaps),
-          capsReturned: form.capsReturned === "" ? null : Number(form.capsReturned),
-          desiccantsIssued: form.desiccantsIssued === "" ? null : Number(form.desiccantsIssued),
-          desiccantsUsed: form.desiccantsUsed === "" ? null : Number(form.desiccantsUsed),
-          damagedDesiccants: form.damagedDesiccants === "" ? null : Number(form.damagedDesiccants),
-          desiccantsReturned: form.desiccantsReturned === "" ? null : Number(form.desiccantsReturned),
-          bottleSize: form.bottleSize || null,
-          targetCapsulesPerBottle: form.targetCapsulesPerBottle === "" ? null : Number(form.targetCapsulesPerBottle),
-          expectedBottles: form.expectedBottles === "" ? null : Number(form.expectedBottles),
-          filledBottles: form.filledBottles === "" ? null : Number(form.filledBottles),
-          rejectedBottles: form.rejectedBottles === "" ? null : Number(form.rejectedBottles),
-          qcSampleBottles: form.qcSampleBottles === "" ? null : Number(form.qcSampleBottles),
-          retentionBottles: form.retentionBottles === "" ? null : Number(form.retentionBottles),
-          bottledByName: form.bottledByName || null,
-          bottledAt: form.bottledAt || null,
-          remarks: form.remarks || null,
+          totalCapsuleBulkWeightKg: n(form.totalCapsuleBulkWeightKg),
+          avgCapsuleFullWeightMg: avgFullWeight,
+          plannedQuantityBottles,
+          capsuleReceivedKg,
+          bottlesProduced,
+          bottleUsed,
+          desiccantsUsed,
+          capsUsed,
+          targetCapsulesPerBottle,
+          completedByName: form.completedByName || null,
+          completedAt: form.completedAt || null,
+          checkedByName: form.checkedByName || null,
+          checkedAt: form.checkedAt || null,
+          comments: form.comments || null,
         });
         router.refresh();
       } catch (err) {
@@ -118,113 +143,101 @@ export default function BottlingSection({ batchId, data, canManage }: { batchId:
 
   return (
     <div className="space-y-4">
-      <Section title="Good Capsules">
+      <Section title="Header">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Field label="Total Capsule Bulk Weight (kg)">
+            <input type="number" className="input" disabled={!canManage} value={form.totalCapsuleBulkWeightKg} onChange={(e) => set("totalCapsuleBulkWeightKg", e.target.value)} />
+          </Field>
+          <Field label="Average Capsule Full Weight (mg)">
+            <input type="number" className="input" disabled={!canManage} value={form.avgCapsuleFullWeightMg} onChange={(e) => set("avgCapsuleFullWeightMg", e.target.value)} />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="Batch Production Data">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Field label="Capsules Received">
-            <input type="number" className="input" disabled={!canManage} value={form.capsulesReceived} onChange={(e) => set("capsulesReceived", e.target.value)} />
-          </Field>
-          <Field label="Capsules Used">
-            <input type="number" className="input" disabled={!canManage} value={form.capsulesUsed} onChange={(e) => set("capsulesUsed", e.target.value)} />
-          </Field>
-          <Field label="Capsules Remaining">
-            <input type="number" className="input" disabled={!canManage} value={form.capsulesRemaining} onChange={(e) => set("capsulesRemaining", e.target.value)} />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Empty Bottles">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          <Field label="Bottles Issued">
-            <input type="number" className="input" disabled={!canManage} value={form.bottlesIssued} onChange={(e) => set("bottlesIssued", e.target.value)} />
-          </Field>
-          <Field label="Bottles Used">
-            <input type="number" className="input" disabled={!canManage} value={form.bottlesUsed} onChange={(e) => set("bottlesUsed", e.target.value)} />
-          </Field>
-          <Field label="Damaged Bottles">
-            <input type="number" className="input" disabled={!canManage} value={form.damagedBottles} onChange={(e) => set("damagedBottles", e.target.value)} />
-          </Field>
-          <Field label="Bottles Returned">
-            <input type="number" className="input" disabled={!canManage} value={form.bottlesReturned} onChange={(e) => set("bottlesReturned", e.target.value)} />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Caps">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          <Field label="Caps Issued">
-            <input type="number" className="input" disabled={!canManage} value={form.capsIssued} onChange={(e) => set("capsIssued", e.target.value)} />
-          </Field>
-          <Field label="Caps Used">
-            <input type="number" className="input" disabled={!canManage} value={form.capsUsed} onChange={(e) => set("capsUsed", e.target.value)} />
-          </Field>
-          <Field label="Damaged Caps">
-            <input type="number" className="input" disabled={!canManage} value={form.damagedCaps} onChange={(e) => set("damagedCaps", e.target.value)} />
-          </Field>
-          <Field label="Caps Returned">
-            <input type="number" className="input" disabled={!canManage} value={form.capsReturned} onChange={(e) => set("capsReturned", e.target.value)} />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Desiccants">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          <Field label="Desiccants Issued">
-            <input type="number" className="input" disabled={!canManage} value={form.desiccantsIssued} onChange={(e) => set("desiccantsIssued", e.target.value)} />
-          </Field>
-          <Field label="Desiccants Used">
-            <input type="number" className="input" disabled={!canManage} value={form.desiccantsUsed} onChange={(e) => set("desiccantsUsed", e.target.value)} />
-          </Field>
-          <Field label="Damaged Desiccants">
-            <input type="number" className="input" disabled={!canManage} value={form.damagedDesiccants} onChange={(e) => set("damagedDesiccants", e.target.value)} />
-          </Field>
-          <Field label="Desiccants Returned">
-            <input type="number" className="input" disabled={!canManage} value={form.desiccantsReturned} onChange={(e) => set("desiccantsReturned", e.target.value)} />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Production">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Field label="Bottle Size">
-            <input className="input" disabled={!canManage} value={form.bottleSize} onChange={(e) => set("bottleSize", e.target.value)} />
+          <Field label="Planned Quantity (Bottles)">
+            <input type="number" className="input" disabled={!canManage} value={form.plannedQuantityBottles} onChange={(e) => set("plannedQuantityBottles", e.target.value)} />
           </Field>
           <Field label="Target Capsules per Bottle">
             <input type="number" className="input" disabled={!canManage} value={form.targetCapsulesPerBottle} onChange={(e) => set("targetCapsulesPerBottle", e.target.value)} />
           </Field>
-          <Field label="Expected Bottles">
-            <input type="number" className="input" disabled={!canManage} value={form.expectedBottles} onChange={(e) => set("expectedBottles", e.target.value)} />
+          <Field label="Capsule Received (kg)">
+            <input type="number" className="input" disabled={!canManage} value={form.capsuleReceivedKg} onChange={(e) => set("capsuleReceivedKg", e.target.value)} />
           </Field>
-          <Field label="Filled Bottles">
-            <input type="number" className="input" disabled={!canManage} value={form.filledBottles} onChange={(e) => set("filledBottles", e.target.value)} />
+          <Field label="Bottles Produced">
+            <input type="number" className="input" disabled={!canManage} value={form.bottlesProduced} onChange={(e) => set("bottlesProduced", e.target.value)} />
           </Field>
-          <Field label="Rejected Bottles">
-            <input type="number" className="input" disabled={!canManage} value={form.rejectedBottles} onChange={(e) => set("rejectedBottles", e.target.value)} />
+          <Field label="Bottle Used">
+            <input type="number" className="input" disabled={!canManage} value={form.bottleUsed} onChange={(e) => set("bottleUsed", e.target.value)} />
           </Field>
-          <Field label="QC Sample Bottles">
-            <input type="number" className="input" disabled={!canManage} value={form.qcSampleBottles} onChange={(e) => set("qcSampleBottles", e.target.value)} />
+          <Field label="Desiccants Used">
+            <input type="number" className="input" disabled={!canManage} value={form.desiccantsUsed} onChange={(e) => set("desiccantsUsed", e.target.value)} />
           </Field>
-          <Field label="Retention Bottles">
-            <input type="number" className="input" disabled={!canManage} value={form.retentionBottles} onChange={(e) => set("retentionBottles", e.target.value)} />
+          <Field label="Caps Used">
+            <input type="number" className="input" disabled={!canManage} value={form.capsUsed} onChange={(e) => set("capsUsed", e.target.value)} />
           </Field>
         </div>
       </Section>
 
-      <Section title="Output">
+      <Section title="Batch Calculations">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Field label="Bottling Yield %">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{yieldPct !== null ? `${yieldPct.toFixed(1)}%` : "—"}</p>
+          <Field label="Capsules Required">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{capsulesRequired !== null ? Math.round(capsulesRequired).toLocaleString() : "—"}</p>
           </Field>
-          <Field label="Bottled By">
-            <input className="input" disabled={!canManage} value={form.bottledByName} onChange={(e) => set("bottledByName", e.target.value)} />
+          <Field label="Theoretical No. of Capsules">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{theoreticalCapsules !== null ? Math.round(theoreticalCapsules).toLocaleString() : "—"}</p>
           </Field>
-          <Field label="Bottled At">
-            <input type="date" className="input" disabled={!canManage} value={form.bottledAt} onChange={(e) => set("bottledAt", e.target.value)} />
+          <Field label="Theoretical Bottles">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{theoreticalBottles !== null ? Math.round(theoreticalBottles).toLocaleString() : "—"}</p>
+          </Field>
+          <Field label="No. of Capsule Used">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{capsulesUsed !== null ? Math.round(capsulesUsed).toLocaleString() : "—"}</p>
+          </Field>
+          <Field label="No. of Reject Capsules">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectCapsules !== null ? Math.round(rejectCapsules).toLocaleString() : "—"}</p>
+          </Field>
+          <Field label="Reject Bottles (from capsule loss)">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectBottlesFromCapsuleLoss !== null ? Math.round(rejectBottlesFromCapsuleLoss).toLocaleString() : "—"}</p>
+          </Field>
+          <Field label="Reject Bottles">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectBottles !== null ? rejectBottles.toLocaleString() : "—"}</p>
+          </Field>
+          <Field label="Reject Desiccants">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectDesiccants !== null ? rejectDesiccants.toLocaleString() : "—"}</p>
+          </Field>
+          <Field label="Reject Caps">
+            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectCaps !== null ? rejectCaps.toLocaleString() : "—"}</p>
           </Field>
         </div>
       </Section>
 
-      <Section title="Remarks">
-        <textarea className="input" rows={2} disabled={!canManage} value={form.remarks} onChange={(e) => set("remarks", e.target.value)} />
+      <Section title="Reconciliation">
+        <div>
+          {checks.map((c) => (
+            <ReconciliationRow key={c.label} check={c} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Sign-off">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Field label="Completed By (Signature)">
+            <input className="input" disabled={!canManage} value={form.completedByName} onChange={(e) => set("completedByName", e.target.value)} />
+          </Field>
+          <Field label="Completed Date">
+            <input type="date" className="input" disabled={!canManage} value={form.completedAt} onChange={(e) => set("completedAt", e.target.value)} />
+          </Field>
+          <Field label="Checked By (Signature)">
+            <input className="input" disabled={!canManage} value={form.checkedByName} onChange={(e) => set("checkedByName", e.target.value)} />
+          </Field>
+          <Field label="Checked Date">
+            <input type="date" className="input" disabled={!canManage} value={form.checkedAt} onChange={(e) => set("checkedAt", e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Comments">
+          <textarea className="input" rows={2} disabled={!canManage} value={form.comments} onChange={(e) => set("comments", e.target.value)} />
+        </Field>
       </Section>
 
       {error && <p className="text-xs text-danger">{error}</p>}
