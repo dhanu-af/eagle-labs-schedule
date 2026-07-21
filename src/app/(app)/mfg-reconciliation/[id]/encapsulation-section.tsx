@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveEncapsulation } from "@/lib/actions/mfg-reconciliation-actions";
-import { capsulesFromKg, checkBelow, checkRange, type ReconciliationCheck } from "@/lib/mfg-reconciliation-defaults";
+import { capsulesFromKg, checkBelow, checkRange, formatCount, type ReconciliationCheck } from "@/lib/mfg-reconciliation-defaults";
 import { Button } from "@/components/ui/Button";
 import { Field, Section } from "./mfg-batch-detail-client";
 
@@ -160,10 +160,10 @@ export default function EncapsulationSection({ batchId, data, canManage }: { bat
       <Section title="Header">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field label="Target Capsule Fill Weight (mg)">
-            <input type="number" className="input" disabled={!canManage} value={form.targetCapsuleFillWeightMg} onChange={(e) => set("targetCapsuleFillWeightMg", e.target.value)} />
+            <input type="number" className="input" placeholder="e.g. 372 (not 0.372)" disabled={!canManage} value={form.targetCapsuleFillWeightMg} onChange={(e) => set("targetCapsuleFillWeightMg", e.target.value)} />
           </Field>
           <Field label="Average Capsule Full Weight (mg)">
-            <input type="number" className="input" disabled={!canManage} value={form.avgCapsuleFullWeightMg} onChange={(e) => set("avgCapsuleFullWeightMg", e.target.value)} />
+            <input type="number" className="input" placeholder="e.g. 450 (not 0.45)" disabled={!canManage} value={form.avgCapsuleFullWeightMg} onChange={(e) => set("avgCapsuleFullWeightMg", e.target.value)} />
           </Field>
         </div>
       </Section>
@@ -191,22 +191,22 @@ export default function EncapsulationSection({ batchId, data, canManage }: { bat
       <Section title="Batch Calculations">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Theoretical No. of Capsules">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{theoreticalCapsules !== null ? Math.round(theoreticalCapsules).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(theoreticalCapsules)}</p>
           </Field>
           <Field label="No. of Capsules Produced">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{capsulesProduced !== null ? Math.round(capsulesProduced).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(capsulesProduced)}</p>
           </Field>
           <Field label="No. of Capsule Samples">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{capsuleSamples !== null ? Math.round(capsuleSamples).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(capsuleSamples)}</p>
           </Field>
           <Field label="No. of Reject Capsules">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectCapsules !== null ? Math.round(rejectCapsules).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(rejectCapsules)}</p>
           </Field>
           <Field label="Bulk Blend Accounted For (kg)">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{bulkBlendAccountedForKg !== null ? bulkBlendAccountedForKg.toFixed(2) : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(bulkBlendAccountedForKg)}</p>
           </Field>
           <Field label="Bulk Blend Unaccounted For (kg)">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{bulkBlendUnaccountedForKg !== null ? bulkBlendUnaccountedForKg.toFixed(2) : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(bulkBlendUnaccountedForKg)}</p>
           </Field>
         </div>
       </Section>
@@ -214,7 +214,7 @@ export default function EncapsulationSection({ batchId, data, canManage }: { bat
       <Section title="Capsule Properties">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Average Capsule Fill Weight (mg)">
-            <input type="number" className="input" disabled={!canManage} value={form.avgCapsuleFillWeightMg} onChange={(e) => set("avgCapsuleFillWeightMg", e.target.value)} />
+            <input type="number" className="input" placeholder="e.g. 372 (not 0.372)" disabled={!canManage} value={form.avgCapsuleFillWeightMg} onChange={(e) => set("avgCapsuleFillWeightMg", e.target.value)} />
           </Field>
           <Field label="Average Capsule Length (mm)">
             <input type="number" className="input" disabled={!canManage} value={form.avgCapsuleLengthMm} onChange={(e) => set("avgCapsuleLengthMm", e.target.value)} />

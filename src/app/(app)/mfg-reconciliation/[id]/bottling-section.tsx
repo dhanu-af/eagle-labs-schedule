@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveBottling } from "@/lib/actions/mfg-reconciliation-actions";
-import { capsulesFromKg, checkBelow, checkRange, type ReconciliationCheck } from "@/lib/mfg-reconciliation-defaults";
+import { capsulesFromKg, checkBelow, checkRange, formatCount, type ReconciliationCheck } from "@/lib/mfg-reconciliation-defaults";
 import { Button } from "@/components/ui/Button";
 import { Field, Section } from "./mfg-batch-detail-client";
 
@@ -149,7 +149,7 @@ export default function BottlingSection({ batchId, data, canManage }: { batchId:
             <input type="number" className="input" disabled={!canManage} value={form.totalCapsuleBulkWeightKg} onChange={(e) => set("totalCapsuleBulkWeightKg", e.target.value)} />
           </Field>
           <Field label="Average Capsule Full Weight (mg)">
-            <input type="number" className="input" disabled={!canManage} value={form.avgCapsuleFullWeightMg} onChange={(e) => set("avgCapsuleFullWeightMg", e.target.value)} />
+            <input type="number" className="input" placeholder="e.g. 450 (not 0.45)" disabled={!canManage} value={form.avgCapsuleFullWeightMg} onChange={(e) => set("avgCapsuleFullWeightMg", e.target.value)} />
           </Field>
         </div>
       </Section>
@@ -183,31 +183,31 @@ export default function BottlingSection({ batchId, data, canManage }: { batchId:
       <Section title="Batch Calculations">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Capsules Required">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{capsulesRequired !== null ? Math.round(capsulesRequired).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(capsulesRequired)}</p>
           </Field>
           <Field label="Theoretical No. of Capsules">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{theoreticalCapsules !== null ? Math.round(theoreticalCapsules).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(theoreticalCapsules)}</p>
           </Field>
           <Field label="Theoretical Bottles">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{theoreticalBottles !== null ? Math.round(theoreticalBottles).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(theoreticalBottles)}</p>
           </Field>
           <Field label="No. of Capsule Used">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{capsulesUsed !== null ? Math.round(capsulesUsed).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(capsulesUsed)}</p>
           </Field>
           <Field label="No. of Reject Capsules">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectCapsules !== null ? Math.round(rejectCapsules).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(rejectCapsules)}</p>
           </Field>
           <Field label="Reject Bottles (from capsule loss)">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectBottlesFromCapsuleLoss !== null ? Math.round(rejectBottlesFromCapsuleLoss).toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(rejectBottlesFromCapsuleLoss)}</p>
           </Field>
           <Field label="Reject Bottles">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectBottles !== null ? rejectBottles.toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(rejectBottles)}</p>
           </Field>
           <Field label="Reject Desiccants">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectDesiccants !== null ? rejectDesiccants.toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(rejectDesiccants)}</p>
           </Field>
           <Field label="Reject Caps">
-            <p className="input flex items-center bg-surface-muted tabular-nums">{rejectCaps !== null ? rejectCaps.toLocaleString() : "—"}</p>
+            <p className="input flex items-center bg-surface-muted tabular-nums">{formatCount(rejectCaps)}</p>
           </Field>
         </div>
       </Section>

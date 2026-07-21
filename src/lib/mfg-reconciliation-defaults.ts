@@ -87,3 +87,9 @@ export function checkRange(label: string, pct: number | null, min: number, max: 
 export function checkBelow(label: string, pct: number | null, max: number): ReconciliationCheck {
   return { label, pct, limitLabel: `Below ${max}%`, pass: pct === null ? null : pct <= max };
 }
+
+/** "000,000.00" display format for the computed Batch Calculations figures -- thousands separators, always 2 decimals. */
+export function formatCount(n: number | null): string {
+  if (n === null) return "—";
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
