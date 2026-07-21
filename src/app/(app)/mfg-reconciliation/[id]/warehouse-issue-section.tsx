@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { MfgMaterialGroup } from "@/generated/prisma";
-import { saveWarehouseIssue } from "@/lib/actions/mfg-reconciliation-actions";
+import { saveWarehouseIssue, populateWarehouseIssueFromBatchRecord } from "@/lib/actions/mfg-reconciliation-actions";
 import { MFG_MATERIAL_GROUP_LABEL, RAW_MATERIAL_GROUPS, PACKAGING_MATERIAL_GROUPS, computeBalance } from "@/lib/mfg-reconciliation-defaults";
 import { Button } from "@/components/ui/Button";
 import { Field, Section } from "./mfg-batch-detail-client";
@@ -59,18 +59,39 @@ export default function WarehouseIssueSection({
   batchId,
   data,
   canManage,
+  hasBatchRecordLink,
 }: {
   batchId: string;
   data: WarehouseIssueData | null;
   canManage: boolean;
+  hasBatchRecordLink: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [populating, startPopulateTransition] = useTransition();
   const [error, setError] = useState("");
   const [issuedByName, setIssuedByName] = useState(data?.issuedByName ?? "");
   const [issueDate, setIssueDate] = useState(data?.issueDate?.slice(0, 10) ?? "");
   const [remarks, setRemarks] = useState(data?.remarks ?? "");
   const [lines, setLines] = useState<LineForm[]>(() => (data?.lines ?? []).map(toLineForm));
+
+  const [dataSyncedWith, setDataSyncedWith] = useState(data);
+  if (dataSyncedWith !== data) {
+    setDataSyncedWith(data);
+    setLines((data?.lines ?? []).map(toLineForm));
+  }
+
+  function populateFromBatchRecord() {
+    setError("");
+    startPopulateTransition(async () => {
+      try {
+        await populateWarehouseIssueFromBatchRecord(batchId);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't populate from Batch Record.");
+      }
+    });
+  }
 
   function updateLine(i: number, patch: Partial<LineForm>) {
     setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -127,6 +148,14 @@ export default function WarehouseIssueSection({
       </Section>
 
       <Section title="Raw Materials & Packaging Materials">
+        {canManage && hasBatchRecordLink && (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">Pull the ingredient list straight from the linked Batch Record.</p>
+            <Button variant="secondary" size="sm" onClick={populateFromBatchRecord} disabled={populating}>
+              {populating ? "Populating..." : "Populate from Batch Record"}
+            </Button>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>

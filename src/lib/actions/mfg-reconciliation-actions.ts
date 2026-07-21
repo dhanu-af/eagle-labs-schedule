@@ -31,12 +31,34 @@ export async function getMfgBatchAuditTrail(batchId: string) {
   }));
 }
 
-/** Creates the batch plus its Warehouse Issue and Packaging stages pre-populated with the standard
- * packaging material lines (same idea as QC Samples seeding its checklist from a template). The other
- * five stages are created lazily by their own save* action the first time that stage is filled in. */
+type RawMaterialLineSeed = { materialGroup: MfgMaterialGroup; materialCode: string | null; description: string; quantityRequested: number | null };
+
+/** Pulls raw material lines straight from a Batch Record's own already-scaled ingredient list
+ * (BatchMaterialRequestLine.kgPerBatch) -- the same figures already printed on that batch's PDF/signed
+ * off by QA -- mirroring how "Create Warehouse Request" on the Batch Record page builds its line items
+ * (see createWarehouseRequestFromBatchRecord in warehouse-requests-actions.ts). Ingredients aren't
+ * tagged Active/Excipient anywhere upstream, so every line comes in as the generic RAW_INGREDIENT
+ * group -- reclassify individual lines by hand if that distinction matters for a given batch. */
+async function getRawMaterialLinesFromBatchRecord(batchRecordId: string): Promise<RawMaterialLineSeed[]> {
+  const batchRecord = await prisma.batchRecord.findUnique({
+    where: { id: batchRecordId },
+    include: { materialRequests: { orderBy: { order: "asc" } } },
+  });
+  if (!batchRecord) return [];
+  return batchRecord.materialRequests
+    .filter((m) => m.kgPerBatch && m.kgPerBatch > 0)
+    .map((m) => ({ materialGroup: "RAW_INGREDIENT" as MfgMaterialGroup, materialCode: m.rmNumber, description: m.ingredientName, quantityRequested: m.kgPerBatch }));
+}
+
+/** Creates the batch plus its Warehouse Issue and Packaging stages pre-populated. Warehouse Issue gets
+ * the standard packaging material lines (same idea as QC Samples seeding its checklist from a template)
+ * plus, when linked to a Batch Record, that record's raw material lines auto-added ahead of them. The
+ * other five stages are created lazily by their own save* action the first time that stage is filled in. */
 export async function createMfgBatch(data: { batchNumber: string; productName: string; batchRecordId: string | null }) {
   const session = await requireAccess();
   if (!data.batchNumber || !data.productName) throw new Error("Batch number and product name are required");
+
+  const rawMaterialLines = data.batchRecordId ? await getRawMaterialLinesFromBatchRecord(data.batchRecordId) : [];
 
   const batch = await prisma.mfgBatch.create({
     data: {
@@ -47,7 +69,10 @@ export async function createMfgBatch(data: { batchNumber: string; productName: s
       warehouseIssue: {
         create: {
           lines: {
-            create: DEFAULT_PACKAGING_ISSUE_LINES.map((line, i) => ({ ...line, sortOrder: i })),
+            create: [
+              ...rawMaterialLines.map((line, i) => ({ ...line, sortOrder: i })),
+              ...DEFAULT_PACKAGING_ISSUE_LINES.map((line, i) => ({ ...line, sortOrder: rawMaterialLines.length + i })),
+            ],
           },
         },
       },
@@ -65,11 +90,48 @@ export async function createMfgBatch(data: { batchNumber: string; productName: s
     action: "CREATE_MFG_BATCH",
     entityType: "MfgBatch",
     entityId: batch.id,
-    summary: `Manufacturing batch ${batch.batchNumber} (${batch.productName}) created`,
+    summary:
+      rawMaterialLines.length > 0
+        ? `Manufacturing batch ${batch.batchNumber} (${batch.productName}) created, ${rawMaterialLines.length} raw material line${rawMaterialLines.length === 1 ? "" : "s"} auto-populated from Batch Record`
+        : `Manufacturing batch ${batch.batchNumber} (${batch.productName}) created`,
   });
 
   revalidatePath("/mfg-reconciliation");
   return batch;
+}
+
+/** Adds any missing raw material lines from the linked Batch Record to an existing batch's Warehouse
+ * Issue -- for batches created before auto-populate existed, or if the Batch Record's ingredient list
+ * changed since. Matches by description so it never duplicates or removes anything already there. */
+export async function populateWarehouseIssueFromBatchRecord(batchId: string) {
+  const session = await requireAccess();
+  const batch = await prisma.mfgBatch.findUniqueOrThrow({
+    where: { id: batchId },
+    include: { warehouseIssue: { include: { lines: true } } },
+  });
+  if (!batch.batchRecordId) throw new Error("This batch isn't linked to a Batch Record");
+  if (!batch.warehouseIssue) throw new Error("Warehouse Issue stage hasn't been initialized for this batch");
+
+  const rawMaterialLines = await getRawMaterialLinesFromBatchRecord(batch.batchRecordId);
+  const existingDescriptions = new Set(batch.warehouseIssue.lines.map((l) => l.description));
+  const newLines = rawMaterialLines.filter((l) => !existingDescriptions.has(l.description));
+  if (newLines.length === 0) {
+    throw new Error("No new ingredients to add -- the linked Batch Record's ingredients are already listed here.");
+  }
+
+  const maxSortOrder = batch.warehouseIssue.lines.reduce((max, l) => Math.max(max, l.sortOrder), -1);
+  await prisma.mfgMaterialIssueLine.createMany({
+    data: newLines.map((line, i) => ({ ...line, warehouseIssueId: batch.warehouseIssue!.id, sortOrder: maxSortOrder + 1 + i })),
+  });
+
+  await logAudit(session, {
+    action: "POPULATE_MFG_WAREHOUSE_ISSUE_FROM_BATCH_RECORD",
+    entityType: "MfgBatch",
+    entityId: batchId,
+    summary: `Added ${newLines.length} raw material line${newLines.length === 1 ? "" : "s"} to Warehouse Issue from linked Batch Record ${batch.batchNumber}`,
+  });
+
+  revalidatePath(`/mfg-reconciliation/${batchId}`);
 }
 
 export async function deleteMfgBatch(id: string) {

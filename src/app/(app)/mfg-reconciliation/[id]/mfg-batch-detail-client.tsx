@@ -166,7 +166,14 @@ export default function MfgBatchDetailClient({
       </div>
 
       <div className="card-elevated rounded-xl border border-border bg-surface p-5">
-        {stage === "warehouseIssue" && <WarehouseIssueSection batchId={batch.id} data={batch.warehouseIssue} canManage={canManage} />}
+        {stage === "warehouseIssue" && (
+          <WarehouseIssueSection
+            batchId={batch.id}
+            data={batch.warehouseIssue}
+            canManage={canManage}
+            hasBatchRecordLink={!!batch.batchRecordLabel}
+          />
+        )}
         {stage === "blending" && <BlendingSection batchId={batch.id} data={batch.blending} canManage={canManage} />}
         {stage === "encapsulation" && <EncapsulationSection batchId={batch.id} data={batch.encapsulation} canManage={canManage} />}
         {stage === "bottling" && <BottlingSection batchId={batch.id} data={batch.bottling} canManage={canManage} />}
