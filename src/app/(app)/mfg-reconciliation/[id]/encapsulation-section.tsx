@@ -23,6 +23,7 @@ export type EncapsulationData = {
   machineRejects: number | null;
   capsulesReturned: number | null;
   targetFillWeightMg: number | null;
+  finishedCapsuleWeightMg: number | null;
   expectedCapsules: number | null;
   goodCapsules: number | null;
   rejectedCapsules: number | null;
@@ -58,6 +59,7 @@ export default function EncapsulationSection({ batchId, data, canManage }: { bat
     machineRejects: num(data?.machineRejects),
     capsulesReturned: num(data?.capsulesReturned),
     targetFillWeightMg: num(data?.targetFillWeightMg),
+    finishedCapsuleWeightMg: num(data?.finishedCapsuleWeightMg),
     expectedCapsules: num(data?.expectedCapsules),
     goodCapsules: num(data?.goodCapsules),
     rejectedCapsules: num(data?.rejectedCapsules),
@@ -70,6 +72,41 @@ export default function EncapsulationSection({ batchId, data, canManage }: { bat
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  /** Capsule count = blend weight (kg) converted to mg, divided by the weight of one finished capsule. */
+  function capsulesFromWeight(blendKg: string, weightMg: string): string {
+    if (blendKg === "" || weightMg === "") return "";
+    const weight = Number(weightMg);
+    if (!weight) return "";
+    return String(Math.round((Number(blendKg) * 1_000_000) / weight));
+  }
+
+  function setBlendReceivedKg(value: string) {
+    setForm((f) => {
+      const computed = capsulesFromWeight(value, f.finishedCapsuleWeightMg);
+      return { ...f, blendReceivedKg: value, ...(computed !== "" ? { expectedCapsules: computed } : {}) };
+    });
+  }
+
+  function setBlendUsedKg(value: string) {
+    setForm((f) => {
+      const computed = capsulesFromWeight(value, f.finishedCapsuleWeightMg);
+      return { ...f, blendUsedKg: value, ...(computed !== "" ? { goodCapsules: computed } : {}) };
+    });
+  }
+
+  function setFinishedCapsuleWeightMg(value: string) {
+    setForm((f) => {
+      const computedExpected = capsulesFromWeight(f.blendReceivedKg, value);
+      const computedGood = capsulesFromWeight(f.blendUsedKg, value);
+      return {
+        ...f,
+        finishedCapsuleWeightMg: value,
+        ...(computedExpected !== "" ? { expectedCapsules: computedExpected } : {}),
+        ...(computedGood !== "" ? { goodCapsules: computedGood } : {}),
+      };
+    });
   }
 
   const yieldPct = computeYieldPct(form.goodCapsules === "" ? null : Number(form.goodCapsules), form.expectedCapsules === "" ? null : Number(form.expectedCapsules));
@@ -94,6 +131,7 @@ export default function EncapsulationSection({ batchId, data, canManage }: { bat
           machineRejects: form.machineRejects === "" ? null : Number(form.machineRejects),
           capsulesReturned: form.capsulesReturned === "" ? null : Number(form.capsulesReturned),
           targetFillWeightMg: form.targetFillWeightMg === "" ? null : Number(form.targetFillWeightMg),
+          finishedCapsuleWeightMg: form.finishedCapsuleWeightMg === "" ? null : Number(form.finishedCapsuleWeightMg),
           expectedCapsules: form.expectedCapsules === "" ? null : Number(form.expectedCapsules),
           goodCapsules: form.goodCapsules === "" ? null : Number(form.goodCapsules),
           rejectedCapsules: form.rejectedCapsules === "" ? null : Number(form.rejectedCapsules),
@@ -115,10 +153,10 @@ export default function EncapsulationSection({ batchId, data, canManage }: { bat
       <Section title="Blend Powder">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Blend Received (kg)">
-            <input type="number" className="input" disabled={!canManage} value={form.blendReceivedKg} onChange={(e) => set("blendReceivedKg", e.target.value)} />
+            <input type="number" className="input" disabled={!canManage} value={form.blendReceivedKg} onChange={(e) => setBlendReceivedKg(e.target.value)} />
           </Field>
           <Field label="Blend Used (kg)">
-            <input type="number" className="input" disabled={!canManage} value={form.blendUsedKg} onChange={(e) => set("blendUsedKg", e.target.value)} />
+            <input type="number" className="input" disabled={!canManage} value={form.blendUsedKg} onChange={(e) => setBlendUsedKg(e.target.value)} />
           </Field>
           <Field label="Blend Remaining (kg)">
             <input type="number" className="input" disabled={!canManage} value={form.blendRemainingKg} onChange={(e) => set("blendRemainingKg", e.target.value)} />
@@ -168,6 +206,9 @@ export default function EncapsulationSection({ batchId, data, canManage }: { bat
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Target Fill Weight (mg)">
             <input type="number" className="input" disabled={!canManage} value={form.targetFillWeightMg} onChange={(e) => set("targetFillWeightMg", e.target.value)} />
+          </Field>
+          <Field label="Finished Capsule Weight (mg)">
+            <input type="number" className="input" disabled={!canManage} value={form.finishedCapsuleWeightMg} onChange={(e) => setFinishedCapsuleWeightMg(e.target.value)} />
           </Field>
           <Field label="Expected Capsules">
             <input type="number" className="input" disabled={!canManage} value={form.expectedCapsules} onChange={(e) => set("expectedCapsules", e.target.value)} />

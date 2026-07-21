@@ -1751,12 +1751,13 @@ model MfgEncapsulation {
   machineRejects   Int?
   capsulesReturned Int?
 
-  targetFillWeightMg Float?
-  expectedCapsules   Int?
-  goodCapsules       Int?
-  rejectedCapsules   Int?
-  sampleCapsules     Int?
-  retentionCapsules  Int?
+  targetFillWeightMg     Float?
+  finishedCapsuleWeightMg Float?
+  expectedCapsules       Int?
+  goodCapsules           Int?
+  rejectedCapsules       Int?
+  sampleCapsules         Int?
+  retentionCapsules      Int?
 
   encapsulatedByName String?
   encapsulatedAt     DateTime?

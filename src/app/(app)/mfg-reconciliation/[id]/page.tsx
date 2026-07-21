@@ -88,6 +88,7 @@ export default async function MfgBatchDetailPage({ params }: { params: Promise<{
               machineRejects: batch.encapsulation.machineRejects,
               capsulesReturned: batch.encapsulation.capsulesReturned,
               targetFillWeightMg: batch.encapsulation.targetFillWeightMg,
+              finishedCapsuleWeightMg: batch.encapsulation.finishedCapsuleWeightMg,
               expectedCapsules: batch.encapsulation.expectedCapsules,
               goodCapsules: batch.encapsulation.goodCapsules,
               rejectedCapsules: batch.encapsulation.rejectedCapsules,
