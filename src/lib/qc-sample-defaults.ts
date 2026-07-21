@@ -189,3 +189,41 @@ export function daysUntil(date: Date | string | null): number | null {
   const ms = new Date(date).getTime() - Date.now();
   return Math.ceil(ms / 86_400_000);
 }
+
+/** Calendar-accurate years/months/days between two dates (like an age calculation) -- not a
+ * fixed-length ÷365/÷30 approximation, so it matches how a human would actually count it. */
+function calendarDiffYMD(earlier: Date, later: Date): { years: number; months: number; days: number } {
+  let years = later.getFullYear() - earlier.getFullYear();
+  let months = later.getMonth() - earlier.getMonth();
+  let days = later.getDate() - earlier.getDate();
+  if (days < 0) {
+    months -= 1;
+    days += new Date(later.getFullYear(), later.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  return { years, months, days };
+}
+
+function pluralize(n: number, unit: string): string {
+  return `${n} ${unit}${n === 1 ? "" : "s"}`;
+}
+
+/** "1 year, 2 months, 5 days left" / "Expired 3 days ago" / "—" when there's no date. */
+export function timeUntilExpiryLabel(date: Date | string | null): string {
+  if (!date) return "—";
+  const target = new Date(date);
+  const now = new Date();
+  const isPast = target.getTime() < now.getTime();
+  const { years, months, days } = isPast ? calendarDiffYMD(target, now) : calendarDiffYMD(now, target);
+
+  const parts: string[] = [];
+  if (years) parts.push(pluralize(years, "year"));
+  if (months) parts.push(pluralize(months, "month"));
+  if (days || parts.length === 0) parts.push(pluralize(days, "day"));
+  const joined = parts.join(", ");
+
+  return isPast ? `Expired ${joined} ago` : `${joined} left`;
+}

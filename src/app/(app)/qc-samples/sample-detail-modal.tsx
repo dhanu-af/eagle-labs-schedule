@@ -9,6 +9,7 @@ import {
   SAMPLE_TYPE_LABEL,
   PRODUCT_CATEGORY_LABEL,
   TEST_SECTIONS_BY_CATEGORY,
+  timeUntilExpiryLabel,
 } from "@/lib/qc-sample-defaults";
 import {
   updateQcSample,
@@ -50,11 +51,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
+function DetailRow({ label, value, valueClassName }: { label: string; value: string | null | undefined; valueClassName?: string }) {
   return (
     <p className="text-sm">
       <span className="text-muted-foreground">{label}: </span>
-      <span className="text-foreground">{value || "—"}</span>
+      <span className={valueClassName ?? "text-foreground"}>{value || "—"}</span>
     </p>
   );
 }
@@ -356,6 +357,11 @@ export default function SampleDetailModal({
               <DetailRow label="Quantity" value={`${sample.quantity} ${sample.unit}`} />
               <DetailRow label="Manufacturing Date" value={sample.manufacturingDate ? new Date(sample.manufacturingDate).toLocaleDateString() : null} />
               <DetailRow label="Expiry Date" value={sample.expiryDate ? new Date(sample.expiryDate).toLocaleDateString() : null} />
+              <DetailRow
+                label="Time to Expiry"
+                value={timeUntilExpiryLabel(sample.expiryDate)}
+                valueClassName={sample.expiryDate && new Date(sample.expiryDate) < new Date() ? "text-danger" : "text-foreground"}
+              />
               <DetailRow label="Collected By" value={sample.collectedByName} />
               <DetailRow label="Collection Date" value={sample.collectionDate ? new Date(sample.collectionDate).toLocaleDateString() : null} />
               <DetailRow label="Production Room / Bay" value={sample.productionRoom} />

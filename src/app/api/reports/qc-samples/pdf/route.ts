@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { SAMPLE_STATUS_LABEL, SAMPLE_TYPE_LABEL, PRODUCT_CATEGORY_LABEL } from "@/lib/qc-sample-defaults";
+import { SAMPLE_STATUS_LABEL, SAMPLE_TYPE_LABEL, PRODUCT_CATEGORY_LABEL, timeUntilExpiryLabel } from "@/lib/qc-sample-defaults";
 import { formatBrisbaneDateTime } from "@/lib/ui";
 
 const MARGIN = 36;
@@ -292,6 +292,7 @@ async function renderDetail(id: string) {
     ["Quantity", `${sample.quantity} ${sample.unit}`],
     ["Manufacturing Date", sample.manufacturingDate ? sample.manufacturingDate.toLocaleDateString("en-AU") : "—"],
     ["Expiry Date", sample.expiryDate ? sample.expiryDate.toLocaleDateString("en-AU") : "—"],
+    ["Time to Expiry", timeUntilExpiryLabel(sample.expiryDate), sample.expiryDate && sample.expiryDate < new Date() ? COLOR.danger : undefined],
     ["Collected By", sample.collectedByName ?? "—"],
     ["Collection Date", sample.collectionDate ? sample.collectionDate.toLocaleDateString("en-AU") : "—"],
     ["Production Room / Bay", sample.productionRoom ?? "—"],

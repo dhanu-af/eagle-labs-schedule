@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { QcSampleType, QcProductCategory } from "@/generated/prisma";
-import { SAMPLE_STATUS_LABEL, SAMPLE_STATUS_TONE, SAMPLE_TYPE_LABEL, PRODUCT_CATEGORY_LABEL } from "@/lib/qc-sample-defaults";
+import { SAMPLE_STATUS_LABEL, SAMPLE_STATUS_TONE, SAMPLE_TYPE_LABEL, PRODUCT_CATEGORY_LABEL, timeUntilExpiryLabel } from "@/lib/qc-sample-defaults";
 import { createQcSample } from "@/lib/actions/qc-sample-actions";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -323,6 +323,7 @@ export default function SamplesTab({
                   <Th>Collection Date</Th>
                   <Th>Analyst</Th>
                   <Th>Production Room / Bay</Th>
+                  <Th>Time to Expiry</Th>
                   <Th>Status</Th>
                 </tr>
               </thead>
@@ -340,6 +341,9 @@ export default function SamplesTab({
                     <td className="px-3 py-2">{s.collectionDate ? new Date(s.collectionDate).toLocaleDateString() : "—"}</td>
                     <td className="px-3 py-2">{s.collectedByName ?? "—"}</td>
                     <td className="px-3 py-2">{s.productionRoom ?? "—"}</td>
+                    <td className={`px-3 py-2 ${s.expiryDate && new Date(s.expiryDate) < new Date() ? "text-danger" : ""}`}>
+                      {timeUntilExpiryLabel(s.expiryDate)}
+                    </td>
                     <td className="px-3 py-2">
                       <Badge tone={SAMPLE_STATUS_TONE[s.status]}>{SAMPLE_STATUS_LABEL[s.status]}</Badge>
                     </td>
