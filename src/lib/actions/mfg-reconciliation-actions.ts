@@ -285,7 +285,7 @@ type EncapsulationInput = {
   machineRejects: number | null;
   capsulesReturned: number | null;
   targetFillWeightMg: number | null;
-  finishedCapsuleWeightMg: number | null;
+  finishedCapsuleWeightKg: number | null;
   expectedCapsules: number | null;
   goodCapsules: number | null;
   rejectedCapsules: number | null;
