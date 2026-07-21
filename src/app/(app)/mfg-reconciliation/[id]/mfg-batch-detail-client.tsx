@@ -15,6 +15,7 @@ import XraySection, { type XrayData } from "./xray-section";
 import PackagingSection, { type PackagingData } from "./packaging-section";
 import FgWarehouseSection, { type FgWarehouseData } from "./fg-warehouse-section";
 import DispatchSection, { type DispatchEventData } from "./dispatch-section";
+import FinalReconciliation from "./final-reconciliation";
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -130,6 +131,12 @@ export default function MfgBatchDetailClient({
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={batch.status === "COMPLETED" ? "success" : "info"}>{MFG_BATCH_STATUS_LABEL[batch.status]}</Badge>
+          <a
+            href={`/api/reports/mfg-reconciliation/pdf?id=${batch.id}`}
+            className="inline-flex items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted"
+          >
+            Download PDF
+          </a>
           {canManage && batch.status === "IN_PROGRESS" && (
             <Button variant="secondary" size="sm" onClick={complete} disabled={pending}>
               Mark Completed
@@ -182,6 +189,8 @@ export default function MfgBatchDetailClient({
         {stage === "fgWarehouse" && <FgWarehouseSection batchId={batch.id} data={batch.finishedGoodsWarehouse} canManage={canManage} />}
         {stage === "dispatch" && <DispatchSection batchId={batch.id} events={batch.dispatchEvents} canManage={canManage} />}
       </div>
+
+      <FinalReconciliation blending={batch.blending} encapsulation={batch.encapsulation} bottling={batch.bottling} />
 
       <div className="card-elevated space-y-2 rounded-xl border border-border bg-surface p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">Audit Trail</p>

@@ -93,3 +93,91 @@ export function formatCount(n: number | null): string {
   if (n === null) return "—";
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+type BlendingCheckInput = { totalBlendProducedKg: number | null; totalTheoreticalWeightKg: number | null };
+type EncapsulationCheckInput = {
+  issuedBulkBlendKg: number | null;
+  targetCapsuleFillWeightMg: number | null;
+  capsulesProducedKg: number | null;
+  avgCapsuleFullWeightMg: number | null;
+  avgCapsuleFillWeightMg: number | null;
+  capsuleSamplesKg: number | null;
+  rejectCapsulesKg: number | null;
+  rejectPowderKg: number | null;
+};
+type BottlingCheckInput = {
+  capsuleReceivedKg: number | null;
+  avgCapsuleFullWeightMg: number | null;
+  targetCapsulesPerBottle: number | null;
+  bottlesProduced: number | null;
+  capsUsed: number | null;
+  bottleUsed: number | null;
+};
+
+/** Every reconciliation %% check across every stage that has one -- the single "Final Reconciliation"
+ * view for a batch, used identically by the web detail page and the PDF export so the two never drift
+ * apart. Reuses the exact same formulas as each stage's own section. */
+export function computeFinalReconciliationChecks(
+  blending: BlendingCheckInput | null,
+  encapsulation: EncapsulationCheckInput | null,
+  bottling: BottlingCheckInput | null
+): ReconciliationCheck[] {
+  const checks: ReconciliationCheck[] = [];
+
+  if (blending) {
+    const blendYieldPct = computeYieldPct(blending.totalBlendProducedKg, blending.totalTheoreticalWeightKg);
+    checks.push({ label: "Blending — Blend Yield", pct: blendYieldPct, limitLabel: "", pass: null });
+  }
+
+  if (encapsulation) {
+    const theoreticalCapsules = capsulesFromKg(encapsulation.issuedBulkBlendKg, encapsulation.targetCapsuleFillWeightMg);
+    const capsulesProduced = capsulesFromKg(encapsulation.capsulesProducedKg, encapsulation.avgCapsuleFullWeightMg);
+    const capsuleSamples = capsulesFromKg(encapsulation.capsuleSamplesKg, encapsulation.avgCapsuleFullWeightMg);
+    const rejectCapsules = capsulesFromKg(encapsulation.rejectCapsulesKg, encapsulation.avgCapsuleFullWeightMg);
+    const blendInProducedCapsulesKg =
+      capsulesProduced !== null && encapsulation.avgCapsuleFillWeightMg !== null ? (capsulesProduced * encapsulation.avgCapsuleFillWeightMg) / 1_000_000 : null;
+    const bulkBlendAccountedForKg =
+      blendInProducedCapsulesKg !== null && encapsulation.capsuleSamplesKg !== null && encapsulation.rejectCapsulesKg !== null && encapsulation.rejectPowderKg !== null
+        ? blendInProducedCapsulesKg + encapsulation.capsuleSamplesKg + encapsulation.rejectCapsulesKg + encapsulation.rejectPowderKg
+        : null;
+
+    const capsuleReconciliationPct =
+      capsulesProduced !== null && capsuleSamples !== null && rejectCapsules !== null && theoreticalCapsules
+        ? ((capsulesProduced + capsuleSamples + rejectCapsules) / theoreticalCapsules) * 100
+        : null;
+    const blendReconciliationPct = bulkBlendAccountedForKg !== null && encapsulation.issuedBulkBlendKg ? (bulkBlendAccountedForKg / encapsulation.issuedBulkBlendKg) * 100 : null;
+    const processYieldPct = capsulesProduced !== null && theoreticalCapsules ? (capsulesProduced / theoreticalCapsules) * 100 : null;
+    const capsuleRejectionPct =
+      rejectCapsules !== null && capsulesProduced !== null && capsulesProduced + rejectCapsules !== 0 ? (rejectCapsules / (capsulesProduced + rejectCapsules)) * 100 : null;
+
+    checks.push(
+      checkRange("Encapsulation — Capsule Reconciliation", capsuleReconciliationPct, 98, 102),
+      checkRange("Encapsulation — Blend Reconciliation", blendReconciliationPct, 98, 102),
+      checkRange("Encapsulation — Process Yield", processYieldPct, 95, 102),
+      checkBelow("Encapsulation — Capsule Rejection", capsuleRejectionPct, 1.5)
+    );
+  }
+
+  if (bottling) {
+    const theoreticalCapsules = capsulesFromKg(bottling.capsuleReceivedKg, bottling.avgCapsuleFullWeightMg);
+    const theoreticalBottles = theoreticalCapsules !== null && bottling.targetCapsulesPerBottle ? theoreticalCapsules / bottling.targetCapsulesPerBottle : null;
+    const capsulesUsed = bottling.bottlesProduced !== null && bottling.targetCapsulesPerBottle !== null ? bottling.bottlesProduced * bottling.targetCapsulesPerBottle : null;
+    const rejectCapsules = theoreticalCapsules !== null && capsulesUsed !== null ? theoreticalCapsules - capsulesUsed : null;
+
+    const capsuleReconciliationPct = capsulesUsed !== null && theoreticalCapsules ? (capsulesUsed / theoreticalCapsules) * 100 : null;
+    const capsReconciliationPct = bottling.bottlesProduced !== null && bottling.capsUsed ? (bottling.bottlesProduced / bottling.capsUsed) * 100 : null;
+    const bottleReconciliationPct = bottling.bottlesProduced !== null && bottling.bottleUsed ? (bottling.bottlesProduced / bottling.bottleUsed) * 100 : null;
+    const processYieldPct = bottling.bottlesProduced !== null && theoreticalBottles ? (bottling.bottlesProduced / theoreticalBottles) * 100 : null;
+    const rejectionLossPct = rejectCapsules !== null && theoreticalCapsules ? (rejectCapsules / theoreticalCapsules) * 100 : null;
+
+    checks.push(
+      checkRange("Bottling — Capsule Reconciliation", capsuleReconciliationPct, 98, 102),
+      checkRange("Bottling — Caps Reconciliation", capsReconciliationPct, 98, 102),
+      checkRange("Bottling — Bottle Reconciliation", bottleReconciliationPct, 98, 102),
+      checkRange("Bottling — Process Yield", processYieldPct, 95, 102),
+      checkBelow("Bottling — Rejection & Loss", rejectionLossPct, 2)
+    );
+  }
+
+  return checks;
+}
