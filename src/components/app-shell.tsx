@@ -47,6 +47,7 @@ const icons = {
   dryingRoom: "🏭",
   warehouse: "🏬",
   qcSamples: "🔬",
+  mfgReconciliation: "🏗️",
 };
 
 type Notification = {
@@ -85,6 +86,7 @@ export default function AppShell({
           items: [
             { href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom },
             { href: "/qc-samples", label: "QC Samples", icon: icons.qcSamples },
+            { href: "/mfg-reconciliation", label: "Mfg Reconciliation", icon: icons.mfgReconciliation },
           ],
         },
       ]
@@ -110,6 +112,7 @@ export default function AppShell({
             { href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom },
             { href: "/warehouse", label: "Warehouse Management", icon: icons.warehouse },
             { href: "/qc-samples", label: "QC Samples", icon: icons.qcSamples },
+            { href: "/mfg-reconciliation", label: "Mfg Reconciliation", icon: icons.mfgReconciliation },
             ...(canSeeIngredientLibrary ? [{ href: "/ingredients", label: "Ingredient Library", icon: icons.ingredients }] : []),
             { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
             { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },

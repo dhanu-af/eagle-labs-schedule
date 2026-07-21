@@ -199,6 +199,21 @@ export function canRunLabTesting(role: Role) {
   return role === "QA" || role === "ADMIN" || role === "SUPER_ADMIN" || role === "EXTRA";
 }
 
+/** End-to-End Manufacturing Reconciliation: single Phase 1 tier covering the whole workflow
+ * (Warehouse Issue through Dispatch) -- same roles as canManageQcSamples since it's the same
+ * production/warehouse/QA staff. Can be split into finer per-stage tiers later if real usage
+ * needs it, the same way QC Samples' tiers evolved from a single broad grant. */
+export function canManageMfgReconciliation(role: Role) {
+  return (
+    role === "QA" ||
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN" ||
+    role === "EXTRA"
+  );
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }

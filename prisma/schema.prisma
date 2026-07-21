@@ -863,6 +863,7 @@ model BatchRecord {
   warehouseReturns BatchWarehouseReturnLine[]
   materialRequests BatchMaterialRequestLine[]
   qcSamples        QcSample[]
+  mfgBatches       MfgBatch[]
 
   @@index([formulationId])
   @@index([batchNumber])
@@ -1600,4 +1601,311 @@ model QcRetentionRecord {
   updatedAt DateTime @updatedAt
 
   @@index([expiryDate])
+}
+
+enum MfgBatchStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum MfgMaterialGroup {
+  RAW_INGREDIENT
+  RAW_ACTIVE_INGREDIENT
+  RAW_EXCIPIENT
+  PACKAGING_EMPTY_CAPSULE
+  PACKAGING_EMPTY_BOTTLE
+  PACKAGING_CAP
+  PACKAGING_DESICCANT
+  PACKAGING_LABEL
+  PACKAGING_CARTON
+  PACKAGING_INSERT
+  PACKAGING_SHRINK_WRAP
+  PACKAGING_SHIPPER
+  PACKAGING_PALLET
+}
+
+enum MfgPackagingMaterialType {
+  LABEL
+  CARTON
+  INSERT
+  SHRINK_WRAP
+  SHIPPER
+}
+
+/// End-to-end GMP/TGA-style manufacturing reconciliation: Warehouse Issue -> Blending -> Encapsulation
+/// -> Bottling -> X-Ray/Metal Detection -> Packaging -> Finished Goods Warehouse -> Dispatch. Each stage
+/// is its own record, filled in independently as production reaches it. Balance/yield figures (Quantity
+/// Balance, Blend Yield %, Capsule Yield %, etc.) are computed at render time from the raw quantities
+/// stored here -- never persisted -- matching the existing yield% precedent in batch-record-client.tsx.
+model MfgBatch {
+  id            String       @id @default(cuid())
+  batchNumber   String
+  productName   String
+  batchRecordId String?
+  batchRecord   BatchRecord? @relation(fields: [batchRecordId], references: [id])
+
+  status  MfgBatchStatus @default(IN_PROGRESS)
+  remarks String?
+
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  warehouseIssue         MfgWarehouseIssue?
+  blending               MfgBlending?
+  encapsulation          MfgEncapsulation?
+  bottling               MfgBottling?
+  xrayInspection         MfgXrayInspection?
+  packaging              MfgPackaging?
+  finishedGoodsWarehouse MfgFinishedGoodsWarehouse?
+  dispatchEvents         MfgDispatchEvent[]
+
+  @@index([batchNumber])
+  @@index([status])
+}
+
+model MfgWarehouseIssue {
+  id         String   @id @default(cuid())
+  mfgBatchId String   @unique
+  mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
+
+  issuedByName String?
+  issueDate    DateTime?
+  remarks      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines MfgMaterialIssueLine[]
+}
+
+/// One row per material issued for a batch -- raw material or packaging material, discriminated by
+/// materialGroup. New batches pre-populate one line per material type from a default template in
+/// mfg-reconciliation-defaults.ts, the same way QcLabTestItem rows are seeded from a checklist template.
+model MfgMaterialIssueLine {
+  id               String            @id @default(cuid())
+  warehouseIssueId String
+  warehouseIssue   MfgWarehouseIssue @relation(fields: [warehouseIssueId], references: [id], onDelete: Cascade)
+
+  materialGroup     MfgMaterialGroup
+  materialCode      String?
+  description       String
+  supplier          String?
+  lotBatchNumber    String?
+  expiryDate        DateTime?
+  quantityRequested Float?
+  quantityIssued    Float?
+  quantityReturned  Float?
+  sortOrder         Int
+
+  @@index([warehouseIssueId])
+}
+
+model MfgBlending {
+  id         String   @id @default(cuid())
+  mfgBatchId String   @unique
+  mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
+
+  totalTheoreticalWeightKg Float?
+  actualWeightKg           Float?
+  blendBatchNumber         String?
+
+  powderRemainingKg     Float?
+  blenderResidueKg      Float?
+  sieveLossKg           Float?
+  dustLossKg            Float?
+  spillagesKg           Float?
+  qcSamplesQty          Float?
+  retentionSamplesQty   Float?
+  destroyedMaterialKg   Float?
+  returnedToWarehouseKg Float?
+
+  totalBlendProducedKg Float?
+
+  blendedByName String?
+  blendedAt     DateTime?
+  remarks       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MfgEncapsulation {
+  id         String   @id @default(cuid())
+  mfgBatchId String   @unique
+  mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
+
+  blendReceivedKg  Float?
+  blendUsedKg      Float?
+  blendRemainingKg Float?
+  blendReturnedKg  Float?
+  powderWasteKg    Float?
+  samplingKg       Float?
+
+  capsuleSize      String?
+  capsuleColour    String?
+  capsuleLot       String?
+  capsulesIssued   Int?
+  capsulesUsed     Int?
+  brokenCapsules   Int?
+  machineRejects   Int?
+  capsulesReturned Int?
+
+  targetFillWeightMg Float?
+  expectedCapsules   Int?
+  goodCapsules       Int?
+  rejectedCapsules   Int?
+  sampleCapsules     Int?
+  retentionCapsules  Int?
+
+  encapsulatedByName String?
+  encapsulatedAt     DateTime?
+  remarks            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MfgBottling {
+  id         String   @id @default(cuid())
+  mfgBatchId String   @unique
+  mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
+
+  capsulesReceived  Int?
+  capsulesUsed      Int?
+  capsulesRemaining Int?
+
+  bottlesIssued   Int?
+  bottlesUsed     Int?
+  damagedBottles  Int?
+  bottlesReturned Int?
+
+  capsIssued   Int?
+  capsUsed     Int?
+  damagedCaps  Int?
+  capsReturned Int?
+
+  desiccantsIssued   Int?
+  desiccantsUsed     Int?
+  damagedDesiccants  Int?
+  desiccantsReturned Int?
+
+  bottleSize              String?
+  targetCapsulesPerBottle Int?
+  expectedBottles         Int?
+  filledBottles           Int?
+  rejectedBottles         Int?
+  qcSampleBottles         Int?
+  retentionBottles        Int?
+
+  bottledByName String?
+  bottledAt     DateTime?
+  remarks       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MfgXrayInspection {
+  id         String   @id @default(cuid())
+  mfgBatchId String   @unique
+  mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
+
+  bottlesReceived Int?
+  bottlesScanned  Int?
+  passed          Int?
+  failed          Int?
+  reworked        Int?
+  destroyed       Int?
+  released        Int?
+
+  rejectMetalDetection   Int?
+  rejectXrayFailure      Int?
+  rejectUnderweight      Int?
+  rejectOverweight       Int?
+  rejectDamagedBottle    Int?
+  rejectMissingCap       Int?
+  rejectMissingDesiccant Int?
+
+  inspectedByName String?
+  inspectedAt     DateTime?
+  remarks         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MfgPackaging {
+  id         String   @id @default(cuid())
+  mfgBatchId String   @unique
+  mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
+
+  packedBottles   Int?
+  cartonsProduced Int?
+  casesProduced   Int?
+
+  packedByName String?
+  packedAt     DateTime?
+  remarks      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines MfgPackagingMaterialLine[]
+}
+
+model MfgPackagingMaterialLine {
+  id          String       @id @default(cuid())
+  packagingId String
+  packaging   MfgPackaging @relation(fields: [packagingId], references: [id], onDelete: Cascade)
+
+  materialType MfgPackagingMaterialType
+  issued       Float?
+  used         Float?
+  damaged      Float?
+  returned     Float?
+  destroyed    Float?
+  sortOrder    Int
+
+  @@index([packagingId])
+}
+
+model MfgFinishedGoodsWarehouse {
+  id         String   @id @default(cuid())
+  mfgBatchId String   @unique
+  mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
+
+  finishedGoodsReceived Int?
+  qaReleased            Boolean   @default(false)
+  qaReleasedByName      String?
+  qaReleasedAt          DateTime?
+  storageLocation       String?
+  warehouseBalance      Int?
+  batchNumber           String?
+  expiryDate            DateTime?
+  remarks               String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MfgDispatchEvent {
+  id         String   @id @default(cuid())
+  mfgBatchId String
+  mfgBatch   MfgBatch @relation(fields: [mfgBatchId], references: [id], onDelete: Cascade)
+
+  customer            String
+  salesOrder          String?
+  batchNumber         String?
+  expiryDate          DateTime?
+  casesDispatched     Int?
+  bottlesDispatched   Int?
+  dispatchDate        DateTime?
+  remainingStockAfter Int?
+  dispatchedByName    String?
+  remarks             String?
+
+  createdAt DateTime @default(now())
+
+  @@index([mfgBatchId])
 }
