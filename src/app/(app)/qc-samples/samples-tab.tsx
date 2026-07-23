@@ -256,52 +256,54 @@ export default function SamplesTab({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <input
-            className="input w-64"
+            className="input w-full sm:w-64"
             placeholder="Search product, batch, sample ID, analyst, location..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <select className="input w-40" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All statuses</option>
-            {Object.entries(SAMPLE_STATUS_LABEL).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select className="input w-36" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-            <option value="">All types</option>
-            {Object.entries(SAMPLE_TYPE_LABEL).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            className="input w-40"
-            value={collectionDateFilter}
-            onChange={(e) => setCollectionDateFilter(e.target.value)}
-          />
+          <div className="flex flex-wrap gap-2">
+            <select className="input flex-1 sm:w-40 sm:flex-none" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">All statuses</option>
+              {Object.entries(SAMPLE_STATUS_LABEL).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <select className="input flex-1 sm:w-36 sm:flex-none" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">All types</option>
+              {Object.entries(SAMPLE_TYPE_LABEL).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              className="input flex-1 sm:w-40 sm:flex-none"
+              value={collectionDateFilter}
+              onChange={(e) => setCollectionDateFilter(e.target.value)}
+            />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <a
             href={`/api/reports/qc-samples?type=filtered&ids=${encodeURIComponent(filtered.map((s) => s.id).join(","))}`}
-            className="inline-flex items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted"
+            className="inline-flex flex-1 items-center justify-center rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted sm:flex-none"
           >
             Download Excel
           </a>
           <a
             href={`/api/reports/qc-samples/pdf?ids=${encodeURIComponent(filtered.map((s) => s.id).join(","))}`}
-            className="inline-flex items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted"
+            className="inline-flex flex-1 items-center justify-center rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted sm:flex-none"
           >
             Download PDF
           </a>
           {canCollect && (
-            <Button size="sm" onClick={() => setShowNew(true)}>
+            <Button size="sm" className="flex-1 sm:flex-none" onClick={() => setShowNew(true)}>
               + Generate Sample
             </Button>
           )}
@@ -311,48 +313,104 @@ export default function SamplesTab({
       {filtered.length === 0 ? (
         <EmptyState title="No samples match" description="Adjust your filters or generate a new QC sample." />
       ) : (
-        <Card padding="none">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className={THEAD_ROW_CLASS}>
-                  <Th>Sample ID</Th>
-                  <Th>Product</Th>
-                  <Th>Batch</Th>
-                  <Th>Type</Th>
-                  <Th>Collection Date</Th>
-                  <Th>Analyst</Th>
-                  <Th>Production Room / Bay</Th>
-                  <Th>Time to Expiry</Th>
-                  <Th>Status</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((s) => (
-                  <tr
-                    key={s.id}
-                    onClick={() => onSelect(s.id)}
-                    className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-muted/40"
-                  >
-                    <td className="px-3 py-2 font-medium text-foreground">{s.sampleId}</td>
-                    <td className="px-3 py-2">{s.productName}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{s.batchNumber}</td>
-                    <td className="px-3 py-2">{SAMPLE_TYPE_LABEL[s.sampleType]}</td>
-                    <td className="px-3 py-2">{s.collectionDate ? new Date(s.collectionDate).toLocaleDateString() : "—"}</td>
-                    <td className="px-3 py-2">{s.collectedByName ?? "—"}</td>
-                    <td className="px-3 py-2">{s.productionRoom ?? "—"}</td>
-                    <td className={`px-3 py-2 ${s.expiryDate && new Date(s.expiryDate) < new Date() ? "text-danger" : ""}`}>
-                      {timeUntilExpiryLabel(s.expiryDate)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge tone={SAMPLE_STATUS_TONE[s.status]}>{SAMPLE_STATUS_LABEL[s.status]}</Badge>
-                    </td>
+        <>
+          {/* Desktop/tablet: full table. Below md, this stays out of the DOM's visible flow in
+           * favour of the stacked-card list below -- a 9-column table doesn't fit a phone screen
+           * even with horizontal scroll (tiny tap targets, no context while scrolled sideways). */}
+          <Card padding="none" className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className={THEAD_ROW_CLASS}>
+                    <Th>Sample ID</Th>
+                    <Th>Product</Th>
+                    <Th>Batch</Th>
+                    <Th>Type</Th>
+                    <Th>Collection Date</Th>
+                    <Th>Analyst</Th>
+                    <Th>Production Room / Bay</Th>
+                    <Th>Time to Expiry</Th>
+                    <Th>Status</Th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.map((s) => (
+                    <tr
+                      key={s.id}
+                      onClick={() => onSelect(s.id)}
+                      className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-muted/40"
+                    >
+                      <td className="px-3 py-2 font-medium text-foreground">{s.sampleId}</td>
+                      <td className="px-3 py-2">{s.productName}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{s.batchNumber}</td>
+                      <td className="px-3 py-2">{SAMPLE_TYPE_LABEL[s.sampleType]}</td>
+                      <td className="px-3 py-2">{s.collectionDate ? new Date(s.collectionDate).toLocaleDateString() : "—"}</td>
+                      <td className="px-3 py-2">{s.collectedByName ?? "—"}</td>
+                      <td className="px-3 py-2">{s.productionRoom ?? "—"}</td>
+                      <td className={`px-3 py-2 ${s.expiryDate && new Date(s.expiryDate) < new Date() ? "text-danger" : ""}`}>
+                        {timeUntilExpiryLabel(s.expiryDate)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge tone={SAMPLE_STATUS_TONE[s.status]}>{SAMPLE_STATUS_LABEL[s.status]}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Phone-sized screens: one stacked card per sample instead of the table above. */}
+          <div className="space-y-2 md:hidden">
+            {filtered.map((s) => {
+              const expired = !!s.expiryDate && new Date(s.expiryDate) < new Date();
+              return (
+                <Card
+                  key={s.id}
+                  padding="sm"
+                  interactive
+                  onClick={() => onSelect(s.id)}
+                  className="cursor-pointer"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="font-medium text-foreground">{s.sampleId}</span>
+                    <Badge tone={SAMPLE_STATUS_TONE[s.status]}>{SAMPLE_STATUS_LABEL[s.status]}</Badge>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    <div>
+                      <dt className="text-muted-foreground">Product</dt>
+                      <dd className="text-foreground">{s.productName}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Batch</dt>
+                      <dd className="text-foreground">{s.batchNumber}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Type</dt>
+                      <dd className="text-foreground">{SAMPLE_TYPE_LABEL[s.sampleType]}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Collection Date</dt>
+                      <dd className="text-foreground">{s.collectionDate ? new Date(s.collectionDate).toLocaleDateString() : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Analyst</dt>
+                      <dd className="text-foreground">{s.collectedByName ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Room / Bay</dt>
+                      <dd className="text-foreground">{s.productionRoom ?? "—"}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-muted-foreground">Time to Expiry</dt>
+                      <dd className={expired ? "text-danger" : "text-foreground"}>{timeUntilExpiryLabel(s.expiryDate)}</dd>
+                    </div>
+                  </dl>
+                </Card>
+              );
+            })}
           </div>
-        </Card>
+        </>
       )}
 
       {showNew && (
