@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { CustomerOrderStatus, OrderPriority } from "@/generated/prisma";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { CUSTOMER_ORDER_STATUS_LABELS } from "@/lib/customer-order-defaults";
+import { CUSTOMER_ORDER_STATUS_LABELS, type QaGateStatus } from "@/lib/customer-order-defaults";
 import type { OrderRow } from "./customer-orders-client";
 
 export type RiskOrderRow = {
@@ -16,6 +16,8 @@ export type RiskOrderRow = {
   requestedDeliveryDate: string;
   confirmedDeliveryDate: string | null;
   risk: { overdue: boolean; atRisk: boolean; reasons: string[] };
+  qaStatus: QaGateStatus;
+  shortLineCount: number;
 };
 
 function StatCard({ label, value, tone }: { label: string; value: number; tone?: "danger" | "warning" }) {

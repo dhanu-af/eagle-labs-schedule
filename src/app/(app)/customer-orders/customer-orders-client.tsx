@@ -5,6 +5,7 @@ import type { CustomerOrderStatus, OrderPriority } from "@/generated/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import DashboardTab, { type RiskOrderRow } from "./dashboard-tab";
 import OrdersTab from "./orders-tab";
+import BoardTab from "./board-tab";
 import CustomersTab from "./customers-tab";
 import ProductsTab from "./products-tab";
 
@@ -68,6 +69,7 @@ export type PlannerOption = { id: string; fullName: string };
 const TABS = [
   { key: "dashboard", label: "Dashboard" },
   { key: "orders", label: "Orders" },
+  { key: "board", label: "Board" },
   { key: "customers", label: "Customers" },
   { key: "products", label: "Products" },
 ] as const;
@@ -119,6 +121,7 @@ export default function CustomerOrdersClient({
       {tab === "orders" && (
         <OrdersTab orders={orders} customers={customers} products={products} planners={planners} canManage={canManage} />
       )}
+      {tab === "board" && <BoardTab orders={orders} riskOverview={riskOverview} canManage={canManage} />}
       {tab === "customers" && <CustomersTab customers={customers} canManage={canManage} />}
       {tab === "products" && <ProductsTab products={products} formulations={formulations} canManage={canManage} />}
     </div>
