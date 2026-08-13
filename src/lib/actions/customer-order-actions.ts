@@ -292,19 +292,24 @@ export async function getActiveOrdersWithRisk() {
   const orders = await prisma.customerOrder.findMany({
     where: { status: { notIn: ["DISPATCHED", "DELIVERED", "CLOSED", "CANCELLED"] } },
     orderBy: { requestedDeliveryDate: "asc" },
-    include: { customer: { select: { name: true } }, lines: { select: { id: true } } },
+    include: {
+      customer: { select: { name: true } },
+      lines: { include: { batchRecords: { include: { qcSamples: { select: { sampleType: true, status: true } } } } } },
+    },
   });
 
   const withRisk = await Promise.all(
     orders.map(async (order) => {
       const checks = order.lines.length ? await getOrderMaterialChecks(order.id) : {};
       const lineMaterialStatuses: MaterialLineStatus[] = Object.values(checks).map((c) => (c.lineStatus === "NO_BOM" ? "UNMAPPED" : c.lineStatus));
+      const shortLineCount = lineMaterialStatuses.filter((s) => s === "SHORT").length;
       const risk = computeOrderRisk({
         status: order.status,
         requestedDeliveryDate: order.requestedDeliveryDate,
         confirmedDeliveryDate: order.confirmedDeliveryDate,
         lineMaterialStatuses,
       });
+      const qaStatus = computeOrderQaStatus(order.lines.map((l) => computeLineQaStatus(l.batchRecords)));
       return {
         id: order.id,
         orderNumber: order.orderNumber,
@@ -314,6 +319,8 @@ export async function getActiveOrdersWithRisk() {
         requestedDeliveryDate: order.requestedDeliveryDate.toISOString(),
         confirmedDeliveryDate: order.confirmedDeliveryDate?.toISOString() ?? null,
         risk,
+        qaStatus,
+        shortLineCount,
       };
     })
   );

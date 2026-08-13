@@ -51,6 +51,7 @@ const icons = {
   customerOrders: "🧾",
   capacityPlanning: "📐",
   procurement: "🛒",
+  controlTower: "🗼",
 };
 
 type Notification = {
@@ -129,6 +130,7 @@ export default function AppShell({
               {
                 label: "Admin",
                 items: [
+                  { href: "/control-tower", label: "Control Tower", icon: icons.controlTower },
                   { href: "/reports", label: "Reports & Analytics", icon: icons.reports },
                   ...(isAdmin ? [{ href: "/team", label: "Production Team", icon: icons.team }] : []),
                   ...(isAdmin ? [{ href: "/audit", label: "Audit Trail", icon: icons.audit }] : []),
