@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getSession, canManageCustomerOrders } from "@/lib/auth";
-import { getOrderMaterialChecks, getCustomerOrderAuditTrail, getBatchRecordsForLinking } from "@/lib/actions/customer-order-actions";
+import { getSession, canManageCustomerOrders, isAdminRole } from "@/lib/auth";
+import { getOrderMaterialChecks, getOrderQaStatus, getCustomerOrderAuditTrail, getBatchRecordsForLinking } from "@/lib/actions/customer-order-actions";
+import { computeBatchQaStatus } from "@/lib/customer-order-defaults";
 import OrderDetailClient from "./order-detail-client";
 
 export default async function CustomerOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +20,16 @@ export default async function CustomerOrderDetailPage({ params }: { params: Prom
         include: {
           product: { select: { id: true, name: true, sku: true, formulationId: true } },
           batchRecords: {
-            select: { id: true, batchNumber: true, productName: true, status: true, scheduledDate: true, estimatedHours: true, machine: { select: { name: true } } },
+            select: {
+              id: true,
+              batchNumber: true,
+              productName: true,
+              status: true,
+              scheduledDate: true,
+              estimatedHours: true,
+              machine: { select: { name: true } },
+              qcSamples: { select: { sampleType: true, status: true } },
+            },
           },
         },
       },
@@ -27,8 +37,9 @@ export default async function CustomerOrderDetailPage({ params }: { params: Prom
   });
   if (!order) notFound();
 
-  const [materialChecks, auditTrail, batchRecordOptions, planners, products] = await Promise.all([
+  const [materialChecks, qaStatus, auditTrail, batchRecordOptions, planners, products] = await Promise.all([
     getOrderMaterialChecks(id),
+    getOrderQaStatus(id),
     getCustomerOrderAuditTrail(id),
     getBatchRecordsForLinking(),
     prisma.user.findMany({ where: { disabled: false }, select: { id: true, fullName: true }, orderBy: { fullName: "asc" } }),
@@ -73,15 +84,19 @@ export default async function CustomerOrderDetailPage({ params }: { params: Prom
             scheduledDate: b.scheduledDate?.toISOString() ?? null,
             estimatedHours: b.estimatedHours,
             machineName: b.machine?.name ?? null,
+            qaStatus: computeBatchQaStatus(b.qcSamples),
           })),
           materialCheck: materialChecks[l.id] ?? { lineStatus: "NO_BOM" as const, materials: [] },
+          qaStatus: qaStatus.lineStatuses[l.id] ?? "NOT_STARTED",
         })),
       }}
+      orderQaStatus={qaStatus.orderStatus}
       auditTrail={auditTrail}
       batchRecordOptions={batchRecordOptions}
       planners={planners}
       products={products}
       canManage={!!session && canManageCustomerOrders(session.role)}
+      isAdmin={!!session && isAdminRole(session.role)}
     />
   );
 }

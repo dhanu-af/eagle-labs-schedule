@@ -95,6 +95,52 @@ export function computeOrderRisk(order: {
   return { overdue, atRisk, reasons };
 }
 
+export type QaGateStatus = "NOT_STARTED" | "PENDING" | "RELEASED" | "HELD";
+
+/** Rolls up a single Batch Record's QC samples to one QA status. Only samples typed
+ * FINISHED_PRODUCT count -- STABILITY/RETENTION/INVESTIGATION/COMPLAINT samples don't
+ * gate whether the batch itself is fit to dispatch. REJECTED beats APPROVED beats "still
+ * in progress", since a real failure is a stronger signal than an unfinished test. */
+export function computeBatchQaStatus(qcSamples: { sampleType: string; status: string }[]): QaGateStatus {
+  const relevant = qcSamples.filter((s) => s.sampleType === "FINISHED_PRODUCT");
+  if (relevant.length === 0) return "PENDING";
+  if (relevant.some((s) => s.status === "REJECTED")) return "HELD";
+  if (relevant.some((s) => s.status === "APPROVED")) return "RELEASED";
+  return "PENDING";
+}
+
+/** Rolls up every Batch Record linked to one order line to a line-level QA status.
+ * NOT_STARTED (no batch linked yet) is not itself a hold -- production hasn't happened,
+ * so there's nothing to release yet; it only becomes relevant once the order is actually
+ * being moved toward dispatch, which is where the gate in updateOrderStatus applies it. */
+export function computeLineQaStatus(batchRecords: { qcSamples: { sampleType: string; status: string }[] }[]): QaGateStatus {
+  if (batchRecords.length === 0) return "NOT_STARTED";
+  const batchStatuses = batchRecords.map((b) => computeBatchQaStatus(b.qcSamples));
+  if (batchStatuses.some((s) => s === "HELD")) return "HELD";
+  if (batchStatuses.some((s) => s !== "RELEASED")) return "PENDING";
+  return "RELEASED";
+}
+
+/** Order-level rollup across all its lines -- worst status wins, same "a real problem
+ * beats an unfinished one" precedence as computeBatchQaStatus. */
+export function computeOrderQaStatus(lineStatuses: QaGateStatus[]): QaGateStatus {
+  if (lineStatuses.some((s) => s === "HELD")) return "HELD";
+  if (lineStatuses.some((s) => s !== "RELEASED")) return "PENDING";
+  return "RELEASED";
+}
+
+export const QA_GATE_STATUS_LABELS: Record<QaGateStatus, string> = {
+  NOT_STARTED: "Not Started",
+  PENDING: "QA Pending",
+  RELEASED: "QA Released",
+  HELD: "QA Hold",
+};
+
+/** Statuses that represent "goods are leaving/gone" -- spec's business rule is "cannot
+ * dispatch / cannot close if required QA is incomplete", so the gate applies from
+ * READY_TO_DISPATCH onward, not to earlier planning statuses. */
+export const QA_GATED_STATUSES: CustomerOrderStatus[] = ["READY_TO_DISPATCH", "DISPATCHED", "DELIVERED", "CLOSED"];
+
 /** Human-friendly order number, e.g. CO-2026-00042 — sequence is per-calendar-year, counted
  * by the caller (needs a DB read) and formatted here. */
 export function formatOrderNumber(year: number, sequence: number): string {

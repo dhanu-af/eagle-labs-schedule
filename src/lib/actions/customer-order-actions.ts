@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canManageCustomerOrders } from "@/lib/auth";
+import { getSession, canManageCustomerOrders, isAdminRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { getItemStockSummary } from "@/lib/warehouse-ledger";
 import {
@@ -11,9 +11,15 @@ import {
   rollUpMaterialStatus,
   formatOrderNumber,
   computeOrderRisk,
+  computeLineQaStatus,
+  computeOrderQaStatus,
+  QA_GATE_STATUS_LABELS,
+  QA_GATED_STATUSES,
+  CUSTOMER_ORDER_STATUS_LABELS,
   type MaterialCheckResult,
   type MaterialCheckLine,
   type MaterialLineStatus,
+  type QaGateStatus,
 } from "@/lib/customer-order-defaults";
 import type { CustomerOrderStatus } from "@/generated/prisma";
 
@@ -422,12 +428,48 @@ const VALID_STATUSES: CustomerOrderStatus[] = [
   "CANCELLED",
 ];
 
-export async function updateOrderStatus(id: string, status: CustomerOrderStatus, reason?: string | null) {
+/** Per-line and order-level QA status, rolled up from each line's linked Batch Records'
+ * FINISHED_PRODUCT QC samples. Exported so both updateOrderStatus's gate and the order
+ * detail page's display use the exact same computation and can never disagree. */
+export async function getOrderQaStatus(orderId: string): Promise<{ lineStatuses: Record<string, QaGateStatus>; orderStatus: QaGateStatus }> {
+  const order = await prisma.customerOrder.findUnique({
+    where: { id: orderId },
+    include: { lines: { include: { batchRecords: { include: { qcSamples: { select: { sampleType: true, status: true } } } } } } },
+  });
+  if (!order) throw new Error("Order not found");
+
+  const lineStatuses: Record<string, QaGateStatus> = {};
+  for (const line of order.lines) {
+    lineStatuses[line.id] = computeLineQaStatus(line.batchRecords);
+  }
+  return { lineStatuses, orderStatus: computeOrderQaStatus(Object.values(lineStatuses)) };
+}
+
+export async function updateOrderStatus(
+  id: string,
+  status: CustomerOrderStatus,
+  options?: { reason?: string | null; qaOverride?: boolean }
+) {
   const session = await requireAccess();
   if (!VALID_STATUSES.includes(status)) throw new Error("Unknown status");
 
   const before = await prisma.customerOrder.findUnique({ where: { id }, select: { orderNumber: true, status: true } });
   if (!before) throw new Error("Order not found");
+
+  let qaOverrideApplied = false;
+  if (QA_GATED_STATUSES.includes(status)) {
+    const { orderStatus: qaStatus } = await getOrderQaStatus(id);
+    if (qaStatus !== "RELEASED") {
+      if (!options?.qaOverride) {
+        throw new Error(
+          `Can't move to ${CUSTOMER_ORDER_STATUS_LABELS[status]} — ${QA_GATE_STATUS_LABELS[qaStatus]}. An Admin/Super Admin can override this with a reason.`
+        );
+      }
+      if (!isAdminRole(session.role)) throw new Error("Only an Admin or Super Admin can override a QA hold");
+      if (!options.reason?.trim()) throw new Error("An override reason is required");
+      qaOverrideApplied = true;
+    }
+  }
 
   const order = await prisma.customerOrder.update({ where: { id }, data: { status } });
 
@@ -435,7 +477,9 @@ export async function updateOrderStatus(id: string, status: CustomerOrderStatus,
     action: "UPDATE_CUSTOMER_ORDER_STATUS",
     entityType: "CustomerOrder",
     entityId: order.id,
-    summary: `Order ${order.orderNumber} moved from ${before.status} to ${status}${reason ? ` — ${reason}` : ""}`,
+    summary: `Order ${order.orderNumber} moved from ${before.status} to ${status}${
+      qaOverrideApplied ? ` — QA HOLD OVERRIDDEN: ${options?.reason}` : options?.reason ? ` — ${options.reason}` : ""
+    }`,
   });
 
   revalidatePath(BASE_PATH);

@@ -13,7 +13,16 @@ import {
   unlinkBatchRecord,
   type NewOrderLineInput,
 } from "@/lib/actions/customer-order-actions";
-import { CUSTOMER_ORDER_STATUS_LABELS, CUSTOMER_ORDER_STATUS_SEQUENCE, computeOrderRisk, type MaterialCheckResult, type MaterialLineStatus } from "@/lib/customer-order-defaults";
+import {
+  CUSTOMER_ORDER_STATUS_LABELS,
+  CUSTOMER_ORDER_STATUS_SEQUENCE,
+  QA_GATE_STATUS_LABELS,
+  QA_GATED_STATUSES,
+  computeOrderRisk,
+  type MaterialCheckResult,
+  type MaterialLineStatus,
+  type QaGateStatus,
+} from "@/lib/customer-order-defaults";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -34,8 +43,18 @@ type OrderLine = {
   packagingRequirement: string | null;
   artworkStatus: string | null;
   notes: string | null;
-  batchRecords: { id: string; batchNumber: string; productName: string; status: string; scheduledDate: string | null; estimatedHours: number | null; machineName: string | null }[];
+  batchRecords: {
+    id: string;
+    batchNumber: string;
+    productName: string;
+    status: string;
+    scheduledDate: string | null;
+    estimatedHours: number | null;
+    machineName: string | null;
+    qaStatus: QaGateStatus;
+  }[];
   materialCheck: MaterialCheckResult;
+  qaStatus: QaGateStatus;
 };
 
 type Order = {
@@ -65,6 +84,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+const QA_TONE: Record<QaGateStatus, "success" | "danger" | "warning" | "muted"> = {
+  NOT_STARTED: "muted",
+  PENDING: "warning",
+  RELEASED: "success",
+  HELD: "danger",
+};
 
 const MATERIAL_TONE: Record<MaterialLineStatus | "NO_BOM", "success" | "danger" | "warning" | "muted"> = {
   READY: "success",
@@ -172,6 +198,7 @@ function LineCard({ line, batchRecordOptions, canManage }: { line: OrderLine; ba
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={MATERIAL_TONE[status]}>{MATERIAL_LABEL[status]}</Badge>
+          {line.qaStatus !== "NOT_STARTED" && <Badge tone={QA_TONE[line.qaStatus]}>{QA_GATE_STATUS_LABELS[line.qaStatus]}</Badge>}
           <button onClick={() => setExpanded((e) => !e)} className="text-xs text-muted-foreground hover:text-foreground">
             {expanded ? "Hide" : "Details"}
           </button>
@@ -204,6 +231,9 @@ function LineCard({ line, batchRecordOptions, canManage }: { line: OrderLine; ba
                           ? `— ${b.machineName}, ${b.scheduledDate ? new Date(b.scheduledDate).toLocaleDateString() : "no date"} (${b.estimatedHours}h)`
                           : "— not scheduled yet"}
                       </span>
+                      <Badge tone={QA_TONE[b.qaStatus]} className="ml-1">
+                        {QA_GATE_STATUS_LABELS[b.qaStatus]}
+                      </Badge>
                     </span>
                     {canManage && (
                       <button onClick={() => unlink(b.id)} disabled={pending} className="text-danger hover:underline">
@@ -239,18 +269,22 @@ function LineCard({ line, batchRecordOptions, canManage }: { line: OrderLine; ba
 
 export default function OrderDetailClient({
   order,
+  orderQaStatus,
   auditTrail,
   batchRecordOptions,
   planners,
   products,
   canManage,
+  isAdmin,
 }: {
   order: Order;
+  orderQaStatus: QaGateStatus;
   auditTrail: { id: string; actorName: string; summary: string; createdAt: string }[];
   batchRecordOptions: BatchRecordOption[];
   planners: PlannerOption[];
   products: ProductOption[];
   canManage: boolean;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -267,8 +301,11 @@ export default function OrderDetailClient({
   const [specialRequirements, setSpecialRequirements] = useState(order.specialRequirements ?? "");
   const [notes, setNotes] = useState(order.notes ?? "");
   const [nextStatus, setNextStatus] = useState<CustomerOrderStatus>(order.status);
+  const [qaOverrideReason, setQaOverrideReason] = useState("");
 
   const [showAddLine, setShowAddLine] = useState(false);
+
+  const qaBlocksNextStatus = QA_GATED_STATUSES.includes(nextStatus) && orderQaStatus !== "RELEASED";
 
   const risk = useMemo(() => {
     const lineMaterialStatuses: MaterialLineStatus[] = order.lines.map((l) => (l.materialCheck.lineStatus === "NO_BOM" ? "UNMAPPED" : l.materialCheck.lineStatus));
@@ -304,9 +341,16 @@ export default function OrderDetailClient({
   }
 
   function applyStatus() {
+    setError("");
+    if (qaBlocksNextStatus && isAdmin && !qaOverrideReason.trim()) return setError("An override reason is required.");
     startTransition(async () => {
       try {
-        await updateOrderStatus(order.id, nextStatus);
+        await updateOrderStatus(
+          order.id,
+          nextStatus,
+          qaBlocksNextStatus && isAdmin ? { qaOverride: true, reason: qaOverrideReason } : undefined
+        );
+        setQaOverrideReason("");
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't update status.");
@@ -328,6 +372,7 @@ export default function OrderDetailClient({
         <div className="flex items-center gap-2">
           {risk.overdue && <Badge tone="danger">Overdue</Badge>}
           {!risk.overdue && risk.atRisk && <Badge tone="warning">At Risk</Badge>}
+          {orderQaStatus !== "NOT_STARTED" && <Badge tone={QA_TONE[orderQaStatus]}>{QA_GATE_STATUS_LABELS[orderQaStatus]}</Badge>}
           <Badge tone="muted">{CUSTOMER_ORDER_STATUS_LABELS[order.status]}</Badge>
         </div>
       </div>
@@ -353,12 +398,29 @@ export default function OrderDetailClient({
               </option>
             ))}
           </select>
-          {canManage && (
+          {canManage && !(qaBlocksNextStatus && !isAdmin) && (
             <Button size="sm" onClick={applyStatus} disabled={pending || nextStatus === order.status}>
-              Update Status
+              {qaBlocksNextStatus ? "Override & Update Status" : "Update Status"}
             </Button>
           )}
         </div>
+        {qaBlocksNextStatus && canManage && (
+          <div className="mt-2 rounded-lg border border-warning/30 bg-warning/5 p-2">
+            <p className="text-xs text-warning">
+              {CUSTOMER_ORDER_STATUS_LABELS[nextStatus]} requires QA release — currently {QA_GATE_STATUS_LABELS[orderQaStatus]}.
+            </p>
+            {isAdmin ? (
+              <input
+                className="input mt-1 w-full"
+                placeholder="Reason for overriding the QA hold (required)"
+                value={qaOverrideReason}
+                onChange={(e) => setQaOverrideReason(e.target.value)}
+              />
+            ) : (
+              <p className="mt-1 text-xs text-muted-foreground">Only an Admin or Super Admin can override this.</p>
+            )}
+          </div>
+        )}
       </Card>
 
       <Card padding="sm">
