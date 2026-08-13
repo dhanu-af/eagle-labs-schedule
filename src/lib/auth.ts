@@ -214,6 +214,20 @@ export function canManageMfgReconciliation(role: Role) {
   );
 }
 
+/** Customer Order Management: single Phase 1 tier covering the whole workflow (create/edit
+ * orders, customers, products, change status, link a Batch Record) -- same broad-tier-first
+ * pattern as canManageMfgReconciliation. No dedicated SALES role exists yet; reuses the
+ * existing manager-tier roles. Can be split into finer per-action tiers later if real usage
+ * needs it, the same way QC Samples' tiers evolved. */
+export function canManageCustomerOrders(role: Role) {
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }

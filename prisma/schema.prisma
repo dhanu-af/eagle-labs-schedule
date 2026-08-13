@@ -140,61 +140,63 @@ model Team {
   description String?
   createdAt   DateTime @default(now())
 
-  employees        Employee[]
-  dailyTasks       DailyTask[]
+  employees         Employee[]
+  dailyTasks        DailyTask[]
   weeklyAssignments WeeklyAssignment[]
-  kpis             Kpi[]
+  kpis              Kpi[]
 }
 
 model Employee {
-  id          String   @id @default(cuid())
-  name        String
-  photoUrl    String?
-  role        Role     @default(EMPLOYEE)
-  shift       String   @default("Day")
-  phone       String?
-  email       String?  @unique
-  teamId      String
-  active      Boolean  @default(true)
-  leaveBalance Int     @default(20)
-  hourlyRate  Float    @default(0)
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  name         String
+  photoUrl     String?
+  role         Role     @default(EMPLOYEE)
+  shift        String   @default("Day")
+  phone        String?
+  email        String?  @unique
+  teamId       String
+  active       Boolean  @default(true)
+  leaveBalance Int      @default(20)
+  hourlyRate   Float    @default(0)
+  createdAt    DateTime @default(now())
 
-  team             Team               @relation(fields: [teamId], references: [id])
-  user             User?
-  dailyTasks       DailyTask[]        @relation("assignee")
+  team              Team               @relation(fields: [teamId], references: [id])
+  user              User?
+  dailyTasks        DailyTask[]        @relation("assignee")
   weeklyAssignments WeeklyAssignment[]
-  kpiRecords       KpiRecord[]
-  attendance       Attendance[]
-  leaveRequests    LeaveRequest[]      @relation("requester")
-  approvedLeaves   LeaveRequest[]      @relation("approver")
-  statusUpdates    DailyTask[]        @relation("updatedBy")
-  payslips         Payslip[]
-  notifications    Notification[]
+  kpiRecords        KpiRecord[]
+  attendance        Attendance[]
+  leaveRequests     LeaveRequest[]     @relation("requester")
+  approvedLeaves    LeaveRequest[]     @relation("approver")
+  statusUpdates     DailyTask[]        @relation("updatedBy")
+  payslips          Payslip[]
+  notifications     Notification[]
 
   @@index([teamId])
 }
 
 model User {
-  id                  String   @id @default(cuid())
-  username            String   @unique
-  passwordHash        String
-  role                Role     @default(EMPLOYEE)
-  fullName            String
-  department          String?
-  employeeId          String?  @unique
-  isPermanent         Boolean  @default(false)
-  disabled            Boolean  @default(false)
-  mustChangePassword  Boolean  @default(false)
-  failedLoginAttempts Int      @default(0)
-  locked              Boolean  @default(false)
-  ingredientLibraryAccess Boolean @default(false)
-  restrictedToHref    String?
-  createdAt           DateTime @default(now())
-  lastActiveAt        DateTime?
+  id                      String    @id @default(cuid())
+  username                String    @unique
+  passwordHash            String
+  role                    Role      @default(EMPLOYEE)
+  fullName                String
+  department              String?
+  employeeId              String?   @unique
+  isPermanent             Boolean   @default(false)
+  disabled                Boolean   @default(false)
+  mustChangePassword      Boolean   @default(false)
+  failedLoginAttempts     Int       @default(0)
+  locked                  Boolean   @default(false)
+  ingredientLibraryAccess Boolean   @default(false)
+  restrictedToHref        String?
+  createdAt               DateTime  @default(now())
+  lastActiveAt            DateTime?
 
-  employee    Employee?    @relation(fields: [employeeId], references: [id])
-  loginEvents LoginEvent[]
+  employee              Employee?       @relation(fields: [employeeId], references: [id])
+  loginEvents           LoginEvent[]
+  plannedCustomerOrders CustomerOrder[] @relation("CustomerOrderPlanner")
+  ownedCustomerOrders   CustomerOrder[] @relation("CustomerOrderSalesOwner")
 }
 
 model LoginEvent {
@@ -236,9 +238,9 @@ model DailyTask {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  team       Team      @relation(fields: [teamId], references: [id])
-  employee   Employee? @relation("assignee", fields: [employeeId], references: [id])
-  updatedBy  Employee? @relation("updatedBy", fields: [updatedById], references: [id])
+  team      Team      @relation(fields: [teamId], references: [id])
+  employee  Employee? @relation("assignee", fields: [employeeId], references: [id])
+  updatedBy Employee? @relation("updatedBy", fields: [updatedById], references: [id])
 
   @@index([date])
   @@index([teamId, date])
@@ -261,16 +263,16 @@ model WeeklyAssignment {
 }
 
 model Kpi {
-  id       String  @id @default(cuid())
-  teamId   String
-  product  String?
-  name     String
-  unit     String  @default("kg")
-  target   Float
+  id      String  @id @default(cuid())
+  teamId  String
+  product String?
+  name    String
+  unit    String  @default("kg")
+  target  Float
 
-  team           Team                 @relation(fields: [teamId], references: [id])
-  records        KpiRecord[]
-  dailyTargets   KpiDailyTarget[]
+  team            Team                 @relation(fields: [teamId], references: [id])
+  records         KpiRecord[]
+  dailyTargets    KpiDailyTarget[]
   dailyProduction KpiDailyProduction[]
 }
 
@@ -320,13 +322,13 @@ model KpiRecord {
 }
 
 model Attendance {
-  id         String           @id @default(cuid())
-  employeeId String
-  date       DateTime
-  status     AttendanceStatus @default(PRESENT)
-  hoursWorked Float           @default(8)
-  overtime   Float            @default(0)
-  createdAt  DateTime         @default(now())
+  id          String           @id @default(cuid())
+  employeeId  String
+  date        DateTime
+  status      AttendanceStatus @default(PRESENT)
+  hoursWorked Float            @default(8)
+  overtime    Float            @default(0)
+  createdAt   DateTime         @default(now())
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
@@ -335,15 +337,15 @@ model Attendance {
 }
 
 model LeaveRequest {
-  id          String      @id @default(cuid())
-  employeeId  String
-  startDate   DateTime
-  endDate     DateTime
-  type        String      @default("Annual")
-  reason      String?
-  status      LeaveStatus @default(PENDING)
-  approverId  String?
-  createdAt   DateTime    @default(now())
+  id         String      @id @default(cuid())
+  employeeId String
+  startDate  DateTime
+  endDate    DateTime
+  type       String      @default("Annual")
+  reason     String?
+  status     LeaveStatus @default(PENDING)
+  approverId String?
+  createdAt  DateTime    @default(now())
 
   employee Employee  @relation("requester", fields: [employeeId], references: [id])
   approver Employee? @relation("approver", fields: [approverId], references: [id])
@@ -390,25 +392,25 @@ model Notification {
 }
 
 model PayRun {
-  id           String       @id @default(cuid())
-  periodStart  DateTime
-  periodEnd    DateTime
-  status       PayRunStatus @default(DRAFT)
-  createdAt    DateTime     @default(now())
-  finalizedAt  DateTime?
+  id          String       @id @default(cuid())
+  periodStart DateTime
+  periodEnd   DateTime
+  status      PayRunStatus @default(DRAFT)
+  createdAt   DateTime     @default(now())
+  finalizedAt DateTime?
 
   payslips Payslip[]
 }
 
 model Payslip {
-  id             String  @id @default(cuid())
-  payRunId       String
-  employeeId     String
-  regularHours   Float   @default(0)
-  overtimeHours  Float   @default(0)
-  hourlyRate     Float   @default(0)
-  grossPay       Float   @default(0)
-  notes          String?
+  id            String  @id @default(cuid())
+  payRunId      String
+  employeeId    String
+  regularHours  Float   @default(0)
+  overtimeHours Float   @default(0)
+  hourlyRate    Float   @default(0)
+  grossPay      Float   @default(0)
+  notes         String?
 
   payRun   PayRun   @relation(fields: [payRunId], references: [id])
   employee Employee @relation(fields: [employeeId], references: [id])
@@ -444,49 +446,49 @@ model KbQuestionLog {
 }
 
 model Ingredient {
-  id                String   @id @default(cuid())
-  name              String
-  alternateName     String?
-  type              String
-  category          String?
-  aanLabel          String?
-  aanValue          String?
-  notes             String?
-  verified          Boolean  @default(false)
+  id                 String    @id @default(cuid())
+  name               String
+  alternateName      String?
+  type               String
+  category           String?
+  aanLabel           String?
+  aanValue           String?
+  notes              String?
+  verified           Boolean   @default(false)
   verificationSource String?
-  verifiedAt        DateTime?
-  verifiedBy        String?
-  classification    String?
-  mainBenefit       String?
-  usedFor           String?
-  synonyms          String?
-  chemicalName      String?
-  casNumber         String?
-  molecularFormula  String?
-  molecularWeight   String?
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  classification     String?
+  mainBenefit        String?
+  usedFor            String?
+  synonyms           String?
+  chemicalName       String?
+  casNumber          String?
+  molecularFormula   String?
+  molecularWeight    String?
 
   // Per-authority regulatory status — leave blank ("—") unless confirmed
-  tgaStatus         String?
-  apvmaStatus       String?
-  fdaStatus         String?
-  emaStatus         String?
-  aicisStatus       String?
-  regulatoryStatus  String?
+  tgaStatus        String?
+  apvmaStatus      String?
+  fdaStatus        String?
+  emaStatus        String?
+  aicisStatus      String?
+  regulatoryStatus String?
 
   // Applications
-  primaryUse        String?
-  industry          String?
-  productTypes      String?
+  primaryUse   String?
+  industry     String?
+  productTypes String?
 
   typicalDosage     String?
   storageConditions String?
   shelfLife         String?
 
   // Safety
-  safetyNotes       String?
-  ghsClassification String?
-  signalWord        String?
-  ppe               String?
+  safetyNotes         String?
+  ghsClassification   String?
+  signalWord          String?
+  ppe                 String?
   handlingPrecautions String?
 
   manufacturingNotes String?
@@ -500,21 +502,21 @@ model Ingredient {
   qcMicrobialLimits String?
 
   // Physical properties
-  appearance        String?
-  colour            String?
-  odour             String?
-  solubility        String?
-  density           String?
-  meltingPoint      String?
-  phValue           String?
+  appearance   String?
+  colour       String?
+  odour        String?
+  solubility   String?
+  density      String?
+  meltingPoint String?
+  phValue      String?
 
   relatedIngredientsText String?
-  referencesText    String?
+  referencesText         String?
 
-  faq               String?
-  source            String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  faq       String?
+  source    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   warehouseItem WarehouseItem?
 
@@ -679,22 +681,22 @@ model PostOpCheck {
 }
 
 model WorkLog {
-  id             String          @id @default(cuid())
-  room           WorkLogRoom
-  opName         String
-  startDate      DateTime
-  startTime      String
-  productName    String
-  productCode    String
-  batchNumber    String
-  activity       WorkLogActivity
-  activityOther  String?
-  endDate        DateTime?
-  endTime        String?
-  closingOpName  String?
-  comments       String?
-  status         CheckStatus     @default(PENDING)
-  locked         Boolean         @default(false)
+  id            String          @id @default(cuid())
+  room          WorkLogRoom
+  opName        String
+  startDate     DateTime
+  startTime     String
+  productName   String
+  productCode   String
+  batchNumber   String
+  activity      WorkLogActivity
+  activityOther String?
+  endDate       DateTime?
+  endTime       String?
+  closingOpName String?
+  comments      String?
+  status        CheckStatus     @default(PENDING)
+  locked        Boolean         @default(false)
 
   submittedById   String
   submittedByName String
@@ -734,21 +736,21 @@ model ChatMessage {
   createdAt  DateTime  @default(now())
 
   replyToId String?
-  replyTo   ChatMessage?  @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   ChatMessage[] @relation("ChatReplies")
+  replyTo   ChatMessage?   @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[]  @relation("ChatReplies")
   reactions ChatReaction[]
 
   @@index([createdAt])
 }
 
 model ChatReaction {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   messageId String
   message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
   userId    String
   userName  String
   emoji     String
-  createdAt DateTime @default(now())
+  createdAt DateTime    @default(now())
 
   @@unique([messageId, userId])
   @@index([messageId])
@@ -787,10 +789,11 @@ model Formulation {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  folder      FormulationFolder       @relation(fields: [folderId], references: [id])
-  ingredients FormulationIngredient[]
-  batchRecords BatchRecord[]
+  folder                    FormulationFolder          @relation(fields: [folderId], references: [id])
+  ingredients               FormulationIngredient[]
+  batchRecords              BatchRecord[]
   warehouseMaterialRequests WarehouseMaterialRequest[]
+  products                  Product[]
 
   @@index([folderId])
 }
@@ -808,10 +811,16 @@ model FormulationIngredient {
   approvedBy       String?
   comments         String?
   tolerancePct     Float   @default(2)
+  /// Optional link to the real stock item this ingredient nets against — lets the Customer
+  /// Order material check compute real READY/SHORT via the warehouse ledger. Null on older
+  /// rows means "unmapped", shown as such rather than guessed.
+  warehouseItemId  String?
 
-  formulation Formulation @relation(fields: [formulationId], references: [id], onDelete: Cascade)
+  formulation   Formulation    @relation(fields: [formulationId], references: [id], onDelete: Cascade)
+  warehouseItem WarehouseItem? @relation(fields: [warehouseItemId], references: [id])
 
   @@index([formulationId])
+  @@index([warehouseItemId])
 }
 
 /// A single produced batch's full GMP Batch Manufacturing Record (Blending stage),
@@ -834,11 +843,11 @@ model BatchRecord {
   batchSizePerMix Float
   batchSizeUnit   String @default("kg")
 
-  declEncapsulation Boolean @default(false)
+  declEncapsulation  Boolean @default(false)
   declBlendingMixing Boolean @default(false)
-  declDispensing    Boolean @default(false)
-  declPolishing     Boolean @default(false)
-  declCoating       Boolean @default(false)
+  declDispensing     Boolean @default(false)
+  declPolishing      Boolean @default(false)
+  declCoating        Boolean @default(false)
 
   releasedByWarehouse String?
   releasedDate        DateTime?
@@ -846,27 +855,34 @@ model BatchRecord {
   ailsNumber          String?
   palletNumber        String?
 
-  status    CheckStatus @default(PENDING)
-  locked    Boolean     @default(false)
+  status CheckStatus @default(PENDING)
+  locked Boolean     @default(false)
+
+  /// Optional link to the Customer Order line this batch is fulfilling. Nullable so
+  /// existing pure-production-push batches, and any batch made without an order, are
+  /// unaffected. Many batches can point at one line (split production across batches).
+  customerOrderLineId String?
 
   createdById   String?
   createdByName String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  formulation      Formulation?              @relation(fields: [formulationId], references: [id])
-  workLogEntries   BatchWorkLogEntry[]
-  operators        BatchOperatorSignoff[]
-  equipment        BatchEquipmentItem[]
-  lineClearance    BatchLineClearance?
-  mixes            BatchMix[]
-  warehouseReturns BatchWarehouseReturnLine[]
-  materialRequests BatchMaterialRequestLine[]
-  qcSamples        QcSample[]
-  mfgBatches       MfgBatch[]
+  formulation       Formulation?               @relation(fields: [formulationId], references: [id])
+  customerOrderLine CustomerOrderLine?         @relation(fields: [customerOrderLineId], references: [id])
+  workLogEntries    BatchWorkLogEntry[]
+  operators         BatchOperatorSignoff[]
+  equipment         BatchEquipmentItem[]
+  lineClearance     BatchLineClearance?
+  mixes             BatchMix[]
+  warehouseReturns  BatchWarehouseReturnLine[]
+  materialRequests  BatchMaterialRequestLine[]
+  qcSamples         QcSample[]
+  mfgBatches        MfgBatch[]
 
   @@index([formulationId])
   @@index([batchNumber])
+  @@index([customerOrderLineId])
 }
 
 model BatchWorkLogEntry {
@@ -973,26 +989,26 @@ model BatchMix {
   bulkVolumeMl           Float?
   tappedVolumeMl         Float?
 
-  batchRecord      BatchRecord           @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
-  dispensingLines  BatchDispensingLine[]
-  drums            BatchDrum[]
+  batchRecord     BatchRecord           @relation(fields: [batchRecordId], references: [id], onDelete: Cascade)
+  dispensingLines BatchDispensingLine[]
+  drums           BatchDrum[]
 
   @@unique([batchRecordId, mixNumber])
 }
 
 model BatchDispensingLine {
-  id     String @id @default(cuid())
-  mixId  String
-  order  Int
-  rmNumber       String?
-  ingredientName String
-  uin            String?
-  requiredQtyKg  Float
+  id                   String    @id @default(cuid())
+  mixId                String
+  order                Int
+  rmNumber             String?
+  ingredientName       String
+  uin                  String?
+  requiredQtyKg        Float
   actualQtyDispensedKg Float?
-  performedBySign String?
-  performedByDate DateTime?
-  verifiedBySign  String?
-  verifiedByDate  DateTime?
+  performedBySign      String?
+  performedByDate      DateTime?
+  verifiedBySign       String?
+  verifiedByDate       DateTime?
 
   mix BatchMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
 
@@ -1012,9 +1028,9 @@ model BatchDrum {
 }
 
 model BatchWarehouseReturnLine {
-  id            String @id @default(cuid())
-  batchRecordId String
-  order         Int
+  id                  String    @id @default(cuid())
+  batchRecordId       String
+  order               Int
   rmNumber            String?
   ingredientName      String
   uin                 String?
@@ -1030,9 +1046,9 @@ model BatchWarehouseReturnLine {
 }
 
 model BatchMaterialRequestLine {
-  id            String @id @default(cuid())
-  batchRecordId String
-  order         Int
+  id                  String    @id @default(cuid())
+  batchRecordId       String
+  order               Int
   rmNumber            String?
   ingredientName      String
   uin                 String?
@@ -1103,21 +1119,21 @@ enum TrolleyQcStatus {
 }
 
 model DryingBay {
-  id                 String   @id @default(cuid())
-  bayNumber          Int      @unique
+  id                 String           @id @default(cuid())
+  bayNumber          Int              @unique
   purpose            DryingBayPurpose @default(EMPTY)
   assignedEmployeeId String?
   department         String?
   comments           String?
   expectedFinishTime DateTime?
   updatedBy          String?
-  updatedAt          DateTime @updatedAt
+  updatedAt          DateTime         @updatedAt
 
   batches DryingBatch[]
 }
 
 model DryingBatch {
-  id                    String   @id @default(cuid())
+  id                    String      @id @default(cuid())
   bayId                 String?
   productName           String
   batchNumber           String
@@ -1128,29 +1144,29 @@ model DryingBatch {
   dateEnteredDryingRoom DateTime
   dryingStartTime       DateTime?
   currentStage          DryingStage @default(RECEIVING)
-  stageUpdatedAt        DateTime @default(now())
+  stageUpdatedAt        DateTime    @default(now())
   assignedEmployeeId    String?
   priorityRank          Int?
   remarks               String?
   completedAt           DateTime?
   updatedBy             String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  bay      DryingBay? @relation(fields: [bayId], references: [id])
+  bay      DryingBay?      @relation(fields: [bayId], references: [id])
   trolleys DryingTrolley[]
 
   @@index([bayId])
 }
 
 model DryingTrolley {
-  id                 String   @id @default(cuid())
+  id                 String          @id @default(cuid())
   batchId            String
   trolleyNumber      Int
   quantity           Float?
   trayCount          Int?
-  wrapped            Boolean  @default(false)
-  rotationCompleted  Boolean  @default(false)
+  wrapped            Boolean         @default(false)
+  rotationCompleted  Boolean         @default(false)
   qcStatus           TrolleyQcStatus @default(PENDING)
   assignedEmployeeId String?
   remarks            String?
@@ -1204,51 +1220,52 @@ enum WarehouseZone {
 }
 
 model WarehouseLocation {
-  id       String        @id @default(cuid())
-  code     String        @unique
+  id       String              @id @default(cuid())
+  code     String              @unique
   label    String
   zone     WarehouseZone
   parentId String?
   parent   WarehouseLocation?  @relation("LocationTree", fields: [parentId], references: [id])
   children WarehouseLocation[] @relation("LocationTree")
-  active   Boolean  @default(true)
+  active   Boolean             @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  itemsDefaultingHere       WarehouseItem[]            @relation("ItemDefaultLocation")
-  goodsReceivingLines       GoodsReceivingLine[]
-  requestLinesReleasedHere  WarehouseRequestLine[]      @relation("ReleaseLocation")
-  requestLinesReturnedHere  WarehouseRequestLine[]      @relation("ReturnLocation")
-  ledgerEntriesFrom         MaterialLedgerEntry[]       @relation("LedgerFrom")
-  ledgerEntriesTo           MaterialLedgerEntry[]       @relation("LedgerTo")
+  itemsDefaultingHere      WarehouseItem[]        @relation("ItemDefaultLocation")
+  goodsReceivingLines      GoodsReceivingLine[]
+  requestLinesReleasedHere WarehouseRequestLine[] @relation("ReleaseLocation")
+  requestLinesReturnedHere WarehouseRequestLine[] @relation("ReturnLocation")
+  ledgerEntriesFrom        MaterialLedgerEntry[]  @relation("LedgerFrom")
+  ledgerEntriesTo          MaterialLedgerEntry[]  @relation("LedgerTo")
 
   @@index([zone])
   @@index([parentId])
 }
 
 model WarehouseItem {
-  id                String   @id @default(cuid())
-  itemCode          String   @unique
+  id                String                @id @default(cuid())
+  itemCode          String                @unique
   name              String
   category          WarehouseItemCategory
   subCategory       String?
-  ingredientId      String?  @unique
-  ingredient        Ingredient? @relation(fields: [ingredientId], references: [id])
+  ingredientId      String?               @unique
+  ingredient        Ingredient?           @relation(fields: [ingredientId], references: [id])
   unit              String
   minimumStock      Float?
   maximumStock      Float?
   defaultLocationId String?
-  defaultLocation   WarehouseLocation? @relation("ItemDefaultLocation", fields: [defaultLocationId], references: [id])
-  active            Boolean  @default(true)
+  defaultLocation   WarehouseLocation?    @relation("ItemDefaultLocation", fields: [defaultLocationId], references: [id])
+  active            Boolean               @default(true)
   createdBy         String?
   updatedBy         String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
-  goodsReceivingLines GoodsReceivingLine[]
-  requestLines        WarehouseRequestLine[]
-  ledgerEntries        MaterialLedgerEntry[]
+  goodsReceivingLines    GoodsReceivingLine[]
+  requestLines           WarehouseRequestLine[]
+  ledgerEntries          MaterialLedgerEntry[]
+  formulationIngredients FormulationIngredient[]
 
   @@index([category])
   @@index([ingredientId])
@@ -1278,11 +1295,11 @@ model GoodsReceiving {
 }
 
 model GoodsReceivingLine {
-  id                      String   @id @default(cuid())
+  id                      String                   @id @default(cuid())
   goodsReceivingId        String
-  goodsReceiving          GoodsReceiving @relation(fields: [goodsReceivingId], references: [id], onDelete: Cascade)
+  goodsReceiving          GoodsReceiving           @relation(fields: [goodsReceivingId], references: [id], onDelete: Cascade)
   itemId                  String
-  item                    WarehouseItem  @relation(fields: [itemId], references: [id])
+  item                    WarehouseItem            @relation(fields: [itemId], references: [id])
   lotNumber               String
   supplierLot             String?
   internalLot             String?
@@ -1296,7 +1313,7 @@ model GoodsReceivingLine {
   storageCondition        String?
   status                  GoodsReceivingLineStatus @default(QUARANTINE)
   locationId              String?
-  location                WarehouseLocation? @relation(fields: [locationId], references: [id])
+  location                WarehouseLocation?       @relation(fields: [locationId], references: [id])
   qaReleasedByName        String?
   qaReleasedAt            DateTime?
   qaRejectReason          String?
@@ -1332,20 +1349,20 @@ enum ReceiptOutcome {
 }
 
 model WarehouseMaterialRequest {
-  id              String   @id @default(cuid())
-  requestNumber   String   @unique
+  id              String                 @id @default(cuid())
+  requestNumber   String                 @unique
   batchReference  String
   batchSize       Float?
   batchSizeUnit   String?
   requiredDate    DateTime?
-  priority        Priority @default(MEDIUM)
+  priority        Priority               @default(MEDIUM)
   status          WarehouseRequestStatus @default(REQUESTED)
   requestedByName String
   formulationId   String?
-  formulation     Formulation? @relation(fields: [formulationId], references: [id])
+  formulation     Formulation?           @relation(fields: [formulationId], references: [id])
   comments        String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   lines         WarehouseRequestLine[]
   ledgerEntries MaterialLedgerEntry[]
@@ -1355,11 +1372,11 @@ model WarehouseMaterialRequest {
 }
 
 model WarehouseRequestLine {
-  id                     String   @id @default(cuid())
+  id                     String                   @id @default(cuid())
   requestId              String
   request                WarehouseMaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   itemId                 String?
-  item                   WarehouseItem? @relation(fields: [itemId], references: [id])
+  item                   WarehouseItem?           @relation(fields: [itemId], references: [id])
   ingredientNameFreeText String?
   requestedQty           Float
   unit                   String
@@ -1426,12 +1443,12 @@ enum StockBucket {
 }
 
 model MaterialLedgerEntry {
-  id       String  @id @default(cuid())
-  sequence Int     @default(autoincrement()) @unique
+  id       String @id @default(cuid())
+  sequence Int    @unique @default(autoincrement())
 
   entryType LedgerEntryType
   itemId    String
-  item      WarehouseItem @relation(fields: [itemId], references: [id])
+  item      WarehouseItem   @relation(fields: [itemId], references: [id])
   lotNumber String?
   quantity  Float
   unit      String
@@ -1448,9 +1465,9 @@ model MaterialLedgerEntry {
   requestId            String?
   request              WarehouseMaterialRequest? @relation(fields: [requestId], references: [id])
   requestLineId        String?
-  requestLine          WarehouseRequestLine? @relation(fields: [requestLineId], references: [id])
+  requestLine          WarehouseRequestLine?     @relation(fields: [requestLineId], references: [id])
   goodsReceivingLineId String?
-  goodsReceivingLine   GoodsReceivingLine? @relation(fields: [goodsReceivingLineId], references: [id])
+  goodsReceivingLine   GoodsReceivingLine?       @relation(fields: [goodsReceivingLineId], references: [id])
 
   performedByName String
   approvedByName  String?
@@ -1502,7 +1519,7 @@ enum QcTestResult {
 /// sampleId (e.g. QC-2026-000124) is derived from `sequence` at creation time and then stored so it never changes.
 model QcSample {
   id       String @id @default(cuid())
-  sequence Int    @default(autoincrement()) @unique
+  sequence Int    @unique @default(autoincrement())
   sampleId String @unique
 
   productName   String
@@ -1748,8 +1765,8 @@ model MfgEncapsulation {
   rejectCapsulesKg   Float? // "Reject Capsules"
   rejectPowderKg     Float? // "Reject Powder"
 
-  avgCapsuleFillWeightMg Float? // "Average Capsule Fill Weight" (Capsule Properties) -- measured, powder only
-  avgCapsuleLengthMm     Float?
+  avgCapsuleFillWeightMg   Float? // "Average Capsule Fill Weight" (Capsule Properties) -- measured, powder only
+  avgCapsuleLengthMm       Float?
   avgDisintegrationMinutes Int?
   avgDisintegrationSeconds Int?
   disintegrationResult     String? // "Pass" | "Fail"
@@ -1895,4 +1912,123 @@ model MfgDispatchEvent {
   createdAt DateTime @default(now())
 
   @@index([mfgBatchId])
+}
+
+/// Customer Order Management — Phase 1 (Foundation). Converts customer demand into a
+/// tracked order against a real Product/SKU and BOM (Formulation), with a material
+/// availability check computed live off the existing MaterialLedgerEntry ledger. Does
+/// NOT model finite capacity (no Machine/WorkCenter exists yet) — that's Phase 2.
+enum CustomerOrderStatus {
+  DRAFT
+  RECEIVED
+  UNDER_REVIEW
+  MATERIAL_CHECK
+  CONFIRMED
+  IN_PRODUCTION
+  QA_QC
+  READY_TO_DISPATCH
+  DISPATCHED
+  DELIVERED
+  CLOSED
+  ON_HOLD
+  CANCELLED
+}
+
+enum OrderPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+/// First-class Product/SKU — until now every module (Formulation, BatchRecord, MfgBatch,
+/// QcSample, DailyTask, Kpi) identified a product only by a free-text productName string.
+/// This does not retrofit those — it's the anchor for new Customer Order lines going
+/// forward, optionally pointing at the Formulation that is its BOM.
+model Product {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  name          String
+  category      String?
+  defaultUnit   String   @default("kg")
+  formulationId String?
+  active        Boolean  @default(true)
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  formulation Formulation?        @relation(fields: [formulationId], references: [id])
+  orderLines  CustomerOrderLine[]
+
+  @@index([formulationId])
+}
+
+model Customer {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  name         String
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  address      String?
+  priorityTier OrderPriority @default(NORMAL)
+  notes        String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  orders CustomerOrder[]
+}
+
+model CustomerOrder {
+  id                    String              @id @default(cuid())
+  orderNumber           String              @unique
+  customerId            String
+  customerPoNumber      String?
+  customerRequestNumber String?
+  orderDate             DateTime            @default(now())
+  requestedDeliveryDate DateTime
+  confirmedDeliveryDate DateTime?
+  priority              OrderPriority       @default(NORMAL)
+  status                CustomerOrderStatus @default(DRAFT)
+  responsiblePlannerId  String?
+  salesOwnerId          String?
+  shippingRequirements  String?
+  specialRequirements   String?
+  notes                 String?
+  createdById           String?
+  createdByName         String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  customer           Customer            @relation(fields: [customerId], references: [id])
+  responsiblePlanner User?               @relation("CustomerOrderPlanner", fields: [responsiblePlannerId], references: [id])
+  salesOwner         User?               @relation("CustomerOrderSalesOwner", fields: [salesOwnerId], references: [id])
+  lines              CustomerOrderLine[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([requestedDeliveryDate])
+}
+
+model CustomerOrderLine {
+  id                   String   @id @default(cuid())
+  customerOrderId      String
+  lineNumber           Int
+  productId            String
+  quantity             Float
+  unit                 String
+  packagingRequirement String?
+  artworkStatus        String?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  customerOrder CustomerOrder @relation(fields: [customerOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id])
+  batchRecords  BatchRecord[]
+
+  @@index([customerOrderId])
+  @@index([productId])
 }
