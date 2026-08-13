@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canManageCustomerOrders, isAdminRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { getItemStockSummary } from "@/lib/warehouse-ledger";
+import { getOpenPurchaseOrderLinesForItems } from "@/lib/actions/procurement-actions";
 import {
   scaleIngredientQtyKg,
   checkIngredientAgainstStock,
@@ -198,6 +199,7 @@ export async function checkMaterialAvailability(lineId: string): Promise<Materia
           availableQty: null,
           shortageQty: null,
           status: "UNMAPPED" as const,
+          incomingPo: null,
         };
       }
 
@@ -211,11 +213,28 @@ export async function checkMaterialAvailability(lineId: string): Promise<Materia
         availableQty: stock.AVAILABLE,
         shortageQty,
         status,
+        incomingPo: null,
       };
     })
   );
 
+  await attachIncomingPos(materials);
   return { lineStatus: rollUpMaterialStatus(materials), materials };
+}
+
+/** Mutates SHORT materials in place, attaching the earliest open PO covering their stock
+ * item (if any) -- one batched lookup shared across every SHORT ingredient passed in, so
+ * a multi-line order doesn't turn into one procurement query per ingredient. */
+async function attachIncomingPos(materials: MaterialCheckLine[]) {
+  const shortItemIds = Array.from(new Set(materials.filter((m) => m.status === "SHORT" && m.warehouseItemId).map((m) => m.warehouseItemId as string)));
+  if (shortItemIds.length === 0) return;
+
+  const incomingByItemId = await getOpenPurchaseOrderLinesForItems(shortItemIds);
+  for (const m of materials) {
+    if (m.status === "SHORT" && m.warehouseItemId && incomingByItemId[m.warehouseItemId]) {
+      m.incomingPo = incomingByItemId[m.warehouseItemId];
+    }
+  }
 }
 
 /** Same check as checkMaterialAvailability, but for every line on an order at once, sharing
@@ -253,16 +272,17 @@ export async function getOrderMaterialChecks(orderId: string): Promise<Record<st
       const stock = ing.warehouseItemId ? stockByItemId.get(ing.warehouseItemId) : undefined;
 
       if (!stock) {
-        return { ingredientName: ing.ingredientName, rmNumber: ing.rmNumber, warehouseItemId: ing.warehouseItemId, requiredQtyKg, availableQty: null, shortageQty: null, status: "UNMAPPED" as const };
+        return { ingredientName: ing.ingredientName, rmNumber: ing.rmNumber, warehouseItemId: ing.warehouseItemId, requiredQtyKg, availableQty: null, shortageQty: null, status: "UNMAPPED" as const, incomingPo: null };
       }
 
       const { status, shortageQty } = checkIngredientAgainstStock(requiredQtyKg, stock);
-      return { ingredientName: ing.ingredientName, rmNumber: ing.rmNumber, warehouseItemId: ing.warehouseItemId, requiredQtyKg, availableQty: stock.AVAILABLE, shortageQty, status };
+      return { ingredientName: ing.ingredientName, rmNumber: ing.rmNumber, warehouseItemId: ing.warehouseItemId, requiredQtyKg, availableQty: stock.AVAILABLE, shortageQty, status, incomingPo: null };
     });
 
     result[line.id] = { lineStatus: rollUpMaterialStatus(materials), materials };
   }
 
+  await attachIncomingPos(Object.values(result).flatMap((r) => r.materials));
   return result;
 }
 

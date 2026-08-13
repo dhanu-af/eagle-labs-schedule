@@ -117,7 +117,8 @@ function MaterialCheckPanel({ check }: { check: MaterialCheckResult }) {
           <th className="py-1 pr-2">Required (kg)</th>
           <th className="py-1 pr-2">Available (kg)</th>
           <th className="py-1 pr-2">Shortage (kg)</th>
-          <th className="py-1">Status</th>
+          <th className="py-1 pr-2">Status</th>
+          <th className="py-1">Incoming PO</th>
         </tr>
       </thead>
       <tbody>
@@ -127,8 +128,15 @@ function MaterialCheckPanel({ check }: { check: MaterialCheckResult }) {
             <td className="py-1 pr-2">{m.requiredQtyKg}</td>
             <td className="py-1 pr-2">{m.availableQty ?? "—"}</td>
             <td className="py-1 pr-2">{m.shortageQty ?? "—"}</td>
-            <td className="py-1">
+            <td className="py-1 pr-2">
               <Badge tone={MATERIAL_TONE[m.status]}>{MATERIAL_LABEL[m.status]}</Badge>
+            </td>
+            <td className="py-1 text-muted-foreground">
+              {m.incomingPo
+                ? `${m.incomingPo.poNumber} — ${m.incomingPo.supplierName}, ${m.incomingPo.quantity} due ${new Date(m.incomingPo.expectedDeliveryDate).toLocaleDateString()}`
+                : m.status === "SHORT"
+                ? "No PO on order"
+                : "—"}
             </td>
           </tr>
         ))}

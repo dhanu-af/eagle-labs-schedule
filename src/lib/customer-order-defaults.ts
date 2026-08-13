@@ -30,6 +30,8 @@ export function scaleIngredientQtyKg(
 
 export type MaterialLineStatus = "READY" | "SHORT" | "UNMAPPED";
 
+export type IncomingPoInfo = { poNumber: string; supplierName: string; quantity: number; expectedDeliveryDate: string };
+
 export type MaterialCheckLine = {
   ingredientName: string;
   rmNumber: string | null;
@@ -38,6 +40,10 @@ export type MaterialCheckLine = {
   availableQty: number | null;
   shortageQty: number | null;
   status: MaterialLineStatus;
+  /** The earliest open Purchase Order line covering this ingredient's stock item, if any
+   * -- lets a SHORT material point at a real answer instead of a dead end (spec §7). Only
+   * ever populated for SHORT lines; null otherwise, and null when nothing's on order. */
+  incomingPo: IncomingPoInfo | null;
 };
 
 export type MaterialCheckResult =

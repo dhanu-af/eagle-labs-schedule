@@ -50,6 +50,7 @@ const icons = {
   mfgReconciliation: "🏗️",
   customerOrders: "🧾",
   capacityPlanning: "📐",
+  procurement: "🛒",
 };
 
 type Notification = {
@@ -115,6 +116,7 @@ export default function AppShell({
             { href: "/batch-records", label: "Batch Records", icon: icons.batchRecords },
             { href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom },
             { href: "/warehouse", label: "Warehouse Management", icon: icons.warehouse },
+            { href: "/procurement", label: "Procurement", icon: icons.procurement },
             { href: "/qc-samples", label: "QC Samples", icon: icons.qcSamples },
             { href: "/mfg-reconciliation", label: "Mfg Reconciliation", icon: icons.mfgReconciliation },
             ...(canSeeIngredientLibrary ? [{ href: "/ingredients", label: "Ingredient Library", icon: icons.ingredients }] : []),

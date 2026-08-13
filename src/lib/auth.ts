@@ -240,6 +240,18 @@ export function canManageCapacityPlanning(role: Role) {
   );
 }
 
+/** Procurement: manager tier -- Supplier/Purchase Order CRUD and status updates. Same
+ * roles as canManageWarehouse since it's the same warehouse/planning staff; no dedicated
+ * PROCUREMENT role exists. */
+export function canManagePurchasing(role: Role) {
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }

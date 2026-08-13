@@ -1276,6 +1276,7 @@ model WarehouseItem {
   requestLines           WarehouseRequestLine[]
   ledgerEntries          MaterialLedgerEntry[]
   formulationIngredients FormulationIngredient[]
+  purchaseOrderLines     PurchaseOrderLine[]
 
   @@index([category])
   @@index([ingredientId])
@@ -2073,4 +2074,70 @@ model MachineCapacityException {
   machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
 
   @@unique([machineId, date])
+}
+
+/// Procurement — supplier-side purchase order tracking. Until now GoodsReceiving was the
+/// only supplier-related record, and it's post-hoc (what already arrived); this is the
+/// first forward-looking "what's on order and when is it due" concept, so a customer
+/// order material shortage can point at a real incoming PO instead of a dead end.
+model Supplier {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  leadTimeDays Int?
+  notes        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  CONFIRMED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id                   String              @id @default(cuid())
+  poNumber             String              @unique
+  supplierId           String
+  orderDate            DateTime            @default(now())
+  expectedDeliveryDate DateTime
+  status               PurchaseOrderStatus @default(DRAFT)
+  notes                String?
+  createdById          String?
+  createdByName        String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  lines    PurchaseOrderLine[]
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([expectedDeliveryDate])
+}
+
+model PurchaseOrderLine {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  itemId          String
+  quantity        Float
+  unit            String
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  item          WarehouseItem @relation(fields: [itemId], references: [id])
+
+  @@index([purchaseOrderId])
+  @@index([itemId])
 }
