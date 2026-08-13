@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import SyncAlertsButton from "./sync-alerts-button";
 
 function StatCard({ label, value, tone }: { label: string; value: string | number; tone?: "danger" | "warning" | "success" }) {
   return (
@@ -22,7 +23,11 @@ export default async function ControlTowerPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Operations Control Tower" subtitle="Customer promise first, material reality second, capacity reality third." />
+      <PageHeader
+        title="Operations Control Tower"
+        subtitle="Customer promise first, material reality second, capacity reality third."
+        actions={<SyncAlertsButton />}
+      />
 
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today&apos;s Customer Commitment</p>
