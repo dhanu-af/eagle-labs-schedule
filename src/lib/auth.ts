@@ -228,6 +228,18 @@ export function canManageCustomerOrders(role: Role) {
   );
 }
 
+/** Capacity Planning: manager tier -- machine CRUD, capacity exceptions, scheduling a
+ * Batch Record onto a machine/date. Same roles as canManageDailyPlanner/canManageWarehouse
+ * since it's the same planning/supervisory staff; no dedicated PLANNER role exists. */
+export function canManageCapacityPlanning(role: Role) {
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }

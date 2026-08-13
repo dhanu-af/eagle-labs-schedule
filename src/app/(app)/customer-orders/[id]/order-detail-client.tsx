@@ -34,7 +34,7 @@ type OrderLine = {
   packagingRequirement: string | null;
   artworkStatus: string | null;
   notes: string | null;
-  batchRecords: { id: string; batchNumber: string; productName: string; status: string }[];
+  batchRecords: { id: string; batchNumber: string; productName: string; status: string; scheduledDate: string | null; estimatedHours: number | null; machineName: string | null }[];
   materialCheck: MaterialCheckResult;
 };
 
@@ -195,9 +195,16 @@ function LineCard({ line, batchRecordOptions, canManage }: { line: OrderLine; ba
               <ul className="space-y-1">
                 {line.batchRecords.map((b) => (
                   <li key={b.id} className="flex items-center justify-between text-xs">
-                    <Link href={`/batch-records/${b.id}`} className="text-foreground hover:underline">
-                      {b.batchNumber} — {b.productName} ({b.status})
-                    </Link>
+                    <span>
+                      <Link href={`/batch-records/${b.id}`} className="text-foreground hover:underline">
+                        {b.batchNumber} — {b.productName} ({b.status})
+                      </Link>
+                      <span className="ml-1 text-muted-foreground">
+                        {b.machineName
+                          ? `— ${b.machineName}, ${b.scheduledDate ? new Date(b.scheduledDate).toLocaleDateString() : "no date"} (${b.estimatedHours}h)`
+                          : "— not scheduled yet"}
+                      </span>
+                    </span>
                     {canManage && (
                       <button onClick={() => unlink(b.id)} disabled={pending} className="text-danger hover:underline">
                         Unlink

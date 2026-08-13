@@ -18,7 +18,9 @@ export default async function CustomerOrderDetailPage({ params }: { params: Prom
         orderBy: { lineNumber: "asc" },
         include: {
           product: { select: { id: true, name: true, sku: true, formulationId: true } },
-          batchRecords: { select: { id: true, batchNumber: true, productName: true, status: true } },
+          batchRecords: {
+            select: { id: true, batchNumber: true, productName: true, status: true, scheduledDate: true, estimatedHours: true, machine: { select: { name: true } } },
+          },
         },
       },
     },
@@ -63,7 +65,15 @@ export default async function CustomerOrderDetailPage({ params }: { params: Prom
           packagingRequirement: l.packagingRequirement,
           artworkStatus: l.artworkStatus,
           notes: l.notes,
-          batchRecords: l.batchRecords,
+          batchRecords: l.batchRecords.map((b) => ({
+            id: b.id,
+            batchNumber: b.batchNumber,
+            productName: b.productName,
+            status: b.status,
+            scheduledDate: b.scheduledDate?.toISOString() ?? null,
+            estimatedHours: b.estimatedHours,
+            machineName: b.machine?.name ?? null,
+          })),
           materialCheck: materialChecks[l.id] ?? { lineStatus: "NO_BOM" as const, materials: [] },
         })),
       }}

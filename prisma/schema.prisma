@@ -863,6 +863,14 @@ model BatchRecord {
   /// unaffected. Many batches can point at one line (split production across batches).
   customerOrderLineId String?
 
+  /// Capacity Planning fields -- which machine this batch is scheduled on, when, and for
+  /// how many hours. Purely a planning concern, not GMP content: written only by
+  /// capacity-planning-actions.ts, never by batch-record-actions.ts, and never checked
+  /// against `locked`.
+  machineId      String?
+  scheduledDate  DateTime?
+  estimatedHours Float?
+
   createdById   String?
   createdByName String?
   createdAt     DateTime @default(now())
@@ -870,6 +878,7 @@ model BatchRecord {
 
   formulation       Formulation?               @relation(fields: [formulationId], references: [id])
   customerOrderLine CustomerOrderLine?         @relation(fields: [customerOrderLineId], references: [id])
+  machine           Machine?                   @relation(fields: [machineId], references: [id])
   workLogEntries    BatchWorkLogEntry[]
   operators         BatchOperatorSignoff[]
   equipment         BatchEquipmentItem[]
@@ -883,6 +892,7 @@ model BatchRecord {
   @@index([formulationId])
   @@index([batchNumber])
   @@index([customerOrderLineId])
+  @@index([machineId, scheduledDate])
 }
 
 model BatchWorkLogEntry {
@@ -2031,4 +2041,36 @@ model CustomerOrderLine {
 
   @@index([customerOrderId])
   @@index([productId])
+}
+
+/// Capacity Planning — Phase 2. A small, real machine list (this is a 2-3 machine
+/// operation, not a large multi-line factory) with a simple standard-hours-per-day
+/// default plus per-date exceptions (maintenance, holidays). Deliberately not a
+/// shift/calendar engine -- covers the real cases at this scale without over-building.
+model Machine {
+  id                  String   @id @default(cuid())
+  code                String   @unique
+  name                String
+  workCenter          String?
+  standardHoursPerDay Float    @default(8)
+  active              Boolean  @default(true)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  capacityExceptions MachineCapacityException[]
+  batchRecords       BatchRecord[]
+}
+
+model MachineCapacityException {
+  id                     String   @id @default(cuid())
+  machineId              String
+  date                   DateTime
+  hoursAvailableOverride Float
+  reason                 String?
+  createdAt              DateTime @default(now())
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@unique([machineId, date])
 }

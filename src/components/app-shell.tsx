@@ -49,6 +49,7 @@ const icons = {
   qcSamples: "🔬",
   mfgReconciliation: "🏗️",
   customerOrders: "🧾",
+  capacityPlanning: "📐",
 };
 
 type Notification = {
@@ -104,6 +105,7 @@ export default function AppShell({
           items: [
             { href: "/", label: "Dashboard", icon: icons.dashboard },
             { href: "/customer-orders", label: "Customer Orders", icon: icons.customerOrders },
+            { href: "/capacity-planning", label: "Capacity Planning", icon: icons.capacityPlanning },
             { href: "/my-task", label: "My Tasks", icon: icons.myTask },
             { href: "/daily", label: "Daily Operations", icon: icons.daily },
             { href: "/weekly", label: "Weekly Operations", icon: icons.weekly },
