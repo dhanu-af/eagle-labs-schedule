@@ -56,6 +56,7 @@ const icons = {
   weeklyKpi: "🎯",
   weeklyMps: "🗓️",
   materialShortages: "📉",
+  planningSearch: "🔎",
 };
 
 type Notification = {
@@ -140,6 +141,7 @@ export default function AppShell({
                 label: "Admin",
                 items: [
                   { href: "/control-tower", label: "Control Tower", icon: icons.controlTower },
+                  { href: "/planning-search", label: "Planning Calendar & Search", icon: icons.planningSearch },
                   { href: "/reports", label: "Reports & Analytics", icon: icons.reports },
                   ...(isAdmin ? [{ href: "/team", label: "Production Team", icon: icons.team }] : []),
                   ...(isAdmin ? [{ href: "/audit", label: "Audit Trail", icon: icons.audit }] : []),
