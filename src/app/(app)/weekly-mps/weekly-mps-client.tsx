@@ -14,6 +14,7 @@ import {
 import { computePlannedQtyKg, computeMpsReadiness, PRIORITY_LABELS, MATERIAL_STATUS_LABELS } from "@/lib/weekly-mps-defaults";
 import { formatWeekLabel, addWeeks } from "@/lib/week-utils";
 import type { MaterialLineStatus } from "@/lib/customer-order-defaults";
+import type { CapacityWeeklyCell } from "@/lib/actions/capacity-planning-actions";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -216,11 +217,13 @@ function EntryCard({
   entry,
   products,
   machines,
+  machineCapacity,
   canManage,
 }: {
   entry: MpsEntryRow;
   products: ProductOption[];
   machines: MachineOption[];
+  machineCapacity: CapacityWeeklyCell | undefined;
   canManage: boolean;
 }) {
   const router = useRouter();
@@ -292,6 +295,11 @@ function EntryCard({
           <Badge tone={PRIORITY_TONE[entry.priority]}>{PRIORITY_LABELS[entry.priority]}</Badge>
           <Badge tone={entry.frozen ? "info" : "muted"}>{entry.frozen ? "Frozen" : "Flexible"}</Badge>
           <Badge tone={readiness.ready ? "success" : "warning"}>{readiness.ready ? "Ready to Release" : "Not Ready"}</Badge>
+          {machineCapacity && (
+            <Badge tone={machineCapacity.overload ? "danger" : machineCapacity.utilizationPct != null && machineCapacity.utilizationPct >= 90 ? "warning" : "success"}>
+              Line {machineCapacity.utilizationPct === null ? "—" : `${machineCapacity.utilizationPct}%`} this week
+            </Badge>
+          )}
           <button onClick={() => setExpanded((e) => !e)} className="text-xs text-muted-foreground hover:text-foreground">
             {expanded ? "Hide" : "Details"}
           </button>
@@ -304,6 +312,14 @@ function EntryCard({
             <p className="text-xs text-muted-foreground">
               <span className="font-medium text-foreground">Not ready because: </span>
               {readiness.reasons.join(", ")}
+            </p>
+          )}
+          {machineCapacity && (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Line capacity this week: </span>
+              {machineCapacity.scheduledHours}h scheduled / {machineCapacity.availableHours}h available
+              {machineCapacity.overload && <span className="text-danger"> — already overloaded before this batch</span>}
+              {" "}(from Capacity Planning&rsquo;s real machine schedule)
             </p>
           )}
           {entry.notes && (
@@ -390,12 +406,14 @@ export default function WeeklyMpsClient({
   entries,
   products,
   machines,
+  capacityByMachine,
   canManage,
 }: {
   weekEndingIso: string;
   entries: MpsEntryRow[];
   products: ProductOption[];
   machines: MachineOption[];
+  capacityByMachine: Record<string, CapacityWeeklyCell>;
   canManage: boolean;
 }) {
   const router = useRouter();
@@ -429,7 +447,14 @@ export default function WeeklyMpsClient({
       ) : (
         <div className="space-y-2">
           {entries.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} products={products} machines={machines} canManage={canManage} />
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              products={products}
+              machines={machines}
+              machineCapacity={entry.machineId ? capacityByMachine[entry.machineId] : undefined}
+              canManage={canManage}
+            />
           ))}
         </div>
       )}
