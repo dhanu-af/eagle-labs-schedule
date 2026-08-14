@@ -71,6 +71,50 @@ export async function listMyPendingTaskRequests() {
   });
 }
 
+export type TaskRequestHistoryRow = {
+  id: string;
+  title: string;
+  message: string | null;
+  priority: Priority;
+  status: TaskRequestStatus;
+  dueDate: Date | null;
+  createdAt: Date;
+  direction: "SENT" | "RECEIVED";
+  counterpartyName: string;
+};
+
+/** Every task request this person has ever sent or received, in both directions
+ * and every status (including DONE) -- unlike listMyPendingTaskRequests(), which
+ * deliberately only shows PENDING/IN_PROGRESS for the urgent banner and drops off
+ * a request the moment it's marked done. This is the "what did I send/get, and
+ * what happened to it" view. */
+export async function listMyTaskRequestHistory(): Promise<TaskRequestHistoryRow[]> {
+  const session = await getSession();
+  if (!session) return [];
+
+  const requests = await prisma.taskRequest.findMany({
+    where: { OR: [{ fromUserId: session.userId }, { toUserId: session.userId }] },
+    include: { fromUser: { select: { fullName: true } }, toUser: { select: { fullName: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
+  return requests.map((r) => {
+    const direction = r.fromUserId === session.userId ? ("SENT" as const) : ("RECEIVED" as const);
+    return {
+      id: r.id,
+      title: r.title,
+      message: r.message,
+      priority: r.priority,
+      status: r.status,
+      dueDate: r.dueDate,
+      createdAt: r.createdAt,
+      direction,
+      counterpartyName: direction === "SENT" ? r.toUser.fullName : r.fromUser.fullName,
+    };
+  });
+}
+
 const VALID_STATUSES: TaskRequestStatus[] = ["PENDING", "IN_PROGRESS", "DONE"];
 
 export async function updateTaskRequestStatus(id: string, status: TaskRequestStatus) {
