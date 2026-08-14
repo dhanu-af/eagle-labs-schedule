@@ -2,7 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { askDhanu, deleteKbEntry, type KbMatch } from "@/lib/actions/kb-actions";
+import { deleteKbEntry, type KbMatch } from "@/lib/actions/kb-actions";
+import { askOpsAssistant } from "@/lib/actions/ops-assistant-actions";
+import Link from "next/link";
 import { KB_CATEGORY_CLASS, KB_CATEGORY_LABEL } from "@/lib/ui";
 import type { KbCategory } from "@/generated/prisma";
 import KbEntryModal from "./kb-entry-modal";
@@ -62,7 +64,8 @@ const SAMPLE_QUESTIONS = [
   "Capsules are not closing properly, what do I do?",
   "Machine suddenly stopped while running",
   "What PPE do I need before entering the blending room?",
-  "How often should I lubricate the machine?",
+  "Which customer orders are at risk this week?",
+  "Which machine is our bottleneck today?",
 ];
 
 function AnswerCard({ match, highlight }: { match: KbMatch; highlight?: boolean }) {
@@ -114,7 +117,7 @@ export default function AskDhanuClient({
   const router = useRouter();
   const [question, setQuestion] = useState("");
   const [pending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ matches: KbMatch[]; confident: boolean } | null>(null);
+  const [result, setResult] = useState<{ liveAnswer: string | null; liveLink: string | null; matches: KbMatch[]; confident: boolean } | null>(null);
 
   const [browseFilter, setBrowseFilter] = useState("");
   const [activeCategory, setActiveCategory] = useState<KbCategory | "ALL">("ALL");
@@ -126,7 +129,7 @@ export default function AskDhanuClient({
   function ask(q: string) {
     if (!q.trim()) return;
     startTransition(async () => {
-      const res = await askDhanu(q);
+      const res = await askOpsAssistant(q);
       setResult(res);
     });
   }
@@ -165,7 +168,7 @@ export default function AskDhanuClient({
     <div className="space-y-6">
       <PageHeader
         title="Dhanu AI"
-        subtitle="Powered by Dhanu's knowledge and expertise. Ask anything about SOPs, quality, production, equipment, formulations, or workplace procedures."
+        subtitle="Powered by Dhanu's knowledge and expertise, plus live answers about current orders, capacity, and QA. Ask about SOPs, quality, production, equipment, formulations, workplace procedures — or what's happening right now."
       />
 
       <div className="glass card-shadow rounded-xl border border-border p-5">
@@ -204,7 +207,20 @@ export default function AskDhanuClient({
 
       {result && (
         <div className="space-y-3">
-          {result.matches.length === 0 && (
+          {result.liveAnswer && (
+            <div className="card-shadow rounded-xl border border-primary/40 bg-primary/5 p-5">
+              <span className="mb-2 inline-block rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                Live operations data
+              </span>
+              <p className="whitespace-pre-line text-sm text-foreground">{result.liveAnswer}</p>
+              {result.liveLink && (
+                <Link href={result.liveLink} className="mt-2 inline-block text-xs text-primary hover:underline">
+                  Open →
+                </Link>
+              )}
+            </div>
+          )}
+          {!result.liveAnswer && result.matches.length === 0 && (
             <div className="rounded-xl border border-dashed border-border bg-surface">
               <EmptyState title="No matching answer found yet." description="Your question has been logged — ask your supervisor or Dhanu directly for now, and this will help expand the knowledge base." />
             </div>
