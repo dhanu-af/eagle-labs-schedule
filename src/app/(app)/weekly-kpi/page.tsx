@@ -1,10 +1,20 @@
 import { getSession, canManageWeeklyKpi } from "@/lib/auth";
-import { listWeeklyKpiScorecards } from "@/lib/actions/weekly-kpi-actions";
+import { listWeeklyKpiScorecards, computeWeeklyKpiSuggestions } from "@/lib/actions/weekly-kpi-actions";
+import { currentWeekEnding } from "@/lib/week-utils";
 import WeeklyKpiClient from "./weekly-kpi-client";
 
 export default async function WeeklyKpiPage() {
   const session = await getSession();
-  const scorecards = await listWeeklyKpiScorecards();
+  const canManage = !!session && canManageWeeklyKpi(session.role);
+
+  const [scorecards, initialSuggestions] = await Promise.all([
+    listWeeklyKpiScorecards(),
+    // Pre-computed automatically on page load so "Record This Week" opens already
+    // filled in -- no manual "Suggest values" click needed. Safe to skip entirely
+    // when the viewer can't manage scorecards, since computeWeeklyKpiSuggestions
+    // itself requires that access.
+    canManage ? computeWeeklyKpiSuggestions(currentWeekEnding().toISOString()) : Promise.resolve(null),
+  ]);
 
   return (
     <WeeklyKpiClient
@@ -25,7 +35,8 @@ export default async function WeeklyKpiPage() {
         managementComment: s.managementComment,
         createdByName: s.createdByName,
       }))}
-      canManage={!!session && canManageWeeklyKpi(session.role)}
+      initialSuggestions={initialSuggestions}
+      canManage={canManage}
     />
   );
 }

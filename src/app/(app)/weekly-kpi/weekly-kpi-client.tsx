@@ -8,6 +8,7 @@ import {
   upsertWeeklyKpiScorecard,
   deleteWeeklyKpiScorecard,
   type WeeklyKpiScorecardInput,
+  type WeeklyKpiSuggestions,
 } from "@/lib/actions/weekly-kpi-actions";
 import { currentWeekEnding, formatWeekLabel, SCORECARD_FIELDS, ESCALATION_LEVEL_LABELS, type ScorecardFieldKey } from "@/lib/weekly-kpi-defaults";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -43,6 +44,21 @@ function emptyDraft(): Draft {
   const base: Partial<Draft> = { overallStatus: "GREEN", managementComment: "" };
   for (const f of SCORECARD_FIELDS) base[f.key] = "";
   return base as Draft;
+}
+
+/** Overlays computed suggestions onto a draft -- shared by the modal's manual
+ * "Suggest values" button and by the initial draft the page pre-fills with on
+ * load, so both paths apply the exact same computed-vs-manual field split. */
+function mergeSuggestions(draft: Draft, suggestions: WeeklyKpiSuggestions): Draft {
+  return {
+    ...draft,
+    otifPct: suggestions.otifPct != null ? String(suggestions.otifPct) : draft.otifPct,
+    pastDueOrders: suggestions.pastDueOrders != null ? String(suggestions.pastDueOrders) : draft.pastDueOrders,
+    materialAvailabilityPct: suggestions.materialAvailabilityPct != null ? String(suggestions.materialAvailabilityPct) : draft.materialAvailabilityPct,
+    criticalShortages: suggestions.criticalShortages != null ? String(suggestions.criticalShortages) : draft.criticalShortages,
+    productionAttainmentPct: suggestions.productionAttainmentPct != null ? String(suggestions.productionAttainmentPct) : draft.productionAttainmentPct,
+    averageYieldPct: suggestions.averageYieldPct != null ? String(suggestions.averageYieldPct) : draft.averageYieldPct,
+  };
 }
 
 function draftFromRow(row: ScorecardRow): Draft {
@@ -96,15 +112,7 @@ function ScorecardModal({
     startTransition(async () => {
       try {
         const suggestions = await computeWeeklyKpiSuggestions(weekEndingIso);
-        setDraft((d) => ({
-          ...d,
-          otifPct: suggestions.otifPct != null ? String(suggestions.otifPct) : d.otifPct,
-          pastDueOrders: suggestions.pastDueOrders != null ? String(suggestions.pastDueOrders) : d.pastDueOrders,
-          materialAvailabilityPct: suggestions.materialAvailabilityPct != null ? String(suggestions.materialAvailabilityPct) : d.materialAvailabilityPct,
-          criticalShortages: suggestions.criticalShortages != null ? String(suggestions.criticalShortages) : d.criticalShortages,
-          productionAttainmentPct: suggestions.productionAttainmentPct != null ? String(suggestions.productionAttainmentPct) : d.productionAttainmentPct,
-          averageYieldPct: suggestions.averageYieldPct != null ? String(suggestions.averageYieldPct) : d.averageYieldPct,
-        }));
+        setDraft((d) => mergeSuggestions(d, suggestions));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't compute suggestions.");
       } finally {
@@ -317,7 +325,15 @@ function draftToInput(draft: Draft): WeeklyKpiScorecardInput {
   };
 }
 
-export default function WeeklyKpiClient({ scorecards, canManage }: { scorecards: ScorecardRow[]; canManage: boolean }) {
+export default function WeeklyKpiClient({
+  scorecards,
+  initialSuggestions,
+  canManage,
+}: {
+  scorecards: ScorecardRow[];
+  initialSuggestions: WeeklyKpiSuggestions | null;
+  canManage: boolean;
+}) {
   const router = useRouter();
   const [showNew, setShowNew] = useState(false);
 
@@ -355,7 +371,9 @@ export default function WeeklyKpiClient({ scorecards, canManage }: { scorecards:
           initial={
             thisWeekExists
               ? draftFromRow(scorecards.find((s) => new Date(s.weekEnding).toDateString() === new Date(thisWeekIso).toDateString())!)
-              : emptyDraft()
+              : initialSuggestions
+                ? mergeSuggestions(emptyDraft(), initialSuggestions)
+                : emptyDraft()
           }
           canSuggest
           onClose={() => setShowNew(false)}
