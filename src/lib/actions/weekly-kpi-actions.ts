@@ -6,6 +6,7 @@ import { getSession, canManageWeeklyKpi } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { computeYieldPct } from "@/lib/mfg-reconciliation-defaults";
 import { getActiveOrdersWithRisk, getOrderMaterialChecks } from "@/lib/actions/customer-order-actions";
+import { listMaterialShortages } from "@/lib/actions/material-shortage-actions";
 import { weekBounds, roundPct } from "@/lib/weekly-kpi-defaults";
 import type { EscalationLevel } from "@/generated/prisma";
 
@@ -108,16 +109,13 @@ export async function computeWeeklyKpiSuggestions(weekEndingIso: string): Promis
   }
   const materialAvailabilityPct = totalLines > 0 ? roundPct((readyLines / totalLines) * 100) : null;
 
-  // Critical Shortages -- open Site Action Log entries raised as CRITICAL priority
-  // against a materials/warehouse section. Reflects what the team actually logged,
-  // not an automatic re-derivation of live stock shortage data.
-  const criticalShortages = await prisma.siteActionLog.count({
-    where: {
-      priority: "CRITICAL",
-      sourceSection: { in: ["PROCUREMENT_MATERIALS", "WAREHOUSE"] },
-      status: { in: ["OPEN", "IN_PROGRESS"] },
-    },
-  });
+  // Critical Shortages -- materials in the Material Shortage Register at Red risk
+  // level (net short across every active order, needed within 7 days). Switched from
+  // counting manually-logged Site Action Log entries to this real computed number once
+  // the Material Shortage Register existed to provide it -- no more depending on
+  // someone remembering to log a shortage as an action.
+  const shortages = await listMaterialShortages();
+  const criticalShortages = shortages.filter((s) => s.riskLevel === "RED").length;
 
   // Production Attainment % -- Daily Operations planned vs actual quantity, summed
   // across every task logged in the week.
