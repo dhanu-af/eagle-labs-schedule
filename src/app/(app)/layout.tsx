@@ -1,20 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { listMyPendingTaskRequests } from "@/lib/actions/task-request-actions";
+import { listMyPendingTaskRequests, listTaskRequestRecipients } from "@/lib/actions/task-request-actions";
 import AppShell from "@/components/app-shell";
-
-const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
-  ADMIN: "Admin",
-  SUPERVISOR: "Supervisor",
-  OPERATIONS: "Operations",
-  TEAM_LEAD: "Team Lead",
-  QA: "QA",
-  EMPLOYEE: "Employee",
-  OTHERS: "Others",
-  EXTRA: "Extra",
-};
 
 export default async function AppLayout({
   children,
@@ -24,7 +12,7 @@ export default async function AppLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [notifications, user, myTaskRequests, users] = await Promise.all([
+  const [notifications, user, myTaskRequests, userOptions] = await Promise.all([
     session.employeeId
       ? prisma.notification.findMany({
           where: { employeeId: session.employeeId },
@@ -37,10 +25,7 @@ export default async function AppLayout({
     // nav restrictions -- EXTRA's staging-only nav and OTHERS' single-restricted-
     // page nav never route through "/", but both still render this shared layout.
     listMyPendingTaskRequests(),
-    // Keyed on User, not Employee -- real data showed almost no login is linked
-    // to an Employee record, so an Employee-based picker couldn't actually reach
-    // most real accounts.
-    prisma.user.findMany({ where: { disabled: false, id: { not: session.userId } }, orderBy: { fullName: "asc" }, select: { id: true, fullName: true, role: true } }),
+    listTaskRequestRecipients(),
   ]);
 
   return (
@@ -63,12 +48,13 @@ export default async function AppLayout({
         id: r.id,
         title: r.title,
         message: r.message,
+        link: r.link,
         priority: r.priority,
         status: r.status,
         dueDate: r.dueDate ? r.dueDate.toISOString() : null,
         fromUserName: r.fromUser.fullName,
       }))}
-      userOptions={users.map((u) => ({ id: u.id, fullName: u.fullName, roleLabel: ROLE_LABELS[u.role] ?? u.role }))}
+      userOptions={userOptions}
     >
       {children}
     </AppShell>

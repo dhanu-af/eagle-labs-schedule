@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 const AREA_LABEL: Record<EnvArea, string> = {
   BLENDING_ROOM: "Blending Room",
@@ -59,6 +60,7 @@ export default function EnvironmentalTab({
   canConfigureLimits,
   canUnlock,
   canDelete,
+  taskRequestRecipients,
 }: {
   rows: EnvironmentalCheckRow[];
   limits: EnvLimit[];
@@ -68,6 +70,7 @@ export default function EnvironmentalTab({
   canConfigureLimits: boolean;
   canUnlock: boolean;
   canDelete: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -285,37 +288,87 @@ export default function EnvironmentalTab({
         </table>
       </Card>
 
-      {showForm && <ReadingForm onClose={() => setShowForm(false)} />}
+      {showForm && <ReadingForm onClose={() => setShowForm(false)} taskRequestRecipients={taskRequestRecipients} />}
       {showLimits && <LimitsModal limits={limits} onClose={() => setShowLimits(false)} />}
     </div>
   );
 }
 
-function ReadingForm({ onClose }: { onClose: () => void }) {
+type SubmittedReading = { area: EnvArea; date: string; temperature: number; humidity: number; passFail: boolean };
+
+function ReadingForm({ onClose, taskRequestRecipients }: { onClose: () => void; taskRequestRecipients: UserOption[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<boolean | null>(null);
+  const [submitted, setSubmitted] = useState<SubmittedReading | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function submit(formData: FormData) {
     setError(null);
+    const area = formData.get("area") as EnvArea;
+    const date = String(formData.get("date"));
+    const temperature = Number(formData.get("temperature"));
+    const humidity = Number(formData.get("humidity"));
     startTransition(async () => {
       try {
         const res = await createEnvironmentalCheck({
-          date: String(formData.get("date")),
-          area: formData.get("area") as EnvArea,
-          temperature: Number(formData.get("temperature")),
-          humidity: Number(formData.get("humidity")),
+          date,
+          area,
+          temperature,
+          humidity,
           remarks: String(formData.get("remarks") ?? ""),
           signature: String(formData.get("signature") ?? ""),
         });
-        setResult(res.passFail);
         router.refresh();
-        setTimeout(onClose, res.passFail ? 400 : 1500);
+        setSubmitted({ area, date, temperature, humidity, passFail: res.passFail });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       }
     });
+  }
+
+  if (submitted) {
+    const summary = `${AREA_LABEL[submitted.area]}, ${submitted.date.slice(0, 10)} — ${submitted.temperature}°C / ${submitted.humidity}% RH (${
+      submitted.passFail ? "Pass" : "OOS"
+    })`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send to Review" : "Reading Recorded"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {!submitted.passFail && (
+            <div className="mb-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+              Out of specification — managers have been notified.
+            </div>
+          )}
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={`Review Environmental Reading — ${AREA_LABEL[submitted.area]}`}
+              initialMessage={summary}
+              initialPriority={submitted.passFail ? "MEDIUM" : "HIGH"}
+              link="/checks"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">{summary}</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send to Review</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -327,11 +380,6 @@ function ReadingForm({ onClose }: { onClose: () => void }) {
             ✕
           </button>
         </div>
-        {result === false && (
-          <div className="mb-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
-            Out of specification — managers have been notified.
-          </div>
-        )}
         <form action={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date">

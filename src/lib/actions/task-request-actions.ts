@@ -5,7 +5,34 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canSendTaskRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { notifyEmployee } from "@/lib/notify";
-import type { Priority, TaskRequestStatus } from "@/generated/prisma";
+import type { Priority, TaskRequestStatus, Role } from "@/generated/prisma";
+
+const ROLE_LABELS: Record<Role, string> = {
+  SUPER_ADMIN: "Super Admin",
+  ADMIN: "Admin",
+  SUPERVISOR: "Supervisor",
+  OPERATIONS: "Operations",
+  TEAM_LEAD: "Team Lead",
+  QA: "QA",
+  EMPLOYEE: "Employee",
+  OTHERS: "Others",
+  EXTRA: "Extra",
+};
+
+/** Every active login except the caller, for the "Send a Task" recipient picker --
+ * shared by the global header button (layout.tsx) and any page-specific "send for
+ * review" action (e.g. Environmental Checks) so both stay in sync. */
+export async function listTaskRequestRecipients() {
+  const session = await getSession();
+  if (!session) return [];
+
+  const users = await prisma.user.findMany({
+    where: { disabled: false, id: { not: session.userId } },
+    orderBy: { fullName: "asc" },
+    select: { id: true, fullName: true, role: true },
+  });
+  return users.map((u) => ({ id: u.id, fullName: u.fullName, roleLabel: ROLE_LABELS[u.role] ?? u.role }));
+}
 
 async function requireLogin() {
   const session = await getSession();
@@ -15,7 +42,7 @@ async function requireLogin() {
 
 export async function sendTaskRequest(
   toUserId: string,
-  data: { title: string; message?: string | null; priority: Priority; dueDate?: string | null }
+  data: { title: string; message?: string | null; priority: Priority; dueDate?: string | null; link?: string | null }
 ) {
   const session = await requireLogin();
   if (!data.title.trim()) throw new Error("Title is required");
@@ -30,6 +57,7 @@ export async function sendTaskRequest(
       toUserId,
       title: data.title.trim(),
       message: data.message?.trim() || null,
+      link: data.link || null,
       priority: data.priority,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
     },
@@ -75,6 +103,7 @@ export type TaskRequestHistoryRow = {
   id: string;
   title: string;
   message: string | null;
+  link: string | null;
   priority: Priority;
   status: TaskRequestStatus;
   dueDate: Date | null;
@@ -105,6 +134,7 @@ export async function listMyTaskRequestHistory(): Promise<TaskRequestHistoryRow[
       id: r.id,
       title: r.title,
       message: r.message,
+      link: r.link,
       priority: r.priority,
       status: r.status,
       dueDate: r.dueDate,

@@ -11,6 +11,7 @@ import WorkLogTab from "./work-log-tab";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
+import type { UserOption } from "@/components/send-task-form";
 
 export type Permissions = {
   canSupervisor: boolean;
@@ -173,6 +174,7 @@ export default function ChecksClient({
   lineClearance,
   postOp,
   workLog,
+  taskRequestRecipients,
 }: {
   permissions: Permissions;
   supervisorPreOp: SupervisorPreOp[];
@@ -182,6 +184,7 @@ export default function ChecksClient({
   lineClearance: LineClearanceRow[];
   postOp: PostOpRow[];
   workLog: WorkLogRow[];
+  taskRequestRecipients: UserOption[];
 }) {
   const [tab, setTab] = useState<TabKey>("dashboard");
 
@@ -278,6 +281,7 @@ export default function ChecksClient({
           canConfigureLimits={permissions.canUnlock}
           canUnlock={permissions.canUnlock}
           canDelete={permissions.canDelete}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
       {tab === "clearance" && (

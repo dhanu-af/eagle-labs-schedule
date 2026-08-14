@@ -2387,6 +2387,10 @@ model TaskRequest {
   toUserId   String
   title      String
   message    String?
+  /// Optional deep link back to whatever record/page prompted this request (e.g.
+  /// "/checks" after submitting an Environmental Check that needs review) --
+  /// plain string, same convention as Notification.link.
+  link       String?
   priority   Priority          @default(MEDIUM)
   dueDate    DateTime?
   status     TaskRequestStatus @default(PENDING)

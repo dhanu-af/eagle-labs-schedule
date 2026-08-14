@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { updateTaskRequestStatus } from "@/lib/actions/task-request-actions";
 import { PRIORITY_CLASS, PRIORITY_LABEL } from "@/lib/ui";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,7 @@ export type MyTaskRequestRow = {
   id: string;
   title: string;
   message: string | null;
+  link: string | null;
   priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   status: "PENDING" | "IN_PROGRESS" | "DONE";
   dueDate: string | null;
@@ -66,6 +68,11 @@ export default function PendingTaskRequestsBanner({ requests }: { requests: MyTa
                     </>
                   )}
                 </p>
+                {r.link && (
+                  <Link href={r.link} className="mt-1 inline-block text-xs font-medium text-primary hover:underline">
+                    View record →
+                  </Link>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${PRIORITY_CLASS[r.priority]}`}>{PRIORITY_LABEL[r.priority]}</span>

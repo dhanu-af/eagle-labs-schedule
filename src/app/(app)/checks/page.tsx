@@ -9,6 +9,7 @@ import {
   canApproveWorkLog,
   canEdit,
 } from "@/lib/auth";
+import { listTaskRequestRecipients } from "@/lib/actions/task-request-actions";
 import ChecksClient from "./checks-client";
 
 function iso(d: Date | null) {
@@ -19,7 +20,7 @@ export default async function ChecksPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [supervisorPreOp, qaPreOp, environmental, envLimits, lineClearance, postOp, workLog] =
+  const [supervisorPreOp, qaPreOp, environmental, envLimits, lineClearance, postOp, workLog, taskRequestRecipients] =
     await Promise.all([
       prisma.supervisorPreOpCheck.findMany({ orderBy: { date: "desc" }, take: 100 }),
       prisma.qaPreOpCheck.findMany({ orderBy: { date: "desc" }, take: 100 }),
@@ -28,6 +29,7 @@ export default async function ChecksPage() {
       prisma.lineClearance.findMany({ orderBy: { date: "desc" }, take: 100 }),
       prisma.postOpCheck.findMany({ orderBy: { date: "desc" }, take: 100 }),
       prisma.workLog.findMany({ orderBy: { startDate: "desc" }, take: 200 }),
+      listTaskRequestRecipients(),
     ]);
 
   return (
@@ -78,6 +80,7 @@ export default async function ChecksPage() {
         submittedAt: r.submittedAt.toISOString(),
         supervisorApprovedAt: iso(r.supervisorApprovedAt),
       }))}
+      taskRequestRecipients={taskRequestRecipients}
     />
   );
 }
