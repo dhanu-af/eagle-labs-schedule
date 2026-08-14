@@ -174,8 +174,6 @@ model Employee {
   kpiRecords        KpiRecord[]
   attendance        Attendance[]
   leaveRequests     LeaveRequest[]     @relation("requester")
-  sentTaskRequests     EmployeeTaskRequest[] @relation("SentTaskRequests")
-  receivedTaskRequests EmployeeTaskRequest[] @relation("ReceivedTaskRequests")
   approvedLeaves    LeaveRequest[]     @relation("approver")
   statusUpdates     DailyTask[]        @relation("updatedBy")
   payslips          Payslip[]
@@ -206,6 +204,8 @@ model User {
   loginEvents           LoginEvent[]
   plannedCustomerOrders CustomerOrder[] @relation("CustomerOrderPlanner")
   ownedCustomerOrders   CustomerOrder[] @relation("CustomerOrderSalesOwner")
+  sentTaskRequests      TaskRequest[]   @relation("SentTaskRequests")
+  receivedTaskRequests  TaskRequest[]   @relation("ReceivedTaskRequests")
 }
 
 model LoginEvent {
@@ -2360,13 +2360,19 @@ model CapacityRecoveryAction {
 }
 
 // ---------------------------------------------------------------------------
-// Employee Task Requests -- one employee/department sending a specific named
-// person an urgent task. Deliberately point-to-point (fromEmployeeId ->
-// toEmployeeId), unlike DailyTask/WeeklyAssignment which are a supervisor
-// assigning work down within their own team's planning tool. Sending also
-// fires the existing Notification (src/lib/notify.ts's notifyEmployee) so it
-// shows in the bell too -- this table exists for the richer, dashboard-level
-// "urgent pending task" card, not to replace notifications.
+// Task Requests -- one person sending a specific named person an urgent task.
+// Deliberately point-to-point (fromUserId -> toUserId), unlike DailyTask/
+// WeeklyAssignment which are a supervisor assigning work down within their own
+// team's planning tool. Keyed on User (the login/session identity), NOT
+// Employee: in this system's real data, only one account (the Super Admin) has
+// a linked Employee record -- every other real login has employeeId = null.
+// An earlier version of this table used Employee and was undeliverable for
+// almost every real user as a result (confirmed by testing -- Dhanu sent tasks
+// that never appeared for the recipient because that recipient's session had
+// no employeeId to match against). User.id is what every session always has.
+// Sending also fires the existing Notification (src/lib/notify.ts's
+// notifyEmployee) when the recipient does happen to have an Employee link, as
+// a bonus for the bell -- but delivery of the core feature never depends on it.
 // ---------------------------------------------------------------------------
 
 enum TaskRequestStatus {
@@ -2375,21 +2381,21 @@ enum TaskRequestStatus {
   DONE
 }
 
-model EmployeeTaskRequest {
-  id             String            @id @default(cuid())
-  fromEmployeeId String
-  toEmployeeId   String
-  title          String
-  message        String?
-  priority       Priority          @default(MEDIUM)
-  dueDate        DateTime?
-  status         TaskRequestStatus @default(PENDING)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+model TaskRequest {
+  id         String            @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  title      String
+  message    String?
+  priority   Priority          @default(MEDIUM)
+  dueDate    DateTime?
+  status     TaskRequestStatus @default(PENDING)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 
-  fromEmployee Employee @relation("SentTaskRequests", fields: [fromEmployeeId], references: [id])
-  toEmployee   Employee @relation("ReceivedTaskRequests", fields: [toEmployeeId], references: [id])
+  fromUser User @relation("SentTaskRequests", fields: [fromUserId], references: [id])
+  toUser   User @relation("ReceivedTaskRequests", fields: [toUserId], references: [id])
 
-  @@index([toEmployeeId, status])
-  @@index([fromEmployeeId])
+  @@index([toUserId, status])
+  @@index([fromUserId])
 }

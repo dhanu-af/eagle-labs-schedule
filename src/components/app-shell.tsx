@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import ThemeToggle from "@/components/theme-toggle";
 import NotificationBell from "@/components/notification-bell";
-import SendTaskButton, { type EmployeeOption } from "@/components/send-task-button";
+import SendTaskButton, { type UserOption } from "@/components/send-task-button";
 import PendingTaskRequestsBanner, { type MyTaskRequestRow } from "@/components/pending-task-requests-banner";
 import { logoutAction } from "@/lib/actions/auth-actions";
 import { initials } from "@/lib/ui";
@@ -74,13 +74,13 @@ export default function AppShell({
   user,
   notifications,
   taskRequests,
-  employeeOptions,
+  userOptions,
   children,
 }: {
   user: { name: string; role: string; ingredientLibraryAccess: boolean; restrictedToHref: string | null };
   notifications: Notification[];
   taskRequests: MyTaskRequestRow[];
-  employeeOptions: EmployeeOption[];
+  userOptions: UserOption[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -288,7 +288,7 @@ export default function AppShell({
             )}
           </div>
           <div className="flex items-center gap-3">
-            {employeeOptions.length > 0 && <SendTaskButton employees={employeeOptions} />}
+            {userOptions.length > 0 && <SendTaskButton users={userOptions} />}
             <NotificationBell notifications={notifications} />
             <ThemeToggle />
             <div className="flex items-center gap-2 pl-1">

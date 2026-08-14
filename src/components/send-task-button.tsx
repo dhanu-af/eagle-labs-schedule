@@ -6,18 +6,20 @@ import { sendTaskRequest } from "@/lib/actions/task-request-actions";
 import { PRIORITY_LABEL } from "@/lib/ui";
 import type { Priority } from "@/generated/prisma";
 
-export type EmployeeOption = { id: string; name: string; teamName: string };
+export type UserOption = { id: string; fullName: string; roleLabel: string };
 
 const PRIORITIES: Priority[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 
 /** Rendered globally in AppShell's header, next to the notification bell -- so any
- * employee, on any page (including EXTRA's staging-only nav and OTHERS' single-
- * restricted-page nav, which never route through the Dashboard), can send a task
- * to any other specific employee. */
-export default function SendTaskButton({ employees }: { employees: EmployeeOption[] }) {
+ * logged-in person, on any page (including EXTRA's staging-only nav and OTHERS'
+ * single-restricted-page nav, which never route through the Dashboard), can send
+ * a task to any other specific person. Targets User (the login/session identity),
+ * not Employee -- real data showed almost no login is linked to an Employee
+ * record, which made an Employee-keyed version of this undeliverable. */
+export default function SendTaskButton({ users }: { users: UserOption[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [toEmployeeId, setToEmployeeId] = useState("");
+  const [toUserId, setToUserId] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState<Priority>("MEDIUM");
@@ -26,7 +28,7 @@ export default function SendTaskButton({ employees }: { employees: EmployeeOptio
   const [error, setError] = useState("");
 
   function reset() {
-    setToEmployeeId("");
+    setToUserId("");
     setTitle("");
     setMessage("");
     setPriority("MEDIUM");
@@ -36,11 +38,11 @@ export default function SendTaskButton({ employees }: { employees: EmployeeOptio
 
   function send() {
     setError("");
-    if (!toEmployeeId) return setError("Choose who this task is for.");
+    if (!toUserId) return setError("Choose who this task is for.");
     if (!title.trim()) return setError("Title is required.");
     startTransition(async () => {
       try {
-        await sendTaskRequest(toEmployeeId, { title: title.trim(), message: message.trim() || null, priority, dueDate: dueDate || null });
+        await sendTaskRequest(toUserId, { title: title.trim(), message: message.trim() || null, priority, dueDate: dueDate || null });
         reset();
         setOpen(false);
         router.refresh();
@@ -50,8 +52,8 @@ export default function SendTaskButton({ employees }: { employees: EmployeeOptio
     });
   }
 
-  const grouped = employees.reduce<Record<string, EmployeeOption[]>>((acc, e) => {
-    (acc[e.teamName] ??= []).push(e);
+  const grouped = users.reduce<Record<string, UserOption[]>>((acc, u) => {
+    (acc[u.roleLabel] ??= []).push(u);
     return acc;
   }, {});
 
@@ -80,13 +82,13 @@ export default function SendTaskButton({ employees }: { employees: EmployeeOptio
             <div className="space-y-3">
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-muted-foreground">To</span>
-                <select className="input" value={toEmployeeId} onChange={(e) => setToEmployeeId(e.target.value)}>
+                <select className="input" value={toUserId} onChange={(e) => setToUserId(e.target.value)}>
                   <option value="">Select a person...</option>
-                  {Object.entries(grouped).map(([teamName, emps]) => (
-                    <optgroup key={teamName} label={teamName}>
-                      {emps.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.name}
+                  {Object.entries(grouped).map(([roleLabel, roleUsers]) => (
+                    <optgroup key={roleLabel} label={roleLabel}>
+                      {roleUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.fullName}
                         </option>
                       ))}
                     </optgroup>

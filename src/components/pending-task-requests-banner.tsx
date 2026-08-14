@@ -13,7 +13,7 @@ export type MyTaskRequestRow = {
   priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   status: "PENDING" | "IN_PROGRESS" | "DONE";
   dueDate: string | null;
-  fromEmployeeName: string;
+  fromUserName: string;
 };
 
 /** Plain helper, not inlined into the component body -- calling Date.now() directly
@@ -23,13 +23,13 @@ function isOverdue(dueDate: string | null): boolean {
 }
 
 /** Rendered globally in AppShell (above every page's content), not just the
- * Dashboard -- reaches every employee regardless of nav restrictions (EXTRA's
- * staging-only nav and OTHERS' single-restricted-page nav never route through
- * the Dashboard, but both still render AppShell). Renders nothing when there's
- * nothing pending -- this is meant to read as an urgent alert, not a permanent
- * fixture, and it's already scoped to exactly one employee (the caller only
- * ever passes in this session's own pending/in-progress requests via
- * listMyPendingTaskRequests()). */
+ * Dashboard -- reaches every logged-in person regardless of nav restrictions
+ * (EXTRA's staging-only nav and OTHERS' single-restricted-page nav never route
+ * through the Dashboard, but both still render AppShell). Renders nothing when
+ * there's nothing pending -- this is meant to read as an urgent alert, not a
+ * permanent fixture, and it's already scoped to exactly this session's own
+ * pending/in-progress requests via listMyPendingTaskRequests() (keyed on User,
+ * so it works for every login). */
 export default function PendingTaskRequestsBanner({ requests }: { requests: MyTaskRequestRow[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -57,7 +57,7 @@ export default function PendingTaskRequestsBanner({ requests }: { requests: MyTa
                 <p className="text-sm font-medium text-foreground">{r.title}</p>
                 {r.message && <p className="mt-0.5 text-xs text-muted-foreground">{r.message}</p>}
                 <p className="mt-1 text-xs text-muted-foreground">
-                  From {r.fromEmployeeName}
+                  From {r.fromUserName}
                   {r.dueDate && (
                     <>
                       {" · Due "}
