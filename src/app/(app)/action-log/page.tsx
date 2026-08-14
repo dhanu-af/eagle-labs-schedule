@@ -1,10 +1,11 @@
 import { getSession, canManageActionLog } from "@/lib/auth";
 import { listActionLog } from "@/lib/actions/action-log-actions";
+import { listTaskRequestRecipients } from "@/lib/actions/task-request-actions";
 import ActionLogClient from "./action-log-client";
 
 export default async function ActionLogPage() {
   const session = await getSession();
-  const entries = await listActionLog();
+  const [entries, taskRequestRecipients] = await Promise.all([listActionLog(), listTaskRequestRecipients()]);
 
   return (
     <ActionLogClient
@@ -25,6 +26,7 @@ export default async function ActionLogPage() {
         createdByName: e.createdByName,
       }))}
       canManage={!!session && canManageActionLog(session.role)}
+      taskRequestRecipients={taskRequestRecipients}
     />
   );
 }

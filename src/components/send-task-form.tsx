@@ -22,6 +22,7 @@ export default function SendTaskForm({
   initialMessage = "",
   initialPriority = "MEDIUM",
   link = null,
+  defaultToUserId,
   onSent,
   onCancel,
 }: {
@@ -30,10 +31,11 @@ export default function SendTaskForm({
   initialMessage?: string;
   initialPriority?: Priority;
   link?: string | null;
+  defaultToUserId?: string;
   onSent: () => void;
   onCancel: () => void;
 }) {
-  const [toUserId, setToUserId] = useState("");
+  const [toUserId, setToUserId] = useState(defaultToUserId ?? "");
   const [title, setTitle] = useState(initialTitle);
   const [message, setMessage] = useState(initialMessage);
   const [priority, setPriority] = useState<Priority>(initialPriority);

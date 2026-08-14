@@ -23,6 +23,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 export type ActionLogRow = {
   id: string;
@@ -85,12 +86,22 @@ type Draft = {
   businessImpact: string;
   priority: Priority;
   owner: string;
+  assigneeUserId: string;
   dueDate: string;
   escalationLevel: EscalationLevel;
 };
 
 function emptyDraft(): Draft {
-  return { sourceSection: "CROSS_FUNCTIONAL", issue: "", businessImpact: "", priority: "MEDIUM", owner: "", dueDate: "", escalationLevel: "GREEN" };
+  return {
+    sourceSection: "CROSS_FUNCTIONAL",
+    issue: "",
+    businessImpact: "",
+    priority: "MEDIUM",
+    owner: "",
+    assigneeUserId: "",
+    dueDate: "",
+    escalationLevel: "GREEN",
+  };
 }
 
 function draftFromEntry(entry: ActionLogRow): Draft {
@@ -100,6 +111,7 @@ function draftFromEntry(entry: ActionLogRow): Draft {
     businessImpact: entry.businessImpact ?? "",
     priority: entry.priority,
     owner: entry.owner,
+    assigneeUserId: "",
     dueDate: toDateInput(entry.dueDate),
     escalationLevel: entry.escalationLevel,
   };
@@ -110,15 +122,21 @@ function EntryModal({
   initial,
   onSave,
   onClose,
+  taskRequestRecipients,
+  offerSendTask = false,
 }: {
   title: string;
   initial: Draft;
-  onSave: (draft: Draft) => Promise<void>;
+  onSave: (draft: Draft) => Promise<{ actionNumber: string } | void>;
   onClose: () => void;
+  taskRequestRecipients?: UserOption[];
+  offerSendTask?: boolean;
 }) {
   const [draft, setDraft] = useState<Draft>(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState<{ actionNumber: string } | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function save() {
     setError("");
@@ -127,12 +145,54 @@ function EntryModal({
 
     startTransition(async () => {
       try {
-        await onSave(draft);
-        onClose();
+        const result = await onSave(draft);
+        if (offerSendTask && result) {
+          setSaved(result);
+        } else {
+          onClose();
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't save action.");
       }
     });
+  }
+
+  if (saved) {
+    const summary = `${saved.actionNumber} — ${draft.issue}`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Action Raised"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients ?? []}
+              initialTitle={summary}
+              initialMessage={draft.businessImpact || draft.issue}
+              initialPriority={draft.priority}
+              defaultToUserId={draft.assigneeUserId || undefined}
+              link="/action-log"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">{summary} has been logged.</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {(taskRequestRecipients?.length ?? 0) > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -192,6 +252,27 @@ function EntryModal({
             </Field>
           </div>
 
+          {taskRequestRecipients && taskRequestRecipients.length > 0 && (
+            <Field label="Assign to a person (optional — fills Owner, and preselects who Send Task goes to)">
+              <select
+                className="input"
+                value={draft.assigneeUserId}
+                onChange={(e) => {
+                  const uid = e.target.value;
+                  const person = taskRequestRecipients.find((u) => u.id === uid);
+                  setDraft((d) => ({ ...d, assigneeUserId: uid, owner: person ? person.fullName : d.owner }));
+                }}
+              >
+                <option value="">— pick a person —</option>
+                {taskRequestRecipients.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.fullName}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
           {error && <p className="text-xs text-danger">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-2">
@@ -208,7 +289,15 @@ function EntryModal({
   );
 }
 
-function EntryCard({ entry, canManage }: { entry: ActionLogRow; canManage: boolean }) {
+function EntryCard({
+  entry,
+  canManage,
+  taskRequestRecipients,
+}: {
+  entry: ActionLogRow;
+  canManage: boolean;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
@@ -333,6 +422,7 @@ function EntryCard({ entry, canManage }: { entry: ActionLogRow; canManage: boole
           title={`Edit ${entry.actionNumber}`}
           initial={draftFromEntry(entry)}
           onClose={() => setEditing(false)}
+          taskRequestRecipients={taskRequestRecipients}
           onSave={async (draft) => {
             await updateActionLogEntry(entry.id, {
               sourceSection: draft.sourceSection,
@@ -351,7 +441,15 @@ function EntryCard({ entry, canManage }: { entry: ActionLogRow; canManage: boole
   );
 }
 
-export default function ActionLogClient({ entries, canManage }: { entries: ActionLogRow[]; canManage: boolean }) {
+export default function ActionLogClient({
+  entries,
+  canManage,
+  taskRequestRecipients,
+}: {
+  entries: ActionLogRow[];
+  canManage: boolean;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [showNew, setShowNew] = useState(false);
   const [search, setSearch] = useState("");
@@ -435,7 +533,7 @@ export default function ActionLogClient({ entries, canManage }: { entries: Actio
       ) : (
         <div className="space-y-2">
           {filtered.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} canManage={canManage} />
+            <EntryCard key={entry.id} entry={entry} canManage={canManage} taskRequestRecipients={taskRequestRecipients} />
           ))}
         </div>
       )}
@@ -445,8 +543,10 @@ export default function ActionLogClient({ entries, canManage }: { entries: Actio
           title="Raise Action"
           initial={emptyDraft()}
           onClose={() => setShowNew(false)}
+          taskRequestRecipients={taskRequestRecipients}
+          offerSendTask
           onSave={async (draft) => {
-            await createActionLogEntry({
+            const entry = await createActionLogEntry({
               sourceSection: draft.sourceSection,
               issue: draft.issue,
               businessImpact: draft.businessImpact || null,
@@ -456,6 +556,7 @@ export default function ActionLogClient({ entries, canManage }: { entries: Actio
               escalationLevel: draft.escalationLevel,
             });
             router.refresh();
+            return { actionNumber: entry.actionNumber };
           }}
         />
       )}
