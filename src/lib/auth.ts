@@ -116,6 +116,15 @@ export function canPostAnnouncement(_role: Role) {
   return true;
 }
 
+/** Dashboard: any authenticated employee (any department) may send an urgent task
+ * request to any other specific employee -- deliberately open, same as
+ * canPostAnnouncement, since the point is cross-department requests, not a
+ * management-only tool. The action itself still requires session.employeeId to
+ * exist (a User with no linked Employee can't send or receive one). */
+export function canSendTaskRequest(_role: Role) {
+  return true;
+}
+
 /** Team Chat: open to every authenticated employee. */
 export function canUseTeamChat(_role: Role) {
   return true;
