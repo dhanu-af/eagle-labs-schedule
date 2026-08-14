@@ -1,9 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { listMyPendingTaskRequests } from "@/lib/actions/task-request-actions";
 import PostAnnouncementCard from "@/components/post-announcement-card";
-import MyTaskRequestsCard from "@/components/my-task-requests-card";
-import SendTaskRequestCard from "@/components/send-task-request-card";
 import BatchLookupCard from "@/components/batch-lookup-card";
 import ProgressRing from "@/components/progress-ring";
 import BrisbaneClock from "@/components/brisbane-clock";
@@ -55,7 +52,7 @@ export default async function DashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
-  const [tasks, teams, kpis, todaysKpiTargets, todaysKpiProduction, pendingLeaves, latestAnnouncements, myTaskRequests, employees] =
+  const [tasks, teams, kpis, todaysKpiTargets, todaysKpiProduction, pendingLeaves, latestAnnouncements] =
     await Promise.all([
       prisma.dailyTask.findMany({
         where: { date: { gte: today, lt: tomorrow } },
@@ -68,10 +65,6 @@ export default async function DashboardPage() {
       prisma.kpiDailyProduction.findMany({ where: { date: { gte: today, lt: tomorrow } } }),
       prisma.leaveRequest.count({ where: { status: "PENDING" } }),
       prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 2 }),
-      listMyPendingTaskRequests(),
-      session?.employeeId
-        ? prisma.employee.findMany({ where: { active: true, id: { not: session.employeeId } }, include: { team: true }, orderBy: { name: "asc" } })
-        : Promise.resolve([]),
     ]);
 
   const statusCounts = {
@@ -112,20 +105,6 @@ export default async function DashboardPage() {
           )
         }
       />
-
-      {session?.employeeId && (
-        <MyTaskRequestsCard
-          requests={myTaskRequests.map((r) => ({
-            id: r.id,
-            title: r.title,
-            message: r.message,
-            priority: r.priority,
-            status: r.status,
-            dueDate: r.dueDate ? r.dueDate.toISOString() : null,
-            fromEmployeeName: r.fromEmployee.name,
-          }))}
-        />
-      )}
 
       <BatchLookupCard />
 
@@ -270,10 +249,6 @@ export default async function DashboardPage() {
           </Card>
         </div>
       </div>
-
-      {session?.employeeId && (
-        <SendTaskRequestCard employees={employees.map((e) => ({ id: e.id, name: e.name, teamName: e.team.name }))} />
-      )}
 
       {!!session && <PostAnnouncementCard />}
     </div>

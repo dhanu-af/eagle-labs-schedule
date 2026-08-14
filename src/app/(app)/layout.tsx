@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { listMyPendingTaskRequests } from "@/lib/actions/task-request-actions";
 import AppShell from "@/components/app-shell";
 
 export default async function AppLayout({
@@ -11,7 +12,7 @@ export default async function AppLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [notifications, user] = await Promise.all([
+  const [notifications, user, myTaskRequests, employees] = await Promise.all([
     session.employeeId
       ? prisma.notification.findMany({
           where: { employeeId: session.employeeId },
@@ -20,6 +21,13 @@ export default async function AppLayout({
         })
       : Promise.resolve([]),
     prisma.user.findUnique({ where: { id: session.userId }, select: { ingredientLibraryAccess: true, restrictedToHref: true } }),
+    // Global (not Dashboard-only) so every employee gets it regardless of nav
+    // restrictions -- EXTRA's staging-only nav and OTHERS' single-restricted-page
+    // nav never route through "/", but both still render this shared layout.
+    listMyPendingTaskRequests(),
+    session.employeeId
+      ? prisma.employee.findMany({ where: { active: true, id: { not: session.employeeId } }, include: { team: true }, orderBy: { name: "asc" } })
+      : Promise.resolve([]),
   ]);
 
   return (
@@ -38,6 +46,16 @@ export default async function AppLayout({
         read: n.read,
         createdAt: n.createdAt.toISOString(),
       }))}
+      taskRequests={myTaskRequests.map((r) => ({
+        id: r.id,
+        title: r.title,
+        message: r.message,
+        priority: r.priority,
+        status: r.status,
+        dueDate: r.dueDate ? r.dueDate.toISOString() : null,
+        fromEmployeeName: r.fromEmployee.name,
+      }))}
+      employeeOptions={employees.map((e) => ({ id: e.id, name: e.name, teamName: e.team.name }))}
     >
       {children}
     </AppShell>

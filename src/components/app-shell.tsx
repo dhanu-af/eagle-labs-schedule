@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import ThemeToggle from "@/components/theme-toggle";
 import NotificationBell from "@/components/notification-bell";
+import SendTaskButton, { type EmployeeOption } from "@/components/send-task-button";
+import PendingTaskRequestsBanner, { type MyTaskRequestRow } from "@/components/pending-task-requests-banner";
 import { logoutAction } from "@/lib/actions/auth-actions";
 import { initials } from "@/lib/ui";
 import { Button } from "@/components/ui/Button";
@@ -71,10 +73,14 @@ type Notification = {
 export default function AppShell({
   user,
   notifications,
+  taskRequests,
+  employeeOptions,
   children,
 }: {
   user: { name: string; role: string; ingredientLibraryAccess: boolean; restrictedToHref: string | null };
   notifications: Notification[];
+  taskRequests: MyTaskRequestRow[];
+  employeeOptions: EmployeeOption[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -282,6 +288,7 @@ export default function AppShell({
             )}
           </div>
           <div className="flex items-center gap-3">
+            {employeeOptions.length > 0 && <SendTaskButton employees={employeeOptions} />}
             <NotificationBell notifications={notifications} />
             <ThemeToggle />
             <div className="flex items-center gap-2 pl-1">
@@ -313,7 +320,10 @@ export default function AppShell({
             </form>
           </div>
         </header>
-        <main className="animate-in flex-1 bg-background px-4 py-4 md:px-6 md:py-6 lg:px-8">{children}</main>
+        <main className="animate-in flex-1 bg-background px-4 py-4 md:px-6 md:py-6 lg:px-8">
+          <PendingTaskRequestsBanner requests={taskRequests} />
+          {children}
+        </main>
       </div>
     </div>
   );
