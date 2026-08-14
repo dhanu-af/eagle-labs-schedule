@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 export const ROOM_LABEL: Record<WorkLogRoom, string> = {
   ENCAPSULATION_ROOM: "Encapsulation Room",
@@ -59,12 +60,14 @@ export default function WorkLogTab({
   canApprove,
   canUnlock,
   canDelete,
+  taskRequestRecipients,
 }: {
   rows: WorkLogRow[];
   canSubmit: boolean;
   canApprove: boolean;
   canUnlock: boolean;
   canDelete: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [room, setRoom] = useState<WorkLogRoom>("ENCAPSULATION_ROOM");
@@ -228,29 +231,47 @@ export default function WorkLogTab({
         </table>
       </Card>
 
-      {showForm && <WorkLogForm defaultRoom={room} onClose={() => setShowForm(false)} />}
+      {showForm && (
+        <WorkLogForm defaultRoom={room} onClose={() => setShowForm(false)} taskRequestRecipients={taskRequestRecipients} />
+      )}
     </div>
   );
 }
 
-function WorkLogForm({ defaultRoom, onClose }: { defaultRoom: WorkLogRoom; onClose: () => void }) {
+type SubmittedWorkLog = { room: WorkLogRoom; opName: string; batchNumber: string; startDate: string };
+
+function WorkLogForm({
+  defaultRoom,
+  onClose,
+  taskRequestRecipients,
+}: {
+  defaultRoom: WorkLogRoom;
+  onClose: () => void;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [activity, setActivity] = useState<WorkLogActivity>("ENCAPSULATION");
+  const [submitted, setSubmitted] = useState<SubmittedWorkLog | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function submit(formData: FormData) {
     setError(null);
+    const room = formData.get("room") as WorkLogRoom;
+    const opName = String(formData.get("opName") ?? "");
+    const batchNumber = String(formData.get("batchNumber") ?? "");
+    const startDate = String(formData.get("startDate"));
     startTransition(async () => {
       try {
         await createWorkLog({
-          room: formData.get("room") as WorkLogRoom,
-          opName: String(formData.get("opName") ?? ""),
-          startDate: String(formData.get("startDate")),
+          room,
+          opName,
+          startDate,
           startTime: String(formData.get("startTime") ?? ""),
           productName: String(formData.get("productName") ?? ""),
           productCode: String(formData.get("productCode") ?? ""),
-          batchNumber: String(formData.get("batchNumber") ?? ""),
+          batchNumber,
           activity: formData.get("activity") as WorkLogActivity,
           activityOther: String(formData.get("activityOther") ?? ""),
           endDate: String(formData.get("endDate") ?? ""),
@@ -260,11 +281,46 @@ function WorkLogForm({ defaultRoom, onClose }: { defaultRoom: WorkLogRoom; onClo
           signature: String(formData.get("signature") ?? ""),
         });
         router.refresh();
-        onClose();
+        setSubmitted({ room, opName, batchNumber, startDate });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       }
     });
+  }
+
+  if (submitted) {
+    const summary = `Work Log — ${ROOM_LABEL[submitted.room]}, ${submitted.opName}, Batch ${submitted.batchNumber} (${submitted.startDate.slice(0, 10)})`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Entry Submitted"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              link="/checks"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">{summary}</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

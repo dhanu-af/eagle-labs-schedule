@@ -13,17 +13,20 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 export default function SupervisorPreOpTab({
   rows,
   canSubmit,
   canUnlock,
   canDelete,
+  taskRequestRecipients,
 }: {
   rows: SupervisorPreOp[];
   canSubmit: boolean;
   canUnlock: boolean;
   canDelete: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -147,23 +150,35 @@ export default function SupervisorPreOpTab({
         </table>
       </Card>
 
-      {showForm && <SupervisorPreOpForm onClose={() => setShowForm(false)} />}
+      {showForm && <SupervisorPreOpForm onClose={() => setShowForm(false)} taskRequestRecipients={taskRequestRecipients} />}
     </div>
   );
 }
 
-function SupervisorPreOpForm({ onClose }: { onClose: () => void }) {
+type SubmittedSupervisorPreOp = { room: string; date: string };
+
+function SupervisorPreOpForm({
+  onClose,
+  taskRequestRecipients,
+}: {
+  onClose: () => void;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<SubmittedSupervisorPreOp | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function submit(formData: FormData) {
     setError(null);
+    const room = String(formData.get("room"));
+    const date = String(formData.get("date"));
     startTransition(async () => {
       try {
         await createSupervisorPreOpCheck({
-          date: String(formData.get("date")),
-          room: String(formData.get("room")),
+          date,
+          room,
           roomCleanliness: formData.get("roomCleanliness") === "on",
           equipmentReadiness: formData.get("equipmentReadiness") === "on",
           safetyPpeVerified: formData.get("safetyPpeVerified") === "on",
@@ -172,11 +187,46 @@ function SupervisorPreOpForm({ onClose }: { onClose: () => void }) {
           signature: String(formData.get("signature") ?? ""),
         });
         router.refresh();
-        onClose();
+        setSubmitted({ room, date });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       }
     });
+  }
+
+  if (submitted) {
+    const summary = `Supervisor Pre-Op Check — ${submitted.room}, ${submitted.date.slice(0, 10)}`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Check Submitted"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              link="/checks"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">{summary}</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 const ITEM_LABEL: Record<PostOpItem, string> = {
   BLENDING_ROOM: "Blending Room",
@@ -39,12 +40,14 @@ export default function PostOpTab({
   canVerify,
   canUnlock,
   canDelete,
+  taskRequestRecipients,
 }: {
   rows: PostOpRow[];
   canSubmit: boolean;
   canVerify: boolean;
   canUnlock: boolean;
   canDelete: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -194,7 +197,7 @@ export default function PostOpTab({
         </table>
       </Card>
 
-      {showForm && <PostOpForm onClose={() => setShowForm(false)} />}
+      {showForm && <PostOpForm onClose={() => setShowForm(false)} taskRequestRecipients={taskRequestRecipients} />}
       {verifyingId && (
         <VerifyModal pending={pending} onClose={() => setVerifyingId(null)} onVerify={(status) => verify(verifyingId, status)} />
       )}
@@ -202,18 +205,24 @@ export default function PostOpTab({
   );
 }
 
-function PostOpForm({ onClose }: { onClose: () => void }) {
+type SubmittedPostOp = { item: PostOpItem; date: string };
+
+function PostOpForm({ onClose, taskRequestRecipients }: { onClose: () => void; taskRequestRecipients: UserOption[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<SubmittedPostOp | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function submit(formData: FormData) {
     setError(null);
+    const item = formData.get("item") as PostOpItem;
+    const date = String(formData.get("date"));
     startTransition(async () => {
       try {
         await createPostOpCheck({
-          date: String(formData.get("date")),
-          item: formData.get("item") as PostOpItem,
+          date,
+          item,
           previousProductName: String(formData.get("previousProductName") ?? ""),
           previousBatchNumber: String(formData.get("previousBatchNumber") ?? ""),
           cleaningType: formData.get("cleaningType") as CleaningType,
@@ -221,11 +230,46 @@ function PostOpForm({ onClose }: { onClose: () => void }) {
           signature: String(formData.get("signature") ?? ""),
         });
         router.refresh();
-        onClose();
+        setSubmitted({ item, date });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       }
     });
+  }
+
+  if (submitted) {
+    const summary = `Post-Op Check — ${ITEM_LABEL[submitted.item]}, ${submitted.date.slice(0, 10)}`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Check Submitted"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              link="/checks"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">{summary}</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

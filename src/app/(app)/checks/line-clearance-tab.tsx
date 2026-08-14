@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 export default function LineClearanceTab({
   rows,
@@ -22,6 +23,7 @@ export default function LineClearanceTab({
   canApproveQa,
   canUnlock,
   canDelete,
+  taskRequestRecipients,
 }: {
   rows: LineClearanceRow[];
   canSubmit: boolean;
@@ -29,6 +31,7 @@ export default function LineClearanceTab({
   canApproveQa: boolean;
   canUnlock: boolean;
   canDelete: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -183,23 +186,35 @@ export default function LineClearanceTab({
         </table>
       </Card>
 
-      {showForm && <LineClearanceForm onClose={() => setShowForm(false)} />}
+      {showForm && <LineClearanceForm onClose={() => setShowForm(false)} taskRequestRecipients={taskRequestRecipients} />}
     </div>
   );
 }
 
-function LineClearanceForm({ onClose }: { onClose: () => void }) {
+type SubmittedLineClearance = { line: string; date: string };
+
+function LineClearanceForm({
+  onClose,
+  taskRequestRecipients,
+}: {
+  onClose: () => void;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<SubmittedLineClearance | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function submit(formData: FormData) {
     setError(null);
+    const line = String(formData.get("line"));
+    const date = String(formData.get("date"));
     startTransition(async () => {
       try {
         await createLineClearance({
-          date: String(formData.get("date")),
-          line: String(formData.get("line")),
+          date,
+          line,
           previousProductName: String(formData.get("previousProductName") ?? ""),
           previousBatchNumber: String(formData.get("previousBatchNumber") ?? ""),
           previousBatchCleared: formData.get("previousBatchCleared") === "on",
@@ -211,11 +226,46 @@ function LineClearanceForm({ onClose }: { onClose: () => void }) {
           signature: String(formData.get("signature") ?? ""),
         });
         router.refresh();
-        onClose();
+        setSubmitted({ line, date });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       }
     });
+  }
+
+  if (submitted) {
+    const summary = `Line Clearance — ${submitted.line}, ${submitted.date.slice(0, 10)}`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Clearance Submitted"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              link="/checks"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">{summary}</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

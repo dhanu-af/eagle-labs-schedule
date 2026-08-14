@@ -266,10 +266,17 @@ export default function ChecksClient({
           canSubmit={permissions.canSupervisor}
           canUnlock={permissions.canUnlock}
           canDelete={permissions.canDelete}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
       {tab === "qa" && (
-        <QaPreOpTab rows={qaPreOp} canSubmit={permissions.canQa} canUnlock={permissions.canUnlock} canDelete={permissions.canDelete} />
+        <QaPreOpTab
+          rows={qaPreOp}
+          canSubmit={permissions.canQa}
+          canUnlock={permissions.canUnlock}
+          canDelete={permissions.canDelete}
+          taskRequestRecipients={taskRequestRecipients}
+        />
       )}
       {tab === "environmental" && (
         <EnvironmentalTab
@@ -292,6 +299,7 @@ export default function ChecksClient({
           canApproveQa={permissions.canQa}
           canUnlock={permissions.canUnlock}
           canDelete={permissions.canDelete}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
       {tab === "postop" && (
@@ -301,6 +309,7 @@ export default function ChecksClient({
           canVerify={permissions.canSupervisor}
           canUnlock={permissions.canUnlock}
           canDelete={permissions.canDelete}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
       {tab === "worklog" && (
@@ -310,6 +319,7 @@ export default function ChecksClient({
           canApprove={permissions.canApproveWorkLog}
           canUnlock={permissions.canUnlock}
           canDelete={permissions.canDelete}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
     </div>
