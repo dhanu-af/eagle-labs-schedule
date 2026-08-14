@@ -34,6 +34,13 @@ enum TaskStatus {
   OTHER
 }
 
+enum DailyTaskQcStatus {
+  PENDING
+  PASSED
+  FAILED
+  HOLD
+}
+
 enum Priority {
   CRITICAL
   HIGH
@@ -230,6 +237,17 @@ model DailyTask {
   actualQty     Float      @default(0)
   plannedStart  String?
   plannedFinish String?
+  /// Actual start/finish -- deliberately loose strings like plannedStart/plannedFinish
+  /// rather than DateTime, matching that existing convention instead of mixing formats.
+  actualStart      String?
+  actualFinish     String?
+  /// Minutes of downtime during this task -- no live source anywhere in the app, so this
+  /// is manual entry only, filled in on the Edit modal after the fact.
+  downtimeMinutes  Int?
+  /// Per-task QC outcome -- separate from the order-level QaGateStatus rollup in
+  /// customer-order-defaults.ts, which is about releasing a whole batch/order, not a
+  /// single day's task. Null means "no QC applicable/recorded", not "pending".
+  qcStatus         DailyTaskQcStatus?
   priority      Priority   @default(MEDIUM)
   status        TaskStatus @default(NOT_STARTED)
   delayReason   String?
@@ -1277,6 +1295,7 @@ model WarehouseItem {
   ledgerEntries          MaterialLedgerEntry[]
   formulationIngredients FormulationIngredient[]
   purchaseOrderLines     PurchaseOrderLine[]
+  shortageWatch          MaterialShortageWatch?
 
   @@index([category])
   @@index([ingredientId])
@@ -1971,6 +1990,7 @@ model Product {
 
   formulation Formulation?        @relation(fields: [formulationId], references: [id])
   orderLines  CustomerOrderLine[]
+  mpsEntries  WeeklyMpsEntry[]
 
   @@index([formulationId])
 }
@@ -2061,6 +2081,8 @@ model Machine {
 
   capacityExceptions MachineCapacityException[]
   batchRecords       BatchRecord[]
+  mpsEntries         WeeklyMpsEntry[]
+  recoveryActions    CapacityRecoveryAction[]
 }
 
 model MachineCapacityException {
@@ -2140,4 +2162,197 @@ model PurchaseOrderLine {
 
   @@index([purchaseOrderId])
   @@index([itemId])
+}
+
+// ---------------------------------------------------------------------------
+// Site Action Log -- cross-functional exception/action register (Planning
+// Manager Master doc, "Site Planning Rules and Escalation" + "Daily Site
+// Control Meeting"). Manually raised and owned, unlike Notification (system-
+// generated) or AuditLog (immutable system trail). "Days Open" is never
+// stored -- always computed at render from dateRaised/closedDate, matching
+// the existing computed-risk precedent in customer-order-defaults.ts.
+// ---------------------------------------------------------------------------
+
+enum ActionSourceSection {
+  SALES_CUSTOMER_SERVICE
+  PRODUCTION_PLANNING
+  PROCUREMENT_MATERIALS
+  WAREHOUSE
+  QC_QA
+  MAINTENANCE_ENGINEERING
+  PRODUCTION_SHIFTS
+  DISPATCH_DELIVERY
+  CROSS_FUNCTIONAL
+}
+
+enum ActionLogStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum EscalationLevel {
+  GREEN
+  AMBER
+  RED
+}
+
+model SiteActionLog {
+  id              String              @id @default(cuid())
+  actionNumber    String              @unique
+  dateRaised      DateTime            @default(now())
+  sourceSection   ActionSourceSection
+  issue           String
+  businessImpact  String?
+  priority        Priority            @default(MEDIUM)
+  owner           String
+  dueDate         DateTime?
+  status          ActionLogStatus     @default(OPEN)
+  escalationLevel EscalationLevel     @default(GREEN)
+  resolution      String?
+  closedDate      DateTime?
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([sourceSection])
+  @@index([escalationLevel])
+}
+
+// ---------------------------------------------------------------------------
+// Weekly KPI Scorecard (Planning Manager Master doc, "Core KPI Scorecard" +
+// "Weekly Manager Update"). Unlike the render-time-only computations elsewhere
+// (order risk, Mfg Reconciliation yield%), this one snapshots per week on
+// purpose -- it's an explicit management-review record ("enter weekly results"),
+// and several fields (scheduleAdherencePct, qcOnTimeReleasePct,
+// inventoryAccuracyPct) have no live source at all, so they can only ever be
+// manual entry. overallStatus reuses EscalationLevel (Green/Amber/Red) rather
+// than a new enum, same "reuse across modules" precedent as the Priority enum.
+// ---------------------------------------------------------------------------
+
+model WeeklyKpiScorecard {
+  id         String   @id @default(cuid())
+  weekEnding DateTime @unique
+
+  otifPct                  Float?
+  scheduleAdherencePct     Float?
+  materialAvailabilityPct  Float?
+  productionAttainmentPct  Float?
+  averageYieldPct          Float?
+  qcOnTimeReleasePct       Float?
+  inventoryAccuracyPct     Float?
+  pastDueOrders            Int?
+  criticalShortages        Int?
+  unplannedScheduleChanges Int?
+
+  overallStatus     EscalationLevel @default(GREEN)
+  managementComment String?
+
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([weekEnding])
+}
+
+// ---------------------------------------------------------------------------
+// Weekly MPS (Planning Manager Master doc, "Master Production Schedule" +
+// "Site Master Plan Template"). One row = one line/product's planned production
+// for a Monday..Sunday week. plannedQtyKg is never stored -- always
+// batchSizeKg * plannedBatches, computed in weekly-mps-defaults.ts. materialReady
+// is likewise never stored -- computed live against the linked Product's
+// Formulation and real warehouse stock, reusing the exact same helpers the
+// Customer Order material check already uses (scaleIngredientQtyKg,
+// checkIngredientAgainstStock, rollUpMaterialStatus). qcReady/maintenanceReady
+// stay real boolean columns -- no live QC-readiness or maintenance-readiness
+// signal exists anywhere else in the app to compute them from.
+// ---------------------------------------------------------------------------
+
+model WeeklyMpsEntry {
+  id             String    @id @default(cuid())
+  weekEnding     DateTime
+  machineId      String?
+  productId      String
+  batchSizeKg    Float
+  plannedBatches Int       @default(1)
+  requiredDate   DateTime?
+  priority       Priority  @default(MEDIUM)
+
+  frozen           Boolean @default(false)
+  qcReady          Boolean @default(false)
+  maintenanceReady Boolean @default(false)
+
+  notes         String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  machine Machine? @relation(fields: [machineId], references: [id])
+  product Product  @relation(fields: [productId], references: [id])
+
+  @@index([weekEnding])
+  @@index([machineId])
+  @@index([productId])
+}
+
+// ---------------------------------------------------------------------------
+// Material Shortage Register (Planning Manager Master doc, "Material
+// Requirements and Shortage Register"). The actual shortage figures (required
+// qty, usable stock, net shortage, incoming PO) are never stored here -- they're
+// computed live in material-shortage-actions.ts by netting demand for a
+// WarehouseItem across every active Customer Order at once, unlike
+// getOrderMaterialChecks() which deliberately checks one order at a time. This
+// table only holds the workflow overlay a computed number can't provide: who's
+// on it, what they're doing, and whether it's resolved. Reuses ActionLogStatus
+// rather than a new enum, same "one status vocabulary" precedent as Priority/
+// EscalationLevel elsewhere.
+// ---------------------------------------------------------------------------
+
+model MaterialShortageWatch {
+  id              String          @id @default(cuid())
+  warehouseItemId String          @unique
+  action          String?
+  owner           String?
+  status          ActionLogStatus @default(OPEN)
+
+  updatedById   String?
+  updatedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  warehouseItem WarehouseItem @relation(fields: [warehouseItemId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Capacity Planning -- Weekly Rollup recovery action. The utilization figures
+// themselves stay exactly as computed in capacity-planning-defaults.ts
+// (computeMachineCapacity), just bucketed into Mon..Sun weeks instead of single
+// days -- never persisted here. This table only holds what a human decides to
+// do about an overloaded week, one row per (machine, week). Reuses
+// ActionLogStatus, same one-status-vocabulary precedent as the other overlays.
+// ---------------------------------------------------------------------------
+
+model CapacityRecoveryAction {
+  id             String          @id @default(cuid())
+  machineId      String
+  weekEnding     DateTime
+  recoveryAction String?
+  owner          String?
+  status         ActionLogStatus @default(OPEN)
+
+  updatedById   String?
+  updatedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@unique([machineId, weekEnding])
+  @@index([weekEnding])
 }

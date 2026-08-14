@@ -11,6 +11,17 @@ export function addDays(d: Date, days: number): Date {
   return next;
 }
 
+/** The Monday (UTC calendar day) of the week containing `date` -- kept in this module's
+ * own UTC-day convention (toDateKey/addDays) rather than week-utils.ts's local-date one,
+ * so the weekly rollup never straddles a UTC/local timezone mismatch against the daily
+ * overview's UTC-keyed cells. */
+export function mostRecentMondayUTC(date: Date): Date {
+  const d = new Date(`${toDateKey(date)}T00:00:00.000Z`);
+  const day = d.getUTCDay(); // 0 = Sunday .. 6 = Saturday
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  return addDays(d, -daysSinceMonday);
+}
+
 export type MachineCapacitySnapshot = {
   availableHours: number;
   scheduledHours: number;

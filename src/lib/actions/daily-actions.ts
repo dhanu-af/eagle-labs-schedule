@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canUpdateDailyProgress, canManageDailyPlanner, isAdminRole } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { notifyAllEmployees } from "@/lib/notify";
-import type { Priority, TaskStatus } from "@/generated/prisma";
+import type { Priority, TaskStatus, DailyTaskQcStatus } from "@/generated/prisma";
 
 async function requireDailyPlannerManager() {
   const session = await getSession();
@@ -86,6 +86,12 @@ export async function updateDailyTask(id: string, formData: FormData) {
   const targetUnit = String(formData.get("targetUnit") || "kg");
   const plannedStart = String(formData.get("plannedStart") || "") || null;
   const plannedFinish = String(formData.get("plannedFinish") || "") || null;
+  const actualStart = String(formData.get("actualStart") || "") || null;
+  const actualFinish = String(formData.get("actualFinish") || "") || null;
+  const downtimeMinutesRaw = String(formData.get("downtimeMinutes") || "");
+  const downtimeMinutes = downtimeMinutesRaw ? Number(downtimeMinutesRaw) : null;
+  const qcStatusRaw = String(formData.get("qcStatus") || "");
+  const qcStatus = (qcStatusRaw || null) as DailyTaskQcStatus | null;
   const priority = String(formData.get("priority") || "MEDIUM") as Priority;
   const notes = String(formData.get("notes") || "") || null;
 
@@ -102,6 +108,10 @@ export async function updateDailyTask(id: string, formData: FormData) {
       targetUnit,
       plannedStart,
       plannedFinish,
+      actualStart,
+      actualFinish,
+      downtimeMinutes,
+      qcStatus,
       priority,
       notes,
     },

@@ -252,6 +252,57 @@ export function canManagePurchasing(role: Role) {
   );
 }
 
+/** Site Action Log: manager tier -- create/edit/close a cross-functional exception.
+ * Same roles as canManageMfgReconciliation/canManageCustomerOrders since raising and
+ * owning an action is a planning/supervisory duty; no dedicated PLANNER role exists. */
+export function canManageActionLog(role: Role) {
+  return (
+    role === "QA" ||
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN" ||
+    role === "EXTRA"
+  );
+}
+
+/** Weekly KPI Scorecard: manager tier -- entering/editing a week's management-review
+ * numbers. Same roles as canManageCapacityPlanning (no QA/EXTRA -- this is a planning/
+ * management artifact, not a QC or floor-operator task). */
+export function canManageWeeklyKpi(role: Role) {
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
+/** Weekly MPS: manager tier -- planning/editing a line's weekly production entry,
+ * freezing it, and toggling QC/maintenance readiness. Same roles as
+ * canManageCapacityPlanning/canManageWeeklyKpi (no QA/EXTRA -- this is planning work,
+ * not a QC or floor-operator task). */
+export function canManageWeeklyMps(role: Role) {
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
+/** Material Shortage Register: manager tier -- assigning/updating an owner, action,
+ * and status against a real computed shortage. Same roles as canManagePurchasing/
+ * canManageWarehouse since it's the same procurement/warehouse/planning staff. */
+export function canManageMaterialShortages(role: Role) {
+  return (
+    role === "SUPERVISOR" ||
+    role === "OPERATIONS" ||
+    role === "ADMIN" ||
+    role === "SUPER_ADMIN"
+  );
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }

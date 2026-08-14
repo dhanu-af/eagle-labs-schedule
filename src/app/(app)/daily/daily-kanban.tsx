@@ -12,7 +12,7 @@ import {
 } from "@hello-pangea/dnd";
 import { updateTaskStatus, deleteDailyTask } from "@/lib/actions/daily-actions";
 import { PRIORITY_CLASS, PRIORITY_LABEL, STATUS_LABEL, initials } from "@/lib/ui";
-import type { Employee, Task } from "./daily-client";
+import { QC_STATUS_LABELS, type Employee, type Task } from "./daily-client";
 import EditTaskModal from "./task-edit-modal";
 
 const COLUMNS: { key: Task["status"]; label: string; tint: string }[] = [
@@ -298,6 +298,13 @@ function KanbanCard({
       )}
       {t.status === "OTHER" && t.delayReason && (
         <p className="mt-1.5 text-[11px] text-muted-foreground">💬 {t.delayReason}</p>
+      )}
+      {(t.downtimeMinutes != null || t.qcStatus) && (
+        <p className={`mt-1.5 text-[11px] ${t.qcStatus === "FAILED" || t.qcStatus === "HOLD" ? "text-danger" : "text-muted-foreground"}`}>
+          {t.downtimeMinutes != null && `Downtime ${t.downtimeMinutes}m`}
+          {t.downtimeMinutes != null && t.qcStatus ? " · " : ""}
+          {t.qcStatus && QC_STATUS_LABELS[t.qcStatus]}
+        </p>
       )}
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-2">
         <div className="flex min-w-0 items-center gap-1.5">

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession, canManageCapacityPlanning } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { toDateKey, addDays, computeMachineCapacity, type MachineCapacitySnapshot } from "@/lib/capacity-planning-defaults";
+import { toDateKey, addDays, mostRecentMondayUTC, computeMachineCapacity, type MachineCapacitySnapshot } from "@/lib/capacity-planning-defaults";
+import type { ActionLogStatus } from "@/generated/prisma";
 
 const BASE_PATH = "/capacity-planning";
 
@@ -204,4 +205,95 @@ export async function unscheduleBatchRecord(batchRecordId: string) {
 
   revalidatePath(BASE_PATH);
   return batch;
+}
+
+// ---------------------------------------------------------------------------
+// Weekly rollup -- aggregates the same daily overview above into Mon..Sun weeks
+// instead of single days. Never recomputes capacity math independently: it sums
+// each week's 7 days of availableHours/scheduledHours and runs that total back
+// through computeMachineCapacity, so a week's utilization% can never disagree
+// with what the daily grid already shows for those same 7 days.
+// ---------------------------------------------------------------------------
+
+export type CapacityWeeklyCell = MachineCapacitySnapshot & {
+  weekEnding: string;
+  recoveryAction: string | null;
+  recoveryOwner: string | null;
+  recoveryStatus: ActionLogStatus | null;
+};
+export type CapacityWeeklyRow = { machineId: string; code: string; name: string; workCenter: string | null; weeks: CapacityWeeklyCell[] };
+
+export async function getCapacityWeeklyRollup(referenceDate: Date, weeks = 4): Promise<{ weekEndings: string[]; rows: CapacityWeeklyRow[] }> {
+  const monday = mostRecentMondayUTC(referenceDate);
+  const { rows: dailyRows, dateKeys } = await getCapacityOverview(monday, weeks * 7);
+
+  const weekEndings = Array.from({ length: weeks }, (_, w) => dateKeys[w * 7 + 6]);
+
+  const machineIds = dailyRows.map((r) => r.machineId);
+  const recoveryActions =
+    machineIds.length === 0
+      ? []
+      : await prisma.capacityRecoveryAction.findMany({
+          where: { machineId: { in: machineIds }, weekEnding: { in: weekEndings.map((w) => new Date(`${w}T00:00:00.000Z`)) } },
+        });
+  const recoveryByKey = new Map(recoveryActions.map((r) => [`${r.machineId}|${toDateKey(r.weekEnding)}`, r]));
+
+  const rows: CapacityWeeklyRow[] = dailyRows.map((row) => {
+    const weekCells: CapacityWeeklyCell[] = weekEndings.map((weekEndingKey, w) => {
+      const weekDateKeys = dateKeys.slice(w * 7, w * 7 + 7);
+      let availableHours = 0;
+      let scheduledHours = 0;
+      for (const dk of weekDateKeys) {
+        availableHours += row.cells[dk].availableHours;
+        scheduledHours += row.cells[dk].scheduledHours;
+      }
+      const recovery = recoveryByKey.get(`${row.machineId}|${weekEndingKey}`);
+      return {
+        ...computeMachineCapacity(availableHours, scheduledHours),
+        weekEnding: weekEndingKey,
+        recoveryAction: recovery?.recoveryAction ?? null,
+        recoveryOwner: recovery?.owner ?? null,
+        recoveryStatus: recovery?.status ?? null,
+      };
+    });
+    return { machineId: row.machineId, code: row.code, name: row.name, workCenter: row.workCenter, weeks: weekCells };
+  });
+
+  return { weekEndings, rows };
+}
+
+export async function upsertCapacityRecoveryAction(
+  machineId: string,
+  weekEndingKey: string,
+  data: { recoveryAction?: string | null; owner?: string | null; status: ActionLogStatus }
+) {
+  const session = await requireAccess();
+
+  const machine = await prisma.machine.findUnique({ where: { id: machineId }, select: { name: true, code: true } });
+  if (!machine) throw new Error("Machine not found");
+
+  const weekEnding = new Date(`${weekEndingKey}T00:00:00.000Z`);
+  const payload = {
+    recoveryAction: data.recoveryAction?.trim() || null,
+    owner: data.owner?.trim() || null,
+    status: data.status,
+    updatedById: session.userId,
+    updatedByName: session.fullName,
+  };
+
+  const entry = await prisma.capacityRecoveryAction.upsert({
+    where: { machineId_weekEnding: { machineId, weekEnding } },
+    create: { machineId, weekEnding, ...payload },
+    update: payload,
+  });
+
+  await logAudit(session, {
+    action: "SAVE_CAPACITY_RECOVERY_ACTION",
+    entityType: "CapacityRecoveryAction",
+    entityId: entry.id,
+    summary: `Recovery action for ${machine.name} (${machine.code}), week ending ${weekEndingKey} set to ${data.status}`,
+  });
+
+  revalidatePath(BASE_PATH);
+  return entry;
 }

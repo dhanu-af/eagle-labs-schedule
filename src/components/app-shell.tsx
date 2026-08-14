@@ -52,6 +52,10 @@ const icons = {
   capacityPlanning: "📐",
   procurement: "🛒",
   controlTower: "🗼",
+  actionLog: "🚨",
+  weeklyKpi: "🎯",
+  weeklyMps: "🗓️",
+  materialShortages: "📉",
 };
 
 type Notification = {
@@ -91,6 +95,7 @@ export default function AppShell({
             { href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom },
             { href: "/qc-samples", label: "QC Samples", icon: icons.qcSamples },
             { href: "/mfg-reconciliation", label: "Mfg Reconciliation", icon: icons.mfgReconciliation },
+            { href: "/action-log", label: "Site Action Log", icon: icons.actionLog },
           ],
         },
       ]
@@ -107,6 +112,7 @@ export default function AppShell({
           items: [
             { href: "/", label: "Dashboard", icon: icons.dashboard },
             { href: "/customer-orders", label: "Customer Orders", icon: icons.customerOrders },
+            { href: "/weekly-mps", label: "Weekly MPS", icon: icons.weeklyMps },
             { href: "/capacity-planning", label: "Capacity Planning", icon: icons.capacityPlanning },
             { href: "/my-task", label: "My Tasks", icon: icons.myTask },
             { href: "/daily", label: "Daily Operations", icon: icons.daily },
@@ -118,8 +124,11 @@ export default function AppShell({
             { href: "/drying-room", label: "Production Staging Operations", icon: icons.dryingRoom },
             { href: "/warehouse", label: "Warehouse Management", icon: icons.warehouse },
             { href: "/procurement", label: "Procurement", icon: icons.procurement },
+            { href: "/material-shortages", label: "Material Shortage Register", icon: icons.materialShortages },
             { href: "/qc-samples", label: "QC Samples", icon: icons.qcSamples },
             { href: "/mfg-reconciliation", label: "Mfg Reconciliation", icon: icons.mfgReconciliation },
+            { href: "/action-log", label: "Site Action Log", icon: icons.actionLog },
+            { href: "/weekly-kpi", label: "Weekly KPI Scorecard", icon: icons.weeklyKpi },
             ...(canSeeIngredientLibrary ? [{ href: "/ingredients", label: "Ingredient Library", icon: icons.ingredients }] : []),
             { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
             { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },

@@ -1,11 +1,16 @@
 import { getSession, canManageCapacityPlanning } from "@/lib/auth";
-import { listMachines, getUnscheduledBatchRecords, getCapacityOverview } from "@/lib/actions/capacity-planning-actions";
+import { listMachines, getUnscheduledBatchRecords, getCapacityOverview, getCapacityWeeklyRollup } from "@/lib/actions/capacity-planning-actions";
 import CapacityPlanningClient from "./capacity-planning-client";
 
 export default async function CapacityPlanningPage() {
   const session = await getSession();
 
-  const [machines, unscheduled, overview] = await Promise.all([listMachines(), getUnscheduledBatchRecords(), getCapacityOverview(new Date(), 14)]);
+  const [machines, unscheduled, overview, weeklyRollup] = await Promise.all([
+    listMachines(),
+    getUnscheduledBatchRecords(),
+    getCapacityOverview(new Date(), 14),
+    getCapacityWeeklyRollup(new Date(), 4),
+  ]);
 
   return (
     <CapacityPlanningClient
@@ -21,6 +26,7 @@ export default async function CapacityPlanningPage() {
       }))}
       unscheduled={unscheduled.map((b) => ({ id: b.id, productName: b.productName, batchNumber: b.batchNumber, status: b.status, createdAt: b.createdAt.toISOString() }))}
       overview={overview}
+      weeklyRollup={weeklyRollup}
       canManage={!!session && canManageCapacityPlanning(session.role)}
     />
   );

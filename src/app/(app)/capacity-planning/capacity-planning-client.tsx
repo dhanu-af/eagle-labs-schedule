@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import OverviewTab from "./overview-tab";
 import MachinesTab from "./machines-tab";
 import UnscheduledTab from "./unscheduled-tab";
-import type { CapacityOverviewRow } from "@/lib/actions/capacity-planning-actions";
+import WeeklyRollupTab from "./weekly-rollup-tab";
+import type { CapacityOverviewRow, CapacityWeeklyRow } from "@/lib/actions/capacity-planning-actions";
 
 export type CapacityExceptionRow = { id: string; date: string; hoursAvailableOverride: number; reason: string | null };
 export type MachineRow = {
@@ -22,6 +23,7 @@ export type UnscheduledBatchRow = { id: string; productName: string; batchNumber
 
 const TABS = [
   { key: "overview", label: "Overview" },
+  { key: "weeklyRollup", label: "Weekly Rollup" },
   { key: "machines", label: "Machines" },
   { key: "unscheduled", label: "Unscheduled Batches" },
 ] as const;
@@ -31,11 +33,13 @@ export default function CapacityPlanningClient({
   machines,
   unscheduled,
   overview,
+  weeklyRollup,
   canManage,
 }: {
   machines: MachineRow[];
   unscheduled: UnscheduledBatchRow[];
   overview: { dateKeys: string[]; rows: CapacityOverviewRow[] };
+  weeklyRollup: { weekEndings: string[]; rows: CapacityWeeklyRow[] };
   canManage: boolean;
 }) {
   const [tab, setTab] = useState<TabKey>("overview");
@@ -59,6 +63,7 @@ export default function CapacityPlanningClient({
       </div>
 
       {tab === "overview" && <OverviewTab overview={overview} />}
+      {tab === "weeklyRollup" && <WeeklyRollupTab rollup={weeklyRollup} canManage={canManage} />}
       {tab === "machines" && <MachinesTab machines={machines} canManage={canManage} />}
       {tab === "unscheduled" && <UnscheduledTab batches={unscheduled} machines={machines} canManage={canManage} />}
     </div>

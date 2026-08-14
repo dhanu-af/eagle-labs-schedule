@@ -4,10 +4,11 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateDailyTask } from "@/lib/actions/daily-actions";
 import { PRIORITY_LABEL } from "@/lib/ui";
-import type { Employee, Task } from "./daily-client";
+import { QC_STATUS_LABELS, type Employee, type Task } from "./daily-client";
 import { Button } from "@/components/ui/Button";
 
 const PRIORITY_OPTIONS = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
+const QC_STATUS_OPTIONS = ["PENDING", "PASSED", "FAILED", "HOLD"] as const;
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -99,6 +100,29 @@ export default function EditTaskModal({
             </Field>
             <Field label="Planned Finish">
               <input name="plannedFinish" type="time" defaultValue={task.plannedFinish ?? ""} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Actual Start">
+              <input name="actualStart" type="time" defaultValue={task.actualStart ?? ""} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            </Field>
+            <Field label="Actual Finish">
+              <input name="actualFinish" type="time" defaultValue={task.actualFinish ?? ""} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Downtime (minutes)">
+              <input name="downtimeMinutes" type="number" min="0" defaultValue={task.downtimeMinutes ?? ""} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground" />
+            </Field>
+            <Field label="QC Status">
+              <select name="qcStatus" defaultValue={task.qcStatus ?? ""} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground">
+                <option value="">Not applicable</option>
+                {QC_STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {QC_STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
             </Field>
           </div>
           <Field label="Notes">

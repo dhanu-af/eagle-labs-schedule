@@ -9,6 +9,7 @@ import {
   updateTaskStatus,
 } from "@/lib/actions/daily-actions";
 import { PRIORITY_CLASS, PRIORITY_LABEL, STATUS_CLASS, STATUS_LABEL, toDateInputValue } from "@/lib/ui";
+import { computeYieldPct } from "@/lib/mfg-reconciliation-defaults";
 import DailyKanban from "./daily-kanban";
 import EditTaskModal, { Field } from "./task-edit-modal";
 import { Card } from "@/components/ui/Card";
@@ -32,10 +33,21 @@ export type Task = {
   actualQty: number;
   plannedStart: string | null;
   plannedFinish: string | null;
+  actualStart: string | null;
+  actualFinish: string | null;
+  downtimeMinutes: number | null;
+  qcStatus: "PENDING" | "PASSED" | "FAILED" | "HOLD" | null;
   priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   status: "NOT_STARTED" | "RUNNING" | "COMPLETED" | "DELAYED" | "OTHER";
   delayReason: string | null;
   notes: string | null;
+};
+
+export const QC_STATUS_LABELS: Record<NonNullable<Task["qcStatus"]>, string> = {
+  PENDING: "QC Pending",
+  PASSED: "QC Passed",
+  FAILED: "QC Failed",
+  HOLD: "QC Hold",
 };
 
 const STATUS_OPTIONS = ["NOT_STARTED", "RUNNING", "COMPLETED", "DELAYED", "OTHER"] as const;
@@ -317,6 +329,26 @@ function TaskRow({
               style={{ width: `${Math.min(100, Math.round((actualQty / task.targetQty) * 100))}%` }}
             />
           </div>
+        </div>
+      )}
+
+      {(task.actualStart || task.downtimeMinutes != null || task.qcStatus || task.targetQty !== null) && (
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          {task.actualStart && (
+            <span>
+              Actual {task.actualStart}–{task.actualFinish ?? "?"}
+            </span>
+          )}
+          {task.targetQty !== null && (
+            <span>Variance {actualQty - task.targetQty >= 0 ? "+" : ""}{Math.round((actualQty - task.targetQty) * 100) / 100} {task.targetUnit}</span>
+          )}
+          {task.targetQty !== null && computeYieldPct(actualQty, task.targetQty) !== null && (
+            <span>Yield {Math.round(computeYieldPct(actualQty, task.targetQty)! * 10) / 10}%</span>
+          )}
+          {task.downtimeMinutes != null && <span>Downtime {task.downtimeMinutes}m</span>}
+          {task.qcStatus && (
+            <span className={task.qcStatus === "FAILED" || task.qcStatus === "HOLD" ? "text-danger" : ""}>{QC_STATUS_LABELS[task.qcStatus]}</span>
+          )}
         </div>
       )}
 
