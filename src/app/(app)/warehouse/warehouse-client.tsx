@@ -15,6 +15,7 @@ import DashboardTab from "./dashboard-tab";
 import StockOverviewTab from "./stock-overview-tab";
 import GoodsReceivingTab from "./goods-receiving-tab";
 import ProductionRequestsTab from "./production-requests-tab";
+import type { UserOption } from "@/components/send-task-form";
 
 export type StockSummary = Record<StockBucket, number> & { QUARANTINE: number };
 
@@ -136,6 +137,7 @@ export default function WarehouseClient({
   canRequest,
   canQaRelease,
   isSuperAdmin,
+  taskRequestRecipients,
 }: {
   items: WarehouseItemRow[];
   locations: WarehouseLocationRow[];
@@ -145,6 +147,7 @@ export default function WarehouseClient({
   canRequest: boolean;
   canQaRelease: boolean;
   isSuperAdmin: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const [tab, setTab] = useState<TabKey>("dashboard");
 
@@ -190,6 +193,7 @@ export default function WarehouseClient({
           canManage={canManage}
           canQaRelease={canQaRelease}
           isSuperAdmin={isSuperAdmin}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
 
@@ -201,6 +205,7 @@ export default function WarehouseClient({
           canManage={canManage}
           canRequest={canRequest}
           isSuperAdmin={isSuperAdmin}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
     </div>

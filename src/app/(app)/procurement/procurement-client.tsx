@@ -5,6 +5,7 @@ import type { PurchaseOrderStatus } from "@/generated/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import PurchaseOrdersTab from "./purchase-orders-tab";
 import SuppliersTab from "./suppliers-tab";
+import type { UserOption } from "@/components/send-task-form";
 
 export type SupplierRow = {
   id: string;
@@ -43,11 +44,13 @@ export default function ProcurementClient({
   purchaseOrders,
   items,
   canManage,
+  taskRequestRecipients,
 }: {
   suppliers: SupplierRow[];
   purchaseOrders: PurchaseOrderRow[];
   items: ItemOption[];
   canManage: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const [tab, setTab] = useState<TabKey>("purchaseOrders");
 
@@ -69,7 +72,15 @@ export default function ProcurementClient({
         ))}
       </div>
 
-      {tab === "purchaseOrders" && <PurchaseOrdersTab purchaseOrders={purchaseOrders} suppliers={suppliers} items={items} canManage={canManage} />}
+      {tab === "purchaseOrders" && (
+        <PurchaseOrdersTab
+          purchaseOrders={purchaseOrders}
+          suppliers={suppliers}
+          items={items}
+          canManage={canManage}
+          taskRequestRecipients={taskRequestRecipients}
+        />
+      )}
       {tab === "suppliers" && <SuppliersTab suppliers={suppliers} canManage={canManage} />}
     </div>
   );

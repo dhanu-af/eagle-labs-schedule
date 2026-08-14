@@ -8,6 +8,7 @@ import OrdersTab from "./orders-tab";
 import BoardTab from "./board-tab";
 import CustomersTab from "./customers-tab";
 import ProductsTab from "./products-tab";
+import type { UserOption } from "@/components/send-task-form";
 
 export type OrderLineRow = {
   id: string;
@@ -83,6 +84,7 @@ export default function CustomerOrdersClient({
   planners,
   riskOverview,
   canManage,
+  taskRequestRecipients,
 }: {
   orders: OrderRow[];
   customers: CustomerRow[];
@@ -91,6 +93,7 @@ export default function CustomerOrdersClient({
   planners: PlannerOption[];
   riskOverview: RiskOrderRow[];
   canManage: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const [tab, setTab] = useState<TabKey>("dashboard");
 
@@ -119,7 +122,14 @@ export default function CustomerOrdersClient({
 
       {tab === "dashboard" && <DashboardTab orders={orders} riskOverview={riskOverview} />}
       {tab === "orders" && (
-        <OrdersTab orders={orders} customers={customers} products={products} planners={planners} canManage={canManage} />
+        <OrdersTab
+          orders={orders}
+          customers={customers}
+          products={products}
+          planners={planners}
+          canManage={canManage}
+          taskRequestRecipients={taskRequestRecipients}
+        />
       )}
       {tab === "board" && <BoardTab orders={orders} riskOverview={riskOverview} canManage={canManage} />}
       {tab === "customers" && <CustomersTab customers={customers} canManage={canManage} />}

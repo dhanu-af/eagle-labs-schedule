@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canManageWarehouse, canRequestMaterials, canQaReleaseStock, canEdit } from "@/lib/auth";
 import { getItemStockSummary } from "@/lib/warehouse-ledger";
+import { listTaskRequestRecipients } from "@/lib/actions/task-request-actions";
 import WarehouseClient from "./warehouse-client";
 
 export default async function WarehousePage() {
   const session = await getSession();
 
-  const [items, locations, receivings, requests] = await Promise.all([
+  const [items, locations, receivings, requests, taskRequestRecipients] = await Promise.all([
     prisma.warehouseItem.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     prisma.warehouseLocation.findMany({ where: { active: true }, orderBy: { code: "asc" } }),
     prisma.goodsReceiving.findMany({
@@ -17,6 +18,7 @@ export default async function WarehousePage() {
       orderBy: { createdAt: "desc" },
       include: { lines: { include: { item: true }, orderBy: { createdAt: "asc" } } },
     }),
+    listTaskRequestRecipients(),
   ]);
 
   const stockSummaries = await Promise.all(
@@ -122,6 +124,7 @@ export default async function WarehousePage() {
       canRequest={!!session && canRequestMaterials(session.role)}
       canQaRelease={!!session && canQaReleaseStock(session.role)}
       isSuperAdmin={!!session && canEdit(session.role)}
+      taskRequestRecipients={taskRequestRecipients}
     />
   );
 }

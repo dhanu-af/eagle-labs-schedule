@@ -1,15 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canManagePurchasing } from "@/lib/auth";
 import { listSuppliers, listPurchaseOrders } from "@/lib/actions/procurement-actions";
+import { listTaskRequestRecipients } from "@/lib/actions/task-request-actions";
 import ProcurementClient from "./procurement-client";
 
 export default async function ProcurementPage() {
   const session = await getSession();
 
-  const [suppliers, purchaseOrders, items] = await Promise.all([
+  const [suppliers, purchaseOrders, items, taskRequestRecipients] = await Promise.all([
     listSuppliers(),
     listPurchaseOrders(),
     prisma.warehouseItem.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, itemCode: true, name: true, unit: true } }),
+    listTaskRequestRecipients(),
   ]);
 
   return (
@@ -37,6 +39,7 @@ export default async function ProcurementPage() {
       }))}
       items={items}
       canManage={!!session && canManagePurchasing(session.role)}
+      taskRequestRecipients={taskRequestRecipients}
     />
   );
 }

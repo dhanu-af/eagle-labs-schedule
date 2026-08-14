@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { SupplierRow, PurchaseOrderRow, ItemOption } from "./procurement-client";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 const PO_STATUSES: PurchaseOrderStatus[] = ["DRAFT", "SENT", "CONFIRMED", "PARTIALLY_RECEIVED", "RECEIVED", "CANCELLED"];
 const PO_TONE: Record<PurchaseOrderStatus, "muted" | "info" | "success" | "danger" | "warning"> = {
@@ -35,7 +36,19 @@ function emptyLine(unit = "kg"): DraftLine {
   return { itemId: "", quantity: 0, unit, notes: "" };
 }
 
-function NewPoModal({ suppliers, items, onClose }: { suppliers: SupplierRow[]; items: ItemOption[]; onClose: () => void }) {
+type CreatedPo = { poNumber: string; supplierName: string; lineCount: number; expectedDeliveryDate: string };
+
+function NewPoModal({
+  suppliers,
+  items,
+  onClose,
+  taskRequestRecipients,
+}: {
+  suppliers: SupplierRow[];
+  items: ItemOption[];
+  onClose: () => void;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -44,6 +57,8 @@ function NewPoModal({ suppliers, items, onClose }: { suppliers: SupplierRow[]; i
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([emptyLine()]);
+  const [created, setCreated] = useState<CreatedPo | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function updateLine(i: number, patch: Partial<DraftLine>) {
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -62,13 +77,52 @@ function NewPoModal({ suppliers, items, onClose }: { suppliers: SupplierRow[]; i
 
     startTransition(async () => {
       try {
-        await createPurchaseOrder({ supplierId, expectedDeliveryDate, notes: notes || null, lines });
+        const po = await createPurchaseOrder({ supplierId, expectedDeliveryDate, notes: notes || null, lines });
         router.refresh();
-        onClose();
+        setCreated({ poNumber: po.poNumber, supplierName: po.supplier.name, lineCount: po.lines.length, expectedDeliveryDate });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't create purchase order.");
       }
     });
+  }
+
+  if (created) {
+    const summary = `Approve PO ${created.poNumber} — ${created.supplierName}`;
+    const details = `${created.lineCount} line${created.lineCount === 1 ? "" : "s"}, expected ${new Date(created.expectedDeliveryDate).toLocaleDateString()}`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Purchase Order Created"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              initialMessage={details}
+              link="/procurement"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">
+                {created.poNumber} — {created.supplierName} has been created. {details}
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -244,11 +298,13 @@ export default function PurchaseOrdersTab({
   suppliers,
   items,
   canManage,
+  taskRequestRecipients,
 }: {
   purchaseOrders: PurchaseOrderRow[];
   suppliers: SupplierRow[];
   items: ItemOption[];
   canManage: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const [showNew, setShowNew] = useState(false);
   const [search, setSearch] = useState("");
@@ -279,7 +335,9 @@ export default function PurchaseOrdersTab({
         </div>
       )}
 
-      {showNew && <NewPoModal suppliers={suppliers} items={items} onClose={() => setShowNew(false)} />}
+      {showNew && (
+        <NewPoModal suppliers={suppliers} items={items} onClose={() => setShowNew(false)} taskRequestRecipients={taskRequestRecipients} />
+      )}
     </div>
   );
 }

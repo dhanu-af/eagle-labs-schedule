@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { OrderRow, CustomerRow, ProductRow, PlannerOption } from "./customer-orders-client";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 const PRIORITIES: OrderPriority[] = ["LOW", "NORMAL", "HIGH", "URGENT"];
 
@@ -30,7 +31,19 @@ function emptyLine(defaultUnit = "kg"): DraftLine {
   return { productId: "", quantity: 0, unit: defaultUnit, packagingRequirement: "", artworkStatus: "", notes: "" };
 }
 
-function NewOrderModal({ customers, products, onClose }: { customers: CustomerRow[]; products: ProductRow[]; onClose: () => void }) {
+type CreatedOrder = { id: string; orderNumber: string; customerName: string; lineCount: number; requestedDeliveryDate: string };
+
+function NewOrderModal({
+  customers,
+  products,
+  onClose,
+  taskRequestRecipients,
+}: {
+  customers: CustomerRow[];
+  products: ProductRow[];
+  onClose: () => void;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -44,6 +57,8 @@ function NewOrderModal({ customers, products, onClose }: { customers: CustomerRo
   const [specialRequirements, setSpecialRequirements] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([emptyLine()]);
+  const [created, setCreated] = useState<CreatedOrder | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function updateLine(i: number, patch: Partial<DraftLine>) {
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -73,12 +88,56 @@ function NewOrderModal({ customers, products, onClose }: { customers: CustomerRo
           notes: notes || null,
           lines,
         });
-        onClose();
-        router.push(`/customer-orders/${order.id}`);
+        const customerName = customers.find((c) => c.id === customerId)?.name ?? "";
+        setCreated({ id: order.id, orderNumber: order.orderNumber, customerName, lineCount: lines.length, requestedDeliveryDate });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't create order.");
       }
     });
+  }
+
+  function finish() {
+    onClose();
+    if (created) router.push(`/customer-orders/${created.id}`);
+  }
+
+  if (created) {
+    const summary = `New order ${created.orderNumber} — ${created.customerName}`;
+    const details = `${created.lineCount} line${created.lineCount === 1 ? "" : "s"}, requested delivery ${new Date(created.requestedDeliveryDate).toLocaleDateString()}`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Order Created"}</h2>
+            <button onClick={finish} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              initialMessage={details}
+              link={`/customer-orders/${created.id}`}
+              onSent={finish}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">
+                {summary} has been created. {details}
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={finish}>
+                  View Order
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -207,12 +266,14 @@ export default function OrdersTab({
   customers,
   products,
   canManage,
+  taskRequestRecipients,
 }: {
   orders: OrderRow[];
   customers: CustomerRow[];
   products: ProductRow[];
   planners: PlannerOption[];
   canManage: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const [showNew, setShowNew] = useState(false);
   const [search, setSearch] = useState("");
@@ -332,7 +393,14 @@ export default function OrdersTab({
         </>
       )}
 
-      {showNew && <NewOrderModal customers={customers} products={products} onClose={() => setShowNew(false)} />}
+      {showNew && (
+        <NewOrderModal
+          customers={customers}
+          products={products}
+          onClose={() => setShowNew(false)}
+          taskRequestRecipients={taskRequestRecipients}
+        />
+      )}
     </div>
   );
 }

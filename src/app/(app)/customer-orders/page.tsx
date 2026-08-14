@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canManageCustomerOrders } from "@/lib/auth";
 import { getActiveOrdersWithRisk } from "@/lib/actions/customer-order-actions";
+import { listTaskRequestRecipients } from "@/lib/actions/task-request-actions";
 import CustomerOrdersClient from "./customer-orders-client";
 
 export default async function CustomerOrdersPage() {
   const session = await getSession();
 
-  const [orders, customers, products, formulations, planners, riskOverview] = await Promise.all([
+  const [orders, customers, products, formulations, planners, riskOverview, taskRequestRecipients] = await Promise.all([
     prisma.customerOrder.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -25,6 +26,7 @@ export default async function CustomerOrdersPage() {
     }),
     prisma.user.findMany({ where: { disabled: false }, select: { id: true, fullName: true }, orderBy: { fullName: "asc" } }),
     getActiveOrdersWithRisk(),
+    listTaskRequestRecipients(),
   ]);
 
   return (
@@ -72,6 +74,7 @@ export default async function CustomerOrdersPage() {
       planners={planners}
       riskOverview={riskOverview}
       canManage={!!session && canManageCustomerOrders(session.role)}
+      taskRequestRecipients={taskRequestRecipients}
     />
   );
 }

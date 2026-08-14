@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import NewRequestModal from "./new-request-modal";
 import RequestDetailModal from "./request-detail-modal";
 import type { MaterialRequestRow, WarehouseItemRow, WarehouseLocationRow } from "./warehouse-client";
+import type { UserOption } from "@/components/send-task-form";
 
 const VIEWS = [
   { key: "all", label: "All Requests" },
@@ -27,6 +28,7 @@ export default function ProductionRequestsTab({
   canManage,
   canRequest,
   isSuperAdmin,
+  taskRequestRecipients,
 }: {
   requests: MaterialRequestRow[];
   items: WarehouseItemRow[];
@@ -34,6 +36,7 @@ export default function ProductionRequestsTab({
   canManage: boolean;
   canRequest: boolean;
   isSuperAdmin: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -229,7 +232,9 @@ export default function ProductionRequestsTab({
           </Card>
         ))}
 
-      {showNew && <NewRequestModal items={items} onClose={() => setShowNew(false)} />}
+      {showNew && (
+        <NewRequestModal items={items} onClose={() => setShowNew(false)} taskRequestRecipients={taskRequestRecipients} />
+      )}
       {openRequest && (
         <RequestDetailModal
           request={openRequest}

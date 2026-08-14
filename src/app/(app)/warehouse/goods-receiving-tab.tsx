@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { GoodsReceivingRow, WarehouseItemRow, WarehouseLocationRow } from "./warehouse-client";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -48,7 +49,17 @@ function emptyLine(defaultUnit: string): DraftLine {
   };
 }
 
-function NewReceivingModal({ items, onClose }: { items: WarehouseItemRow[]; onClose: () => void }) {
+type CreatedReceiving = { supplierName: string; poNumber: string | null; lineCount: number };
+
+function NewReceivingModal({
+  items,
+  onClose,
+  taskRequestRecipients,
+}: {
+  items: WarehouseItemRow[];
+  onClose: () => void;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -60,6 +71,8 @@ function NewReceivingModal({ items, onClose }: { items: WarehouseItemRow[]; onCl
   const [checkedByName, setCheckedByName] = useState("");
   const [approvedByName, setApprovedByName] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([emptyLine(items[0]?.unit ?? "kg")]);
+  const [created, setCreated] = useState<CreatedReceiving | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function updateLine(index: number, patch: Partial<DraftLine>) {
     setLines((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
@@ -103,11 +116,50 @@ function NewReceivingModal({ items, onClose }: { items: WarehouseItemRow[]; onCl
           }))
         );
         router.refresh();
-        onClose();
+        setCreated({ supplierName, poNumber: poNumber || null, lineCount: lines.length });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't save goods receiving.");
       }
     });
+  }
+
+  if (created) {
+    const summary = `QA release needed — ${created.supplierName} delivery${created.poNumber ? ` (PO ${created.poNumber})` : ""}`;
+    const details = `${created.lineCount} line${created.lineCount === 1 ? "" : "s"} in quarantine, awaiting QA release.`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Receiving Saved"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              initialMessage={details}
+              link="/warehouse"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">
+                {created.supplierName} delivery has been logged. {details}
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -282,6 +334,7 @@ export default function GoodsReceivingTab({
   canManage,
   canQaRelease,
   isSuperAdmin,
+  taskRequestRecipients,
 }: {
   receivings: GoodsReceivingRow[];
   items: WarehouseItemRow[];
@@ -289,6 +342,7 @@ export default function GoodsReceivingTab({
   canManage: boolean;
   canQaRelease: boolean;
   isSuperAdmin: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -408,7 +462,9 @@ export default function GoodsReceivingTab({
         </div>
       )}
 
-      {showNew && <NewReceivingModal items={items} onClose={() => setShowNew(false)} />}
+      {showNew && (
+        <NewReceivingModal items={items} onClose={() => setShowNew(false)} taskRequestRecipients={taskRequestRecipients} />
+      )}
     </div>
   );
 }

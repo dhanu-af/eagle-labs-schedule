@@ -7,6 +7,7 @@ import DashboardTab from "./dashboard-tab";
 import SamplesTab from "./samples-tab";
 import ReportsTab from "./reports-tab";
 import SampleDetailModal from "./sample-detail-modal";
+import type { UserOption } from "@/components/send-task-form";
 
 export type QcLabTestItemRow = { section: string; parameter: string; result: QcTestResult | null; details: string | null };
 
@@ -82,6 +83,7 @@ export default function QcSamplesClient({
   canManage,
   canRunLabTesting,
   isSuperAdmin,
+  taskRequestRecipients,
 }: {
   samples: QcSampleRow[];
   batchRecords: BatchRecordOption[];
@@ -92,6 +94,7 @@ export default function QcSamplesClient({
   canManage: boolean;
   canRunLabTesting: boolean;
   isSuperAdmin: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const [tab, setTab] = useState<TabKey>("dashboard");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -130,6 +133,7 @@ export default function QcSamplesClient({
           locationOptions={locationOptions}
           canCollect={canCollect}
           onSelect={setSelectedId}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
 

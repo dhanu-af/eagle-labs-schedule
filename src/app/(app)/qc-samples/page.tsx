@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canManageQcSamples, canCollectQcSamples, canRunLabTesting, canEdit } from "@/lib/auth";
+import { listTaskRequestRecipients } from "@/lib/actions/task-request-actions";
 import QcSamplesClient from "./qc-samples-client";
 
 export default async function QcSamplesPage() {
   const session = await getSession();
 
-  const [samples, batchRecords, bays, locations, whatsAppGroups] = await Promise.all([
+  const [samples, batchRecords, bays, locations, whatsAppGroups, taskRequestRecipients] = await Promise.all([
     prisma.qcSample.findMany({
       orderBy: { createdAt: "desc" },
       include: { labTest: { include: { items: { orderBy: { sortOrder: "asc" } } } }, retentionRecord: true },
@@ -22,6 +23,7 @@ export default async function QcSamplesPage() {
       select: { code: true, label: true },
     }),
     prisma.whatsAppGroup.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    listTaskRequestRecipients(),
   ]);
 
   const bayOptions = bays.map((b) => `Bay ${b.bayNumber}`);
@@ -93,6 +95,7 @@ export default async function QcSamplesPage() {
       canManage={!!session && canManageQcSamples(session.role)}
       canRunLabTesting={!!session && canRunLabTesting(session.role)}
       isSuperAdmin={!!session && canEdit(session.role)}
+      taskRequestRecipients={taskRequestRecipients}
     />
   );
 }

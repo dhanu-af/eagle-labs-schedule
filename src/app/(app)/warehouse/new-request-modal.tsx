@@ -6,6 +6,7 @@ import type { Priority } from "@/generated/prisma";
 import { createMaterialRequest } from "@/lib/actions/warehouse-requests-actions";
 import { Button } from "@/components/ui/Button";
 import type { WarehouseItemRow } from "./warehouse-client";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 const PRIORITY_OPTIONS: Priority[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 
@@ -24,7 +25,17 @@ function emptyLine(): DraftLine {
   return { itemId: "", ingredientNameFreeText: "", requestedQty: "", unit: "kg" };
 }
 
-export default function NewRequestModal({ items, onClose }: { items: WarehouseItemRow[]; onClose: () => void }) {
+type CreatedRequest = { batchReference: string; priority: Priority; requiredDate: string; lineCount: number };
+
+export default function NewRequestModal({
+  items,
+  onClose,
+  taskRequestRecipients,
+}: {
+  items: WarehouseItemRow[];
+  onClose: () => void;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -36,6 +47,8 @@ export default function NewRequestModal({ items, onClose }: { items: WarehouseIt
   const [priority, setPriority] = useState<Priority>("MEDIUM");
   const [comments, setComments] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([emptyLine()]);
+  const [created, setCreated] = useState<CreatedRequest | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function updateLine(index: number, patch: Partial<DraftLine>) {
     setLines((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
@@ -68,11 +81,53 @@ export default function NewRequestModal({ items, onClose }: { items: WarehouseIt
           })),
         });
         router.refresh();
-        onClose();
+        setCreated({ batchReference, priority, requiredDate, lineCount: lines.length });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't create request.");
       }
     });
+  }
+
+  if (created) {
+    const summary = `Material request — ${created.batchReference}`;
+    const details = `${created.lineCount} ingredient${created.lineCount === 1 ? "" : "s"} requested, priority ${created.priority}${
+      created.requiredDate ? `, needed by ${new Date(created.requiredDate).toLocaleDateString()}` : ""
+    }`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Request Created"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              initialMessage={details}
+              initialPriority={created.priority}
+              link="/warehouse"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">
+                {summary} has been created. {details}
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

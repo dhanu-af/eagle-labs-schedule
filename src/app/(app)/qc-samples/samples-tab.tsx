@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { QcSampleRow, BatchRecordOption } from "./qc-samples-client";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 const SAMPLE_TYPES: QcSampleType[] = ["FINISHED_PRODUCT", "STABILITY", "RETENTION", "INVESTIGATION", "COMPLAINT"];
 const PRODUCT_CATEGORIES: QcProductCategory[] = ["CAPSULE", "GUMMY"];
@@ -24,20 +25,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+type CreatedSample = { productName: string; batchNumber: string; sampleStorageLocation: string; collectionDate: string };
+
 function NewSampleModal({
   batchRecords,
   bayOptions,
   locationOptions,
   onClose,
+  taskRequestRecipients,
 }: {
   batchRecords: BatchRecordOption[];
   bayOptions: string[];
   locationOptions: string[];
   onClose: () => void;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const [created, setCreated] = useState<CreatedSample | null>(null);
+  const [showSendTask, setShowSendTask] = useState(false);
 
   const [batchRecordId, setBatchRecordId] = useState("");
   const [productName, setProductName] = useState("");
@@ -92,11 +99,52 @@ function NewSampleModal({
           remarks: remarks || null,
         });
         router.refresh();
-        onClose();
+        setCreated({ productName, batchNumber, sampleStorageLocation, collectionDate });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't save sample.");
       }
     });
+  }
+
+  if (created) {
+    const summary = `QC sample generated — ${created.productName} batch ${created.batchNumber}`;
+    const details = `Collected ${created.collectionDate ? new Date(created.collectionDate).toLocaleDateString() : "today"}${
+      created.sampleStorageLocation ? `, stored at ${created.sampleStorageLocation}` : ""
+    } — needs collection & lab testing.`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">{showSendTask ? "Send Task" : "Sample Generated"}</h2>
+            <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              ✕
+            </button>
+          </div>
+          {showSendTask ? (
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={summary}
+              initialMessage={details}
+              link="/qc-samples"
+              onSent={onClose}
+              onCancel={() => setShowSendTask(false)}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-foreground">
+                {summary} has been logged. {details}
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                {taskRequestRecipients.length > 0 && <Button onClick={() => setShowSendTask(true)}>Send Task</Button>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -226,6 +274,7 @@ export default function SamplesTab({
   locationOptions,
   canCollect,
   onSelect,
+  taskRequestRecipients,
 }: {
   samples: QcSampleRow[];
   batchRecords: BatchRecordOption[];
@@ -233,6 +282,7 @@ export default function SamplesTab({
   locationOptions: string[];
   canCollect: boolean;
   onSelect: (id: string) => void;
+  taskRequestRecipients: UserOption[];
 }) {
   const [showNew, setShowNew] = useState(false);
   const [search, setSearch] = useState("");
@@ -419,6 +469,7 @@ export default function SamplesTab({
           bayOptions={bayOptions}
           locationOptions={locationOptions}
           onClose={() => setShowNew(false)}
+          taskRequestRecipients={taskRequestRecipients}
         />
       )}
     </div>
