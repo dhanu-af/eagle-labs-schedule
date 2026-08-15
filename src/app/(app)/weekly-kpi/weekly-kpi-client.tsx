@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { EscalationLevel } from "@/generated/prisma";
 import {
@@ -32,16 +32,23 @@ export type ScorecardRow = {
   unplannedScheduleChanges: number | null;
   overallStatus: EscalationLevel;
   managementComment: string | null;
+  autoUpdateComputed: boolean;
   createdByName: string | null;
 };
 
 const STATUSES = Object.keys(ESCALATION_LEVEL_LABELS) as EscalationLevel[];
 const STATUS_TONE: Record<EscalationLevel, "success" | "warning" | "danger"> = { GREEN: "success", AMBER: "warning", RED: "danger" };
 
-type Draft = Record<ScorecardFieldKey, string> & { overallStatus: EscalationLevel; managementComment: string };
+type Draft = Record<ScorecardFieldKey, string> & {
+  overallStatus: EscalationLevel;
+  managementComment: string;
+  autoUpdateComputed: boolean;
+};
 
 function emptyDraft(): Draft {
-  const base: Partial<Draft> = { overallStatus: "GREEN", managementComment: "" };
+  // New records default to auto-update -- the whole point of a fresh week is that
+  // there's nothing manually finalized yet to protect from being overwritten.
+  const base: Partial<Draft> = { overallStatus: "GREEN", managementComment: "", autoUpdateComputed: true };
   for (const f of SCORECARD_FIELDS) base[f.key] = "";
   return base as Draft;
 }
@@ -62,7 +69,11 @@ function mergeSuggestions(draft: Draft, suggestions: WeeklyKpiSuggestions): Draf
 }
 
 function draftFromRow(row: ScorecardRow): Draft {
-  const base: Partial<Draft> = { overallStatus: row.overallStatus, managementComment: row.managementComment ?? "" };
+  const base: Partial<Draft> = {
+    overallStatus: row.overallStatus,
+    managementComment: row.managementComment ?? "",
+    autoUpdateComputed: row.autoUpdateComputed,
+  };
   for (const f of SCORECARD_FIELDS) {
     const v = row[f.key];
     base[f.key] = v == null ? "" : String(v);
@@ -121,11 +132,42 @@ function ScorecardModal({
     });
   }
 
+  // Auto-update mode means the computed fields should always reflect live data, not
+  // whatever was last saved -- so pull fresh values the moment the modal opens rather
+  // than waiting for a manual "Suggest values" click. Calls the server action directly
+  // (not the shared suggest() helper) so no state is set synchronously within the effect.
+  useEffect(() => {
+    if (!(canSuggest && initial.autoUpdateComputed)) return;
+    let cancelled = false;
+    computeWeeklyKpiSuggestions(weekEndingIso)
+      .then((suggestions) => {
+        if (!cancelled) setDraft((d) => mergeSuggestions(d, suggestions));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function toggleAutoUpdate(checked: boolean) {
+    setDraft((d) => ({ ...d, autoUpdateComputed: checked }));
+    if (checked) suggest();
+  }
+
   function save() {
     setError("");
     startTransition(async () => {
       try {
-        await onSave(draft);
+        let toSave = draft;
+        if (draft.autoUpdateComputed) {
+          // Re-pull one more time right before saving, in case live data changed
+          // while the modal was open, so what gets saved is never stale.
+          const suggestions = await computeWeeklyKpiSuggestions(weekEndingIso);
+          toSave = mergeSuggestions(draft, suggestions);
+          setDraft(toSave);
+        }
+        await onSave(toSave);
         onClose();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't save scorecard.");
@@ -148,14 +190,32 @@ function ScorecardModal({
 
         <div className="space-y-4">
           <div>
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-medium text-muted-foreground">Computed from live data — accept or override</span>
               {canSuggest && (
-                <Button size="sm" variant="secondary" onClick={suggest} disabled={suggesting || pending}>
-                  {suggesting ? "Computing..." : "Suggest values"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 rounded border-border accent-[var(--primary)]"
+                      checked={draft.autoUpdateComputed}
+                      onChange={(e) => toggleAutoUpdate(e.target.checked)}
+                    />
+                    Auto-update from live data
+                  </label>
+                  {!draft.autoUpdateComputed && (
+                    <Button size="sm" variant="secondary" onClick={suggest} disabled={suggesting || pending}>
+                      {suggesting ? "Computing..." : "Suggest values"}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
+            {draft.autoUpdateComputed && (
+              <p className="mb-2 text-[11px] text-muted-foreground">
+                {suggesting ? "Refreshing from live data..." : "These values auto-refresh from live data every time this scorecard is opened or saved."}
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {computedFields.map((f) => (
                 <Field key={f.key} label={f.label}>
@@ -165,6 +225,7 @@ function ScorecardModal({
                     className="input"
                     value={draft[f.key]}
                     onChange={(e) => set(f.key, e.target.value)}
+                    disabled={draft.autoUpdateComputed}
                   />
                 </Field>
               ))}
@@ -248,6 +309,7 @@ function ScorecardCard({ row, canManage }: { row: ScorecardRow; canManage: boole
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {row.autoUpdateComputed && <Badge tone="info">Auto-updating</Badge>}
           <Badge tone={STATUS_TONE[row.overallStatus]}>{ESCALATION_LEVEL_LABELS[row.overallStatus]}</Badge>
           <button onClick={() => setExpanded((e) => !e)} className="text-xs text-muted-foreground hover:text-foreground">
             {expanded ? "Hide" : "Details"}
@@ -322,6 +384,7 @@ function draftToInput(draft: Draft): WeeklyKpiScorecardInput {
     unplannedScheduleChanges: num(draft.unplannedScheduleChanges),
     overallStatus: draft.overallStatus,
     managementComment: draft.managementComment || null,
+    autoUpdateComputed: draft.autoUpdateComputed,
   };
 }
 

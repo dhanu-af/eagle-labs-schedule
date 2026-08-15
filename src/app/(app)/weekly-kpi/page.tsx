@@ -33,6 +33,7 @@ export default async function WeeklyKpiPage() {
         unplannedScheduleChanges: s.unplannedScheduleChanges,
         overallStatus: s.overallStatus,
         managementComment: s.managementComment,
+        autoUpdateComputed: s.autoUpdateComputed,
         createdByName: s.createdByName,
       }))}
       initialSuggestions={initialSuggestions}

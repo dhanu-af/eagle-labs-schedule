@@ -154,6 +154,7 @@ export type WeeklyKpiScorecardInput = {
   unplannedScheduleChanges?: number | null;
   overallStatus: EscalationLevel;
   managementComment?: string | null;
+  autoUpdateComputed?: boolean;
 };
 
 export async function upsertWeeklyKpiScorecard(weekEndingIso: string, data: WeeklyKpiScorecardInput) {

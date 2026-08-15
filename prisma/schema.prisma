@@ -2251,8 +2251,9 @@ model WeeklyKpiScorecard {
   criticalShortages        Int?
   unplannedScheduleChanges Int?
 
-  overallStatus     EscalationLevel @default(GREEN)
-  managementComment String?
+  overallStatus       EscalationLevel @default(GREEN)
+  managementComment   String?
+  autoUpdateComputed  Boolean         @default(false)
 
   createdById   String?
   createdByName String?
