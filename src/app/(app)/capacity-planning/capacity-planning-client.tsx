@@ -7,6 +7,7 @@ import MachinesTab from "./machines-tab";
 import UnscheduledTab from "./unscheduled-tab";
 import WeeklyRollupTab from "./weekly-rollup-tab";
 import type { CapacityOverviewRow, CapacityWeeklyRow } from "@/lib/actions/capacity-planning-actions";
+import type { UserOption } from "@/components/send-task-form";
 
 export type CapacityExceptionRow = { id: string; date: string; hoursAvailableOverride: number; reason: string | null };
 export type MachineRow = {
@@ -35,12 +36,14 @@ export default function CapacityPlanningClient({
   overview,
   weeklyRollup,
   canManage,
+  taskRequestRecipients,
 }: {
   machines: MachineRow[];
   unscheduled: UnscheduledBatchRow[];
   overview: { dateKeys: string[]; rows: CapacityOverviewRow[] };
   weeklyRollup: { weekEndings: string[]; rows: CapacityWeeklyRow[] };
   canManage: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const [tab, setTab] = useState<TabKey>("overview");
 
@@ -63,7 +66,9 @@ export default function CapacityPlanningClient({
       </div>
 
       {tab === "overview" && <OverviewTab overview={overview} />}
-      {tab === "weeklyRollup" && <WeeklyRollupTab rollup={weeklyRollup} canManage={canManage} />}
+      {tab === "weeklyRollup" && (
+        <WeeklyRollupTab rollup={weeklyRollup} canManage={canManage} taskRequestRecipients={taskRequestRecipients} />
+      )}
       {tab === "machines" && <MachinesTab machines={machines} canManage={canManage} />}
       {tab === "unscheduled" && <UnscheduledTab batches={unscheduled} machines={machines} canManage={canManage} />}
     </div>

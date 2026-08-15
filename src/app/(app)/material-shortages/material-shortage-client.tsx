@@ -10,11 +10,58 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 const RISK_TONE: Record<EscalationLevel, "success" | "warning" | "danger"> = { GREEN: "success", AMBER: "warning", RED: "danger" };
 const STATUSES = Object.keys(WATCH_STATUS_LABELS) as ActionLogStatus[];
 
-function ShortageRow({ row, canManage }: { row: MaterialShortageRow; canManage: boolean }) {
+function SendShortageTaskModal({
+  row,
+  taskRequestRecipients,
+  onClose,
+}: {
+  row: MaterialShortageRow;
+  taskRequestRecipients: UserOption[];
+  onClose: () => void;
+}) {
+  const summary = `Material shortage — ${row.itemName} (${row.itemCode})`;
+  const affected = row.affectedOrders.map((o) => `${o.orderNumber} (${o.requiredQtyKg}${row.unit})`).join(", ");
+  const details = `Short ${row.netShortageKg}${row.unit}, need by ${new Date(row.earliestNeedDate).toLocaleDateString()}.${
+    affected ? ` Affects orders: ${affected}.` : ""
+  }`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-foreground">Send Task</h2>
+          <button onClick={onClose} className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+            ✕
+          </button>
+        </div>
+        <SendTaskForm
+          users={taskRequestRecipients}
+          initialTitle={summary}
+          initialMessage={details}
+          initialPriority={row.riskLevel === "RED" ? "HIGH" : "MEDIUM"}
+          link="/material-shortages"
+          onSent={onClose}
+          onCancel={onClose}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ShortageRow({
+  row,
+  canManage,
+  taskRequestRecipients,
+}: {
+  row: MaterialShortageRow;
+  canManage: boolean;
+  taskRequestRecipients: UserOption[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
@@ -22,6 +69,7 @@ function ShortageRow({ row, canManage }: { row: MaterialShortageRow; canManage: 
   const [owner, setOwner] = useState(row.watchOwner ?? "");
   const [status, setStatus] = useState<ActionLogStatus>(row.watchStatus ?? "OPEN");
   const [error, setError] = useState("");
+  const [showSendTask, setShowSendTask] = useState(false);
 
   function save() {
     setError("");
@@ -95,7 +143,12 @@ function ShortageRow({ row, canManage }: { row: MaterialShortageRow; canManage: 
                 <span className="mb-1 block text-xs font-medium text-muted-foreground">Action</span>
                 <input className="input" placeholder="Expedite PO, substitute item, escalate..." value={action} onChange={(e) => setAction(e.target.value)} />
               </label>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                {taskRequestRecipients.length > 0 && (
+                  <Button size="sm" variant="secondary" onClick={() => setShowSendTask(true)}>
+                    Send Task
+                  </Button>
+                )}
                 <Button size="sm" onClick={save} disabled={pending}>
                   {pending ? "Saving..." : "Save"}
                 </Button>
@@ -105,11 +158,23 @@ function ShortageRow({ row, canManage }: { row: MaterialShortageRow; canManage: 
           {error && <p className="text-xs text-danger">{error}</p>}
         </div>
       )}
+
+      {showSendTask && (
+        <SendShortageTaskModal row={row} taskRequestRecipients={taskRequestRecipients} onClose={() => setShowSendTask(false)} />
+      )}
     </Card>
   );
 }
 
-export default function MaterialShortageClient({ shortages, canManage }: { shortages: MaterialShortageRow[]; canManage: boolean }) {
+export default function MaterialShortageClient({
+  shortages,
+  canManage,
+  taskRequestRecipients,
+}: {
+  shortages: MaterialShortageRow[];
+  canManage: boolean;
+  taskRequestRecipients: UserOption[];
+}) {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -144,7 +209,7 @@ export default function MaterialShortageClient({ shortages, canManage }: { short
       ) : (
         <div className="space-y-2">
           {filtered.map((row) => (
-            <ShortageRow key={row.warehouseItemId} row={row} canManage={canManage} />
+            <ShortageRow key={row.warehouseItemId} row={row} canManage={canManage} taskRequestRecipients={taskRequestRecipients} />
           ))}
         </div>
       )}

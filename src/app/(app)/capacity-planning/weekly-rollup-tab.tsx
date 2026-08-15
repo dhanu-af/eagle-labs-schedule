@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 const WATCH_STATUS_LABELS: Record<ActionLogStatus, string> = { OPEN: "Open", IN_PROGRESS: "In Progress", RESOLVED: "Resolved", CLOSED: "Closed" };
 const STATUSES = Object.keys(WATCH_STATUS_LABELS) as ActionLogStatus[];
@@ -29,9 +30,11 @@ function formatWeekHeader(dateKey: string) {
 export default function WeeklyRollupTab({
   rollup,
   canManage,
+  taskRequestRecipients,
 }: {
   rollup: { weekEndings: string[]; rows: CapacityWeeklyRow[] };
   canManage: boolean;
+  taskRequestRecipients: UserOption[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<{ machineId: string; weekEnding: string } | null>(null);
@@ -40,6 +43,7 @@ export default function WeeklyRollupTab({
   const [owner, setOwner] = useState("");
   const [status, setStatus] = useState<ActionLogStatus>("OPEN");
   const [error, setError] = useState("");
+  const [showSendTask, setShowSendTask] = useState(false);
 
   if (rollup.rows.length === 0) {
     return <EmptyState title="No machines yet" description="Add a machine on the Machines tab to start seeing weekly utilisation here." />;
@@ -54,6 +58,7 @@ export default function WeeklyRollupTab({
     setOwner(cell.recoveryOwner ?? "");
     setStatus(cell.recoveryStatus ?? "OPEN");
     setError("");
+    setShowSendTask(false);
   }
 
   function save() {
@@ -148,7 +153,12 @@ export default function WeeklyRollupTab({
                   ))}
                 </select>
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                {taskRequestRecipients.length > 0 && (
+                  <Button size="sm" variant="secondary" onClick={() => setShowSendTask(true)}>
+                    Send Task
+                  </Button>
+                )}
                 <Button size="sm" onClick={save} disabled={pending}>
                   {pending ? "Saving..." : "Save"}
                 </Button>
@@ -164,6 +174,33 @@ export default function WeeklyRollupTab({
             )
           )}
         </Card>
+      )}
+
+      {showSendTask && selected && selectedCell && selectedRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="card-elevated max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-foreground">Send Task</h2>
+              <button
+                onClick={() => setShowSendTask(false)}
+                className="text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
+              >
+                ✕
+              </button>
+            </div>
+            <SendTaskForm
+              users={taskRequestRecipients}
+              initialTitle={`Machine overload — ${selectedRow.name}, week of ${formatWeekHeader(selected.weekEnding)}`}
+              initialMessage={`${selectedCell.scheduledHours}h scheduled vs ${selectedCell.availableHours}h available (${selectedCell.remainingHours}h over).${
+                recoveryAction ? ` Proposed recovery: ${recoveryAction}.` : ""
+              }`}
+              initialPriority="HIGH"
+              link="/capacity-planning"
+              onSent={() => setShowSendTask(false)}
+              onCancel={() => setShowSendTask(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
