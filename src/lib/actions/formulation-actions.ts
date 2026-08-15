@@ -147,6 +147,7 @@ export async function updateFormulation(
             approvedBy: ing.approvedBy || null,
             comments: ing.comments || null,
             tolerancePct: ing.tolerancePct,
+            warehouseItemId: ing.warehouseItemId || null,
           })),
         },
       },
