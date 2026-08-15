@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createFolder, deleteFolder } from "@/lib/actions/formulation-actions";
 import { formatBrisbaneDateTime } from "@/lib/ui";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -18,6 +19,7 @@ type FormulationRow = {
   baseBatchSize: number;
   baseUnit: string;
   ingredientCount: number;
+  unmappedCount: number;
   updatedAt: string;
 };
 
@@ -174,7 +176,14 @@ export default function FormulationCheckerClient({
                     <td className="px-3 py-2.5 text-muted-foreground">
                       {f.baseBatchSize.toFixed(2)} {f.baseUnit}
                     </td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{f.ingredientCount}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      {f.ingredientCount}
+                      {f.unmappedCount > 0 && (
+                        <Badge tone="warning" className="ml-2">
+                          {f.unmappedCount} unmapped
+                        </Badge>
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 text-muted-foreground">{formatBrisbaneDateTime(f.updatedAt)}</td>
                     <td className="px-3 py-2.5">
                       <Link href={`/formulation-checker/${f.id}`} className="text-xs font-medium text-primary hover:underline">

@@ -23,7 +23,10 @@ export default async function FormulationCheckerPage({
           folderId: activeFolder.id,
           ...(q ? { productName: { contains: q, mode: "insensitive" } } : {}),
         },
-        include: { _count: { select: { ingredients: true } } },
+        include: {
+          _count: { select: { ingredients: true } },
+          ingredients: { select: { warehouseItemId: true } },
+        },
         orderBy: { productName: "asc" },
       })
     : [];
@@ -40,6 +43,7 @@ export default async function FormulationCheckerPage({
         baseBatchSize: f.baseBatchSize,
         baseUnit: f.baseUnit,
         ingredientCount: f._count.ingredients,
+        unmappedCount: f.ingredients.filter((i) => !i.warehouseItemId).length,
         updatedAt: f.updatedAt.toISOString(),
       }))}
     />

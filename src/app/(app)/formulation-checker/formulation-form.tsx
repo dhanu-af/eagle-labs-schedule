@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 
 type Folder = { id: string; name: string };
+type WarehouseItemOption = { id: string; itemCode: string; name: string; unit: string };
 
 type Row = IngredientInput & { key: string };
 
@@ -25,15 +26,18 @@ function newRow(): Row {
     approvedBy: "",
     comments: "",
     tolerancePct: 2,
+    warehouseItemId: null,
   };
 }
 
 export default function FormulationForm({
   folders,
+  warehouseItems,
   defaultFolderId,
   existing,
 }: {
   folders: Folder[];
+  warehouseItems: WarehouseItemOption[];
   defaultFolderId?: string;
   existing?: {
     id: string;
@@ -145,6 +149,7 @@ export default function FormulationForm({
               <Th>UIN</Th>
               <Th>Base Qty ({baseUnit})</Th>
               <Th>% w/w</Th>
+              <Th>Stock Item</Th>
               <Th>Tolerance %</Th>
               <Th>Control Status</Th>
               <Th>Change Control Ref</Th>
@@ -180,6 +185,21 @@ export default function FormulationForm({
                     />
                   </td>
                   <td className="px-2 py-1.5 text-muted-foreground">{pctWw.toFixed(4)}%</td>
+                  <td className="px-2 py-1.5">
+                    <select
+                      value={r.warehouseItemId ?? ""}
+                      onChange={(e) => updateRow(r.key, { warehouseItemId: e.target.value || null })}
+                      className={`input ${!r.warehouseItemId ? "border-warning/50 text-warning" : ""}`}
+                      style={{ width: "10rem" }}
+                    >
+                      <option value="">— Unmapped —</option>
+                      {warehouseItems.map((wi) => (
+                        <option key={wi.id} value={wi.id}>
+                          {wi.name} ({wi.itemCode})
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="px-2 py-1.5">
                     <input
                       type="number"
@@ -218,7 +238,7 @@ export default function FormulationForm({
               </td>
               <td className="px-2 py-2">{totalQty.toFixed(3)}</td>
               <td className="px-2 py-2">{totalQty > 0 ? "100.0000%" : "—"}</td>
-              <td colSpan={6}></td>
+              <td colSpan={7}></td>
             </tr>
           </tfoot>
         </table>

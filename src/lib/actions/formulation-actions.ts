@@ -23,6 +23,7 @@ export type IngredientInput = {
   approvedBy?: string;
   comments?: string;
   tolerancePct: number;
+  warehouseItemId?: string | null;
 };
 
 export async function createFolder(name: string) {
@@ -94,6 +95,7 @@ export async function createFormulation(data: {
           approvedBy: ing.approvedBy || null,
           comments: ing.comments || null,
           tolerancePct: ing.tolerancePct,
+          warehouseItemId: ing.warehouseItemId || null,
         })),
       },
     },

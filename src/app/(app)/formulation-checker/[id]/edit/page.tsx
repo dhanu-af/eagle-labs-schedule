@@ -12,11 +12,16 @@ export default async function EditFormulationPage({
   const session = await getSession();
   if (!session || !canEdit(session.role)) redirect("/formulation-checker");
 
-  const [folders, formulation] = await Promise.all([
+  const [folders, formulation, warehouseItems] = await Promise.all([
     prisma.formulationFolder.findMany({ orderBy: { order: "asc" } }),
     prisma.formulation.findUnique({
       where: { id },
       include: { ingredients: { orderBy: { order: "asc" } } },
+    }),
+    prisma.warehouseItem.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, itemCode: true, name: true, unit: true },
     }),
   ]);
 
@@ -30,6 +35,7 @@ export default async function EditFormulationPage({
       </div>
       <FormulationForm
         folders={folders.map((f) => ({ id: f.id, name: f.name }))}
+        warehouseItems={warehouseItems}
         existing={{
           id: formulation.id,
           productName: formulation.productName,
@@ -45,6 +51,7 @@ export default async function EditFormulationPage({
             approvedBy: ing.approvedBy ?? "",
             comments: ing.comments ?? "",
             tolerancePct: ing.tolerancePct,
+            warehouseItemId: ing.warehouseItemId,
           })),
         }}
       />
