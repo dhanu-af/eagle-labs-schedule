@@ -13,11 +13,27 @@ const REPORTS: ReportDef[] = [
   { key: "kpi", label: "KPI Report", description: "Daily KPI actuals vs targets across all teams." },
 ];
 
-export default function ReportsClient() {
+const LOGIN_HISTORY_REPORT: ReportDef = {
+  key: "login-history",
+  label: "Login History Report",
+  description: "Who logged in, when, and from what device, in range.",
+};
+
+const CHECKS_REPORTS: { type: string; label: string }[] = [
+  { type: "supervisor", label: "Supervisor Pre-Op" },
+  { type: "qa", label: "QA Pre-Op" },
+  { type: "environmental", label: "RH & Temperature" },
+  { type: "clearance", label: "Line Clearance" },
+  { type: "postop", label: "Post-Op Checks" },
+  { type: "worklog", label: "Work Log" },
+];
+
+export default function ReportsClient({ canViewLoginHistory }: { canViewLoginHistory: boolean }) {
   const today = toDateInputValue(new Date());
   const weekAgo = toDateInputValue(new Date(Date.now() - 6 * 86400000));
   const [start, setStart] = useState(weekAgo);
   const [end, setEnd] = useState(today);
+  const reports = canViewLoginHistory ? [...REPORTS, LOGIN_HISTORY_REPORT] : REPORTS;
 
   return (
     <div className="space-y-4">
@@ -45,7 +61,7 @@ export default function ReportsClient() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {REPORTS.map((r) => (
+        {reports.map((r) => (
           <Card key={r.key} padding="sm">
             <p className="text-sm font-semibold text-foreground">{r.label}</p>
             <p className="mt-1 text-xs text-muted-foreground">{r.description}</p>
@@ -59,8 +75,27 @@ export default function ReportsClient() {
         ))}
       </div>
 
+      <Card padding="sm">
+        <p className="text-sm font-semibold text-foreground">Checks Reports</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Full history for each check type (these aren&apos;t limited by the date range above).
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {CHECKS_REPORTS.map((c) => (
+            <a
+              key={c.type}
+              href={`/api/reports/checks?type=${c.type}`}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors duration-150 ease-out hover:bg-surface-muted"
+            >
+              {c.label}
+            </a>
+          ))}
+        </div>
+      </Card>
+
       <p className="text-xs text-muted-foreground">
-        Payroll payslip exports are available from the Payroll page, per pay run.
+        Payroll payslip exports are available from the Payroll page, per pay run. Mfg Reconciliation&apos;s PDF report is
+        per-batch, not date-range — download it from that batch&apos;s own detail page.
       </p>
     </div>
   );
