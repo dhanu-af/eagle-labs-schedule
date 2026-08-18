@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Th, THEAD_ROW_CLASS } from "@/components/ui/Th";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { GoodsReceivingRow, WarehouseItemRow, WarehouseLocationRow } from "./warehouse-client";
+import type { GoodsReceivingRow, WarehouseItemRow, WarehouseLocationRow, OpenPurchaseOrderOption } from "./warehouse-client";
 import SendTaskForm, { type UserOption } from "@/components/send-task-form";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -55,15 +55,18 @@ function NewReceivingModal({
   items,
   onClose,
   taskRequestRecipients,
+  openPurchaseOrders,
 }: {
   items: WarehouseItemRow[];
   onClose: () => void;
   taskRequestRecipients: UserOption[];
+  openPurchaseOrders: OpenPurchaseOrderOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
+  const [purchaseOrderId, setPurchaseOrderId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [poNumber, setPoNumber] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -73,6 +76,15 @@ function NewReceivingModal({
   const [lines, setLines] = useState<DraftLine[]>([emptyLine(items[0]?.unit ?? "kg")]);
   const [created, setCreated] = useState<CreatedReceiving | null>(null);
   const [showSendTask, setShowSendTask] = useState(false);
+
+  function pickPurchaseOrder(id: string) {
+    setPurchaseOrderId(id);
+    const po = openPurchaseOrders.find((p) => p.id === id);
+    if (po) {
+      setSupplierName(po.supplierName);
+      setPoNumber(po.poNumber);
+    }
+  }
 
   function updateLine(index: number, patch: Partial<DraftLine>) {
     setLines((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
@@ -99,7 +111,15 @@ function NewReceivingModal({
     startTransition(async () => {
       try {
         await createGoodsReceiving(
-          { supplierName, poNumber: poNumber || null, deliveryDate, invoiceRef: invoiceRef || null, checkedByName: checkedByName || null, approvedByName: approvedByName || null },
+          {
+            supplierName,
+            poNumber: poNumber || null,
+            purchaseOrderId: purchaseOrderId || null,
+            deliveryDate,
+            invoiceRef: invoiceRef || null,
+            checkedByName: checkedByName || null,
+            approvedByName: approvedByName || null,
+          },
           lines.map((l) => ({
             itemId: l.itemId,
             lotNumber: l.lotNumber,
@@ -173,6 +193,18 @@ function NewReceivingModal({
         </div>
 
         <div className="space-y-4">
+          {openPurchaseOrders.length > 0 && (
+            <Field label="Link to Purchase Order (optional — auto-fills Supplier & PO Number, and updates that PO's status once saved)">
+              <select className="input" value={purchaseOrderId} onChange={(e) => pickPurchaseOrder(e.target.value)}>
+                <option value="">— No linked PO —</option>
+                {openPurchaseOrders.map((po) => (
+                  <option key={po.id} value={po.id}>
+                    {po.poNumber} — {po.supplierName}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Field label="Supplier">
               <input className="input" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
@@ -335,6 +367,7 @@ export default function GoodsReceivingTab({
   canQaRelease,
   isSuperAdmin,
   taskRequestRecipients,
+  openPurchaseOrders,
 }: {
   receivings: GoodsReceivingRow[];
   items: WarehouseItemRow[];
@@ -343,6 +376,7 @@ export default function GoodsReceivingTab({
   canQaRelease: boolean;
   isSuperAdmin: boolean;
   taskRequestRecipients: UserOption[];
+  openPurchaseOrders: OpenPurchaseOrderOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -391,6 +425,14 @@ export default function GoodsReceivingTab({
                   <p className="text-xs text-muted-foreground">
                     {r.poNumber ? `PO ${r.poNumber} · ` : ""}
                     Delivered {new Date(r.deliveryDate).toLocaleDateString()} · Received by {r.receivedByName}
+                    {r.linkedPoNumber && (
+                      <>
+                        {" · "}
+                        <Badge tone="info" className="align-middle">
+                          Linked to {r.linkedPoNumber}
+                        </Badge>
+                      </>
+                    )}
                   </p>
                 </div>
                 {canManage && deletable && (
@@ -463,7 +505,12 @@ export default function GoodsReceivingTab({
       )}
 
       {showNew && (
-        <NewReceivingModal items={items} onClose={() => setShowNew(false)} taskRequestRecipients={taskRequestRecipients} />
+        <NewReceivingModal
+          items={items}
+          onClose={() => setShowNew(false)}
+          taskRequestRecipients={taskRequestRecipients}
+          openPurchaseOrders={openPurchaseOrders}
+        />
       )}
     </div>
   );

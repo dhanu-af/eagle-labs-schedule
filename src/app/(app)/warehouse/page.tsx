@@ -2,23 +2,25 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canManageWarehouse, canRequestMaterials, canQaReleaseStock, canEdit } from "@/lib/auth";
 import { getItemStockSummary } from "@/lib/warehouse-ledger";
 import { listTaskRequestRecipients } from "@/lib/actions/task-request-actions";
+import { listOpenPurchaseOrdersForReceiving } from "@/lib/actions/procurement-actions";
 import WarehouseClient from "./warehouse-client";
 
 export default async function WarehousePage() {
   const session = await getSession();
 
-  const [items, locations, receivings, requests, taskRequestRecipients] = await Promise.all([
+  const [items, locations, receivings, requests, taskRequestRecipients, openPurchaseOrders] = await Promise.all([
     prisma.warehouseItem.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     prisma.warehouseLocation.findMany({ where: { active: true }, orderBy: { code: "asc" } }),
     prisma.goodsReceiving.findMany({
       orderBy: { createdAt: "desc" },
-      include: { lines: { include: { item: true }, orderBy: { createdAt: "asc" } } },
+      include: { lines: { include: { item: true }, orderBy: { createdAt: "asc" } }, purchaseOrder: { select: { poNumber: true } } },
     }),
     prisma.warehouseMaterialRequest.findMany({
       orderBy: { createdAt: "desc" },
       include: { lines: { include: { item: true }, orderBy: { createdAt: "asc" } } },
     }),
     listTaskRequestRecipients(),
+    listOpenPurchaseOrdersForReceiving(),
   ]);
 
   const stockSummaries = await Promise.all(
@@ -51,6 +53,7 @@ export default async function WarehousePage() {
         id: r.id,
         supplierName: r.supplierName,
         poNumber: r.poNumber,
+        linkedPoNumber: r.purchaseOrder?.poNumber ?? null,
         deliveryDate: r.deliveryDate.toISOString(),
         invoiceRef: r.invoiceRef,
         receivedByName: r.receivedByName,
@@ -125,6 +128,7 @@ export default async function WarehousePage() {
       canQaRelease={!!session && canQaReleaseStock(session.role)}
       isSuperAdmin={!!session && canEdit(session.role)}
       taskRequestRecipients={taskRequestRecipients}
+      openPurchaseOrders={openPurchaseOrders}
     />
   );
 }

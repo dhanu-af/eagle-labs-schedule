@@ -1310,20 +1310,23 @@ enum GoodsReceivingLineStatus {
 }
 
 model GoodsReceiving {
-  id             String   @id @default(cuid())
-  supplierName   String
-  poNumber       String?
-  deliveryDate   DateTime
-  invoiceRef     String?
-  receivedByName String
-  checkedByName  String?
-  approvedByName String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(cuid())
+  supplierName    String
+  poNumber        String?
+  purchaseOrderId String?
+  deliveryDate    DateTime
+  invoiceRef      String?
+  receivedByName  String
+  checkedByName   String?
+  approvedByName  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  lines GoodsReceivingLine[]
+  purchaseOrder PurchaseOrder?       @relation(fields: [purchaseOrderId], references: [id])
+  lines         GoodsReceivingLine[]
 
   @@index([deliveryDate])
+  @@index([purchaseOrderId])
 }
 
 model GoodsReceivingLine {
@@ -2142,8 +2145,9 @@ model PurchaseOrder {
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
-  supplier Supplier            @relation(fields: [supplierId], references: [id])
-  lines    PurchaseOrderLine[]
+  supplier        Supplier            @relation(fields: [supplierId], references: [id])
+  lines           PurchaseOrderLine[]
+  goodsReceivings GoodsReceiving[]
 
   @@index([supplierId])
   @@index([status])

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession, canManageWarehouse, canQaReleaseStock, canEdit } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { computeResultingBalance } from "@/lib/warehouse-ledger";
+import { recomputePurchaseOrderStatus } from "@/lib/actions/procurement-actions";
 
 async function requireWarehouseManagerAccess() {
   const session = await getSession();
@@ -36,6 +37,7 @@ type NewGoodsReceivingLine = {
 export async function createGoodsReceiving(header: {
   supplierName: string;
   poNumber: string | null;
+  purchaseOrderId: string | null;
   deliveryDate: string;
   invoiceRef: string | null;
   checkedByName: string | null;
@@ -49,6 +51,7 @@ export async function createGoodsReceiving(header: {
     data: {
       supplierName: header.supplierName,
       poNumber: header.poNumber,
+      purchaseOrderId: header.purchaseOrderId,
       deliveryDate: new Date(header.deliveryDate),
       invoiceRef: header.invoiceRef,
       receivedByName: session.fullName,
@@ -79,6 +82,10 @@ export async function createGoodsReceiving(header: {
     entityId: receiving.id,
     summary: `Logged goods receiving from ${header.supplierName} (${lines.length} line${lines.length === 1 ? "" : "s"}) — entered Quarantine pending QA release`,
   });
+
+  if (header.purchaseOrderId) {
+    await recomputePurchaseOrderStatus(header.purchaseOrderId, session);
+  }
 
   revalidatePath("/warehouse");
 }
@@ -155,6 +162,10 @@ export async function deleteGoodsReceiving(id: string) {
       : `Deleted goods receiving from ${receiving.supplierName} (never QA released)`,
   });
 
+  if (receiving.purchaseOrderId) {
+    await recomputePurchaseOrderStatus(receiving.purchaseOrderId, session);
+  }
+
   revalidatePath("/warehouse");
 }
 
@@ -162,7 +173,7 @@ export async function rejectGoodsReceivingLine(lineId: string, reason: string) {
   const session = await requireQaAccess();
   if (!reason) throw new Error("A rejection reason is required");
 
-  const line = await prisma.goodsReceivingLine.findUniqueOrThrow({ where: { id: lineId } });
+  const line = await prisma.goodsReceivingLine.findUniqueOrThrow({ where: { id: lineId }, include: { goodsReceiving: { select: { purchaseOrderId: true } } } });
   if (line.status !== "QUARANTINE") throw new Error("Only lines still in Quarantine can be rejected");
 
   await prisma.goodsReceivingLine.update({
@@ -176,6 +187,10 @@ export async function rejectGoodsReceivingLine(lineId: string, reason: string) {
     entityId: lineId,
     summary: `Rejected lot ${line.lotNumber}: ${reason}`,
   });
+
+  if (line.goodsReceiving.purchaseOrderId) {
+    await recomputePurchaseOrderStatus(line.goodsReceiving.purchaseOrderId, session);
+  }
 
   revalidatePath("/warehouse");
 }

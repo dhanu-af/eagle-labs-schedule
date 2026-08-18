@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession, canManagePurchasing } from "@/lib/auth";
+import { getSession, canManagePurchasing, type SessionPayload } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import type { PurchaseOrderStatus } from "@/generated/prisma";
 
@@ -167,4 +167,63 @@ export async function getOpenPurchaseOrderLinesForItems(itemIds: string[]): Prom
     };
   }
   return result;
+}
+
+/** For the "New Goods Receiving" PO picker -- every PO that could plausibly still receive
+ * stock against it (not yet fully RECEIVED, not CANCELLED). */
+export async function listOpenPurchaseOrdersForReceiving() {
+  const orders = await prisma.purchaseOrder.findMany({
+    where: { status: { notIn: ["RECEIVED", "CANCELLED"] } },
+    orderBy: { expectedDeliveryDate: "asc" },
+    include: { supplier: true, lines: { include: { item: { select: { name: true, itemCode: true } } } } },
+  });
+  return orders.map((po) => ({
+    id: po.id,
+    poNumber: po.poNumber,
+    supplierName: po.supplier.name,
+    lines: po.lines.map((l) => ({ itemId: l.itemId, itemName: l.item.name, itemCode: l.item.itemCode, quantity: l.quantity, unit: l.unit })),
+  }));
+}
+
+/**
+ * Recomputes and applies a PO's status from real Goods Receiving data linked to it --
+ * called after any goods-receiving-side event (new receiving created, a line rejected, a
+ * receiving deleted) that could change how much of the PO has actually arrived. Rejected
+ * lines don't count as received. Only ever moves a PO into PARTIALLY_RECEIVED/RECEIVED --
+ * never overrides DRAFT/CANCELLED, since "nothing sent yet" and "this was cancelled" aren't
+ * states a goods receipt should silently reverse.
+ */
+export async function recomputePurchaseOrderStatus(purchaseOrderId: string, session: SessionPayload) {
+  const po = await prisma.purchaseOrder.findUnique({ where: { id: purchaseOrderId }, include: { lines: true } });
+  if (!po) return;
+  if (po.status === "DRAFT" || po.status === "CANCELLED") return;
+
+  const receivedLines = await prisma.goodsReceivingLine.findMany({
+    where: { goodsReceiving: { purchaseOrderId }, status: { not: "REJECTED" } },
+    select: { itemId: true, quantity: true },
+  });
+
+  const receivedByItem = new Map<string, number>();
+  for (const l of receivedLines) {
+    receivedByItem.set(l.itemId, (receivedByItem.get(l.itemId) ?? 0) + l.quantity);
+  }
+
+  const anyReceived = receivedByItem.size > 0;
+  if (!anyReceived) return; // nothing received (or everything since rejected/removed) -- don't guess at reverting a status change we can't be sure of
+
+  const allFulfilled = po.lines.every((line) => (receivedByItem.get(line.itemId) ?? 0) >= line.quantity);
+  const newStatus: PurchaseOrderStatus = allFulfilled ? "RECEIVED" : "PARTIALLY_RECEIVED";
+
+  if (newStatus === po.status) return;
+
+  await prisma.purchaseOrder.update({ where: { id: purchaseOrderId }, data: { status: newStatus } });
+
+  await logAudit(session, {
+    action: "UPDATE_PURCHASE_ORDER_STATUS",
+    entityType: "PurchaseOrder",
+    entityId: po.id,
+    summary: `PO ${po.poNumber} auto-updated from ${po.status} to ${newStatus} based on goods receiving`,
+  });
+
+  revalidatePath(BASE_PATH);
 }

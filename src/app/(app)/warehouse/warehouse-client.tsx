@@ -67,6 +67,7 @@ export type GoodsReceivingRow = {
   id: string;
   supplierName: string;
   poNumber: string | null;
+  linkedPoNumber: string | null;
   deliveryDate: string;
   invoiceRef: string | null;
   receivedByName: string;
@@ -74,6 +75,13 @@ export type GoodsReceivingRow = {
   approvedByName: string | null;
   createdAt: string;
   lines: GoodsReceivingLineRow[];
+};
+
+export type OpenPurchaseOrderOption = {
+  id: string;
+  poNumber: string;
+  supplierName: string;
+  lines: { itemId: string; itemName: string; itemCode: string; quantity: number; unit: string }[];
 };
 
 export type RequestLineRow = {
@@ -138,6 +146,7 @@ export default function WarehouseClient({
   canQaRelease,
   isSuperAdmin,
   taskRequestRecipients,
+  openPurchaseOrders,
 }: {
   items: WarehouseItemRow[];
   locations: WarehouseLocationRow[];
@@ -148,6 +157,7 @@ export default function WarehouseClient({
   canQaRelease: boolean;
   isSuperAdmin: boolean;
   taskRequestRecipients: UserOption[];
+  openPurchaseOrders: OpenPurchaseOrderOption[];
 }) {
   const [tab, setTab] = useState<TabKey>("dashboard");
 
@@ -194,6 +204,7 @@ export default function WarehouseClient({
           canQaRelease={canQaRelease}
           isSuperAdmin={isSuperAdmin}
           taskRequestRecipients={taskRequestRecipients}
+          openPurchaseOrders={openPurchaseOrders}
         />
       )}
 
