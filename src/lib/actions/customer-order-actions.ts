@@ -21,6 +21,7 @@ import {
   type MaterialCheckLine,
   type MaterialLineStatus,
   type QaGateStatus,
+  type ContestingOrder,
 } from "@/lib/customer-order-defaults";
 import type { CustomerOrderStatus } from "@/generated/prisma";
 
@@ -200,6 +201,7 @@ export async function checkMaterialAvailability(lineId: string): Promise<Materia
           shortageQty: null,
           status: "UNMAPPED" as const,
           incomingPo: null,
+          contestedBy: [],
         };
       }
 
@@ -214,11 +216,18 @@ export async function checkMaterialAvailability(lineId: string): Promise<Materia
         shortageQty,
         status,
         incomingPo: null,
+        contestedBy: [],
       };
     })
   );
 
   await attachIncomingPos(materials);
+  const itemIds = Array.from(new Set(materials.filter((m) => m.warehouseItemId).map((m) => m.warehouseItemId as string)));
+  const contestingByItemId = await getContestingDemand(itemIds, line.customerOrderId);
+  for (const m of materials) {
+    if (m.warehouseItemId && contestingByItemId[m.warehouseItemId]) m.contestedBy = contestingByItemId[m.warehouseItemId];
+  }
+
   return { lineStatus: rollUpMaterialStatus(materials), materials };
 }
 
@@ -237,13 +246,56 @@ async function attachIncomingPos(materials: MaterialCheckLine[]) {
   }
 }
 
+/** For a set of warehouse items, the demand every OTHER active order places on them
+ * (excluding `excludeOrderId`) -- the cross-order netting signal getOrderMaterialChecks'
+ * own comment flags as intentionally deferred. Doesn't change any line's own READY/SHORT
+ * status (still "can THIS order be covered right now") -- purely an additional "heads up,
+ * these other orders are drawing on the same pool" signal, same underlying computation
+ * listMaterialShortages() already does across every order at once. */
+async function getContestingDemand(itemIds: string[], excludeOrderId: string): Promise<Record<string, ContestingOrder[]>> {
+  if (itemIds.length === 0) return {};
+
+  const otherLines = await prisma.customerOrderLine.findMany({
+    where: {
+      customerOrderId: { not: excludeOrderId },
+      customerOrder: { status: { notIn: ["DISPATCHED", "DELIVERED", "CLOSED", "CANCELLED"] } },
+    },
+    include: {
+      customerOrder: { select: { orderNumber: true } },
+      product: { include: { formulation: { include: { ingredients: true } } } },
+    },
+  });
+
+  const byItem = new Map<string, Map<string, number>>();
+  for (const line of otherLines) {
+    const formulation = line.product.formulation;
+    if (!formulation) continue;
+    for (const ing of formulation.ingredients) {
+      if (!ing.warehouseItemId || !itemIds.includes(ing.warehouseItemId)) continue;
+      const requiredQtyKg = scaleIngredientQtyKg(ing.baseQty, formulation, line);
+      const perOrder = byItem.get(ing.warehouseItemId) ?? new Map<string, number>();
+      perOrder.set(line.customerOrder.orderNumber, (perOrder.get(line.customerOrder.orderNumber) ?? 0) + requiredQtyKg);
+      byItem.set(ing.warehouseItemId, perOrder);
+    }
+  }
+
+  const result: Record<string, ContestingOrder[]> = {};
+  for (const [itemId, perOrder] of byItem) {
+    result[itemId] = Array.from(perOrder.entries()).map(([orderNumber, requiredQtyKg]) => ({
+      orderNumber,
+      requiredQtyKg: Math.round(requiredQtyKg * 1000) / 1000,
+    }));
+  }
+  return result;
+}
+
 /** Same check as checkMaterialAvailability, but for every line on an order at once, sharing
  * one stock-summary lookup per distinct warehouse item across all of them instead of
  * re-querying the ledger per line -- this is what the order detail page and the dashboard's
  * risk overview both call, so a multi-line order (or a dashboard with many active orders)
- * doesn't turn into an N+1 query storm. Note: each order's check is still independent of
- * every other order's -- it does not net multiple orders competing for the same shortage,
- * a real MRP nuance intentionally deferred past Phase 1. */
+ * doesn't turn into an N+1 query storm. Each line's own READY/SHORT status is still computed
+ * against this order alone (not netted against other orders -- see getContestingDemand's own
+ * comment); `contestedBy` is attached separately as an additional signal, not a status change. */
 export async function getOrderMaterialChecks(orderId: string): Promise<Record<string, MaterialCheckResult>> {
   const order = await prisma.customerOrder.findUnique({
     where: { id: orderId },
@@ -272,17 +324,25 @@ export async function getOrderMaterialChecks(orderId: string): Promise<Record<st
       const stock = ing.warehouseItemId ? stockByItemId.get(ing.warehouseItemId) : undefined;
 
       if (!stock) {
-        return { ingredientName: ing.ingredientName, rmNumber: ing.rmNumber, warehouseItemId: ing.warehouseItemId, requiredQtyKg, availableQty: null, shortageQty: null, status: "UNMAPPED" as const, incomingPo: null };
+        return { ingredientName: ing.ingredientName, rmNumber: ing.rmNumber, warehouseItemId: ing.warehouseItemId, requiredQtyKg, availableQty: null, shortageQty: null, status: "UNMAPPED" as const, incomingPo: null, contestedBy: [] };
       }
 
       const { status, shortageQty } = checkIngredientAgainstStock(requiredQtyKg, stock);
-      return { ingredientName: ing.ingredientName, rmNumber: ing.rmNumber, warehouseItemId: ing.warehouseItemId, requiredQtyKg, availableQty: stock.AVAILABLE, shortageQty, status, incomingPo: null };
+      return { ingredientName: ing.ingredientName, rmNumber: ing.rmNumber, warehouseItemId: ing.warehouseItemId, requiredQtyKg, availableQty: stock.AVAILABLE, shortageQty, status, incomingPo: null, contestedBy: [] };
     });
 
     result[line.id] = { lineStatus: rollUpMaterialStatus(materials), materials };
   }
 
   await attachIncomingPos(Object.values(result).flatMap((r) => r.materials));
+
+  const contestingByItemId = await getContestingDemand(warehouseItemIds, orderId);
+  for (const r of Object.values(result)) {
+    for (const m of r.materials) {
+      if (m.warehouseItemId && contestingByItemId[m.warehouseItemId]) m.contestedBy = contestingByItemId[m.warehouseItemId];
+    }
+  }
+
   return result;
 }
 

@@ -32,6 +32,8 @@ export type MaterialLineStatus = "READY" | "SHORT" | "UNMAPPED";
 
 export type IncomingPoInfo = { poNumber: string; supplierName: string; quantity: number; expectedDeliveryDate: string };
 
+export type ContestingOrder = { orderNumber: string; requiredQtyKg: number };
+
 export type MaterialCheckLine = {
   ingredientName: string;
   rmNumber: string | null;
@@ -44,6 +46,12 @@ export type MaterialCheckLine = {
    * -- lets a SHORT material point at a real answer instead of a dead end (spec §7). Only
    * ever populated for SHORT lines; null otherwise, and null when nothing's on order. */
   incomingPo: IncomingPoInfo | null;
+  /** Every OTHER active order that also needs this same stock item, if any. Doesn't change
+   * this line's own READY/SHORT status (that still only answers "can THIS order be covered
+   * right now") -- there's no stock reservation/allocation system, so a READY line can still
+   * lose the race to another order that draws down the same shared pool first. Empty array
+   * when nothing else is competing for it. */
+  contestedBy: ContestingOrder[];
 };
 
 export type MaterialCheckResult =
