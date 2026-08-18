@@ -348,3 +348,86 @@ export async function sendMorningReportToWhatsApp(target: { groupId: string | nu
 
   return { ok: true, target: targetLabel, reportText, sent: false };
 }
+
+export type DryingRoomMetrics = {
+  avgDryingTimeHours: number | null;
+  avgTimeToQcHours: number | null;
+  throughputToday: number;
+  throughputThisWeek: number;
+};
+
+const QC_STAGES = new Set(["QC_SAMPLING", "QC_PENDING", "QC_APPROVED", "QC_HOLD", "QA_QC_APPROVALS"]);
+const STILL_DRYING_STAGES = new Set(["RECEIVING", "DRYING", "ROTATION_REQUIRED", "CONTINUE_DRYING"]);
+
+function startOfWeekMonday(d: Date) {
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return start;
+}
+
+/**
+ * Average Drying Time / Average Time to QC / Throughput — the three KPIs the Drying Room
+ * dashboard has been flagging as "needs stage-transition history and not wired up yet".
+ * No new table needed: `updateBatchStage` already writes a `logAudit` entry on every stage
+ * change with a fixed-format summary ("Set batch {id} to {STAGE}"), so per-stage timestamps
+ * are reconstructed from the existing AuditLog trail — same approach Weekly KPI's OTIF
+ * calculation already uses against CustomerOrder's audit trail. Only completed batches
+ * (completedAt set) count, since in-progress batches don't have a real duration yet.
+ */
+export async function getDryingRoomMetrics(): Promise<DryingRoomMetrics> {
+  const session = await getSession();
+  if (!session) throw new Error("Not authorized");
+
+  const completed = await prisma.dryingBatch.findMany({
+    where: { completedAt: { not: null } },
+    select: { id: true, dryingStartTime: true, dateEnteredDryingRoom: true, completedAt: true },
+    orderBy: { completedAt: "desc" },
+    take: 200,
+  });
+
+  const batchIds = completed.map((b) => b.id);
+  const stageLogs = batchIds.length
+    ? await prisma.auditLog.findMany({
+        where: { entityType: "DryingBatch", entityId: { in: batchIds }, action: "UPDATE_DRYING_BATCH_STAGE" },
+        orderBy: { createdAt: "asc" },
+        select: { entityId: true, summary: true, createdAt: true },
+      })
+    : [];
+
+  const transitionsByBatch = new Map<string, { stage: string; at: Date }[]>();
+  for (const log of stageLogs) {
+    if (!log.entityId) continue;
+    const match = log.summary.match(/to (\w+)$/);
+    if (!match) continue;
+    const list = transitionsByBatch.get(log.entityId) ?? [];
+    list.push({ stage: match[1], at: log.createdAt });
+    transitionsByBatch.set(log.entityId, list);
+  }
+
+  const dryingDurationsHours: number[] = [];
+  const timeToQcHours: number[] = [];
+
+  for (const batch of completed) {
+    const start = batch.dryingStartTime ?? batch.dateEnteredDryingRoom;
+    const transitions = transitionsByBatch.get(batch.id) ?? [];
+
+    const leftDrying = transitions.find((t) => !STILL_DRYING_STAGES.has(t.stage));
+    if (leftDrying) dryingDurationsHours.push((leftDrying.at.getTime() - start.getTime()) / 3_600_000);
+
+    const reachedQc = transitions.find((t) => QC_STAGES.has(t.stage));
+    if (reachedQc) timeToQcHours.push((reachedQc.at.getTime() - start.getTime()) / 3_600_000);
+  }
+
+  const avg = (nums: number[]) => (nums.length ? nums.reduce((s, n) => s + n, 0) / nums.length : null);
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = startOfWeekMonday(now);
+
+  return {
+    avgDryingTimeHours: avg(dryingDurationsHours),
+    avgTimeToQcHours: avg(timeToQcHours),
+    throughputToday: completed.filter((b) => b.completedAt! >= startOfToday).length,
+    throughputThisWeek: completed.filter((b) => b.completedAt! >= startOfWeek).length,
+  };
+}

@@ -31,6 +31,7 @@ import {
   upsertMiscStorageItem,
   deleteMiscStorageItem,
   sendMorningReportToWhatsApp,
+  type DryingRoomMetrics,
 } from "@/lib/actions/drying-room-actions";
 import { formatBrisbaneDateTime, toDateInputValue } from "@/lib/ui";
 import { Card } from "@/components/ui/Card";
@@ -165,12 +166,14 @@ export default function DryingRoomClient({
   employees,
   whatsAppGroups,
   canManage,
+  metrics,
 }: {
   bays: Bay[];
   misc: MiscItem[];
   employees: Employee[];
   whatsAppGroups: WhatsAppGroupOpt[];
   canManage: boolean;
+  metrics: DryingRoomMetrics;
 }) {
   const searchParams = useSearchParams();
   const bayParam = searchParams.get("bay");
@@ -230,7 +233,7 @@ export default function DryingRoomClient({
         </Card>
       )}
 
-      {tab === "dashboard" && <DashboardTab bays={bays} allBatches={allBatches} alerts={alerts} />}
+      {tab === "dashboard" && <DashboardTab bays={bays} allBatches={allBatches} alerts={alerts} metrics={metrics} />}
 
       {tab === "bays" && (
         <BaysGrid bays={bays} employees={employees} canManage={canManage} onOpenBay={setOpenBayId} />
@@ -277,7 +280,23 @@ function StatCard({
   );
 }
 
-function DashboardTab({ bays, allBatches, alerts }: { bays: Bay[]; allBatches: Batch[]; alerts: DryingAlert[] }) {
+function formatHours(hours: number | null): string {
+  if (hours === null) return "Not enough data yet";
+  if (hours < 24) return `${hours.toFixed(1)}h`;
+  return `${(hours / 24).toFixed(1)}d`;
+}
+
+function DashboardTab({
+  bays,
+  allBatches,
+  alerts,
+  metrics,
+}: {
+  bays: Bay[];
+  allBatches: Batch[];
+  alerts: DryingAlert[];
+  metrics: DryingRoomMetrics;
+}) {
   const [showPriorityList, setShowPriorityList] = useState(false);
   const priorityJobs = bays
     .flatMap((bay) => bay.batches.map((batch) => ({ ...batch, bayNumber: bay.bayNumber })))
@@ -358,10 +377,15 @@ function DashboardTab({ bays, allBatches, alerts }: { bays: Bay[]; allBatches: B
           <StatCard label="Products on Hold" value={onHoldCount} />
           <StatCard label="Cleaning Tasks" value={cleaningRequiredCount} />
           <StatCard label="Overdue Batches" value={overdueBatchIds.size} />
+          <StatCard label="Avg. Drying Time" value={formatHours(metrics.avgDryingTimeHours)} />
+          <StatCard label="Avg. Time to QC" value={formatHours(metrics.avgTimeToQcHours)} />
+          <StatCard label="Throughput Today" value={metrics.throughputToday} />
+          <StatCard label="Throughput This Week" value={metrics.throughputThisWeek} />
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          Average Drying Time, Daily/Weekly Throughput, and Average Time to QC/Pouching need stage-transition
-          history and are not wired up yet — flag if you want those added next.
+          Throughput counts batches marked Complete. Drying Time and Time to QC are computed from each batch&apos;s
+          recorded stage changes (up to the last 200 completed batches) — reads &quot;Not enough data yet&quot; if a
+          batch was completed without its stage changes ever being tracked here.
         </p>
       </div>
 

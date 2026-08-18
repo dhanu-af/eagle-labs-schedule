@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSession, canManageDryingRoom } from "@/lib/auth";
+import { getDryingRoomMetrics } from "@/lib/actions/drying-room-actions";
 import DryingRoomClient from "./drying-room-client";
 
 const BAY_COUNT = 7;
@@ -26,7 +27,7 @@ export default async function DryingRoomPage() {
     skipDuplicates: true,
   });
 
-  const [bays, misc, employees, whatsAppGroups] = await Promise.all([
+  const [bays, misc, employees, whatsAppGroups, metrics] = await Promise.all([
     prisma.dryingBay.findMany({
       orderBy: { bayNumber: "asc" },
       include: {
@@ -40,6 +41,7 @@ export default async function DryingRoomPage() {
     prisma.miscStorageItem.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.employee.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.whatsAppGroup.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    getDryingRoomMetrics(),
   ]);
 
   return (
@@ -96,6 +98,7 @@ export default async function DryingRoomPage() {
       employees={employees}
       whatsAppGroups={whatsAppGroups.map((g) => ({ id: g.id, name: g.name }))}
       canManage={!!session && canManageDryingRoom(session.role)}
+      metrics={metrics}
     />
   );
 }
