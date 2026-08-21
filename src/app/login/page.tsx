@@ -38,12 +38,12 @@ export default async function LoginPage({
                 boxShadow: "0 0 18px rgba(16,185,129,0.45)",
               }}
             >
-              EL
+              DL
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight leading-tight text-white">Eagle Labs Australia</h1>
+              <h1 className="text-lg font-semibold tracking-tight leading-tight text-white">Dhanu Labs Australia</h1>
               <p className="text-xs leading-tight text-emerald-100/40">
-                BlendCaps Operations Platform
+                Operations Platform
               </p>
             </div>
           </div>

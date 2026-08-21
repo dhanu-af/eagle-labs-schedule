@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eagle Labs Australia | BlendCaps Operations Platform",
-  description: "BlendCaps Operations Platform — Team Work Schedule & KPI Management for Eagle Labs Australia",
+  title: "Dhanu Labs Australia | Operations Platform",
+  description: "Operations Platform — Team Work Schedule & KPI Management for Dhanu Labs Australia",
 };
 
 export default function RootLayout({

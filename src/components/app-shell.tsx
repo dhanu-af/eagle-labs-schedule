@@ -218,12 +218,12 @@ export default function AppShell({
               boxShadow: "0 0 16px var(--glow-primary)",
             }}
           >
-            EL
+            DL
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight text-foreground">Eagle Labs Australia</p>
+            <p className="truncate text-sm font-semibold leading-tight text-foreground">Dhanu Labs Australia</p>
             <p className="truncate text-[11px] leading-tight text-muted-foreground">
-              BlendCaps Operations Platform
+              Operations Platform
             </p>
           </div>
         </div>
@@ -249,11 +249,11 @@ export default function AppShell({
                 className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-emerald-950"
                 style={{ background: "linear-gradient(135deg, #34d399 0%, #10b981 55%, #0d9488 100%)" }}
               >
-                EL
+                DL
               </div>
               <div>
-                <p className="text-sm font-semibold leading-tight text-foreground">Eagle Labs Australia</p>
-                <p className="text-[11px] leading-tight text-muted-foreground">BlendCaps Operations Platform</p>
+                <p className="text-sm font-semibold leading-tight text-foreground">Dhanu Labs Australia</p>
+                <p className="text-[11px] leading-tight text-muted-foreground">Operations Platform</p>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground" aria-label="Close menu">
