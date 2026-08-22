@@ -4,7 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CalculationDirection } from "@/generated/prisma";
 import { createCalculation, deleteCalculation } from "@/lib/actions/capsule-calculation-actions";
-import { computeCalculation, DIRECTION_LABEL, formatKg, formatWholeCount } from "@/lib/capsule-calculation-defaults";
+import {
+  computeCalculation,
+  DIRECTION_LABEL,
+  WEIGHT_FIELD_LABEL,
+  QUANTITY_FIELD_LABEL,
+  formatKg,
+  formatWholeCount,
+} from "@/lib/capsule-calculation-defaults";
 import { formatBrisbaneDateTime } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -36,7 +43,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const DIRECTIONS: CalculationDirection[] = ["BOTTLES_TO_KG", "KG_TO_OUTPUT"];
+const DIRECTIONS: CalculationDirection[] = ["BOTTLES_TO_KG", "KG_TO_OUTPUT", "BAGGED_KG_TO_OUTPUT"];
+
+const DIRECTION_TONE: Record<CalculationDirection, "info" | "muted" | "success"> = {
+  BOTTLES_TO_KG: "info",
+  KG_TO_OUTPUT: "muted",
+  BAGGED_KG_TO_OUTPUT: "success",
+};
 
 export default function CalculationClient({ calculations }: { calculations: CalculationRow[] }) {
   const router = useRouter();
@@ -54,9 +67,9 @@ export default function CalculationClient({ calculations }: { calculations: Calc
     const avgFillWeightMgNum = Number(avgFillWeightMg);
     const inputValueNum = Number(inputValue);
     if (!capsulesPerBottleNum || capsulesPerBottleNum <= 0) return setError("Capsules per bottle must be greater than 0.");
-    if (!avgFillWeightMgNum || avgFillWeightMgNum <= 0) return setError("Average fill weight must be greater than 0.");
+    if (!avgFillWeightMgNum || avgFillWeightMgNum <= 0) return setError(`${WEIGHT_FIELD_LABEL[direction]} must be greater than 0.`);
     if (!inputValueNum || inputValueNum <= 0) {
-      return setError(direction === "BOTTLES_TO_KG" ? "Enter the number of bottles." : "Enter the kg of powder blended.");
+      return setError(`Enter a value for "${QUANTITY_FIELD_LABEL[direction]}".`);
     }
 
     startTransition(async () => {
@@ -128,20 +141,22 @@ export default function CalculationClient({ calculations }: { calculations: Calc
           <Field label="Capsules per Bottle">
             <input type="number" className="input" value={capsulesPerBottle} onChange={(e) => setCapsulesPerBottle(e.target.value)} />
           </Field>
-          <Field label="Avg. Fill Weight (mg)">
+          <Field label={WEIGHT_FIELD_LABEL[direction]}>
             <input type="number" step="0.1" className="input" value={avgFillWeightMg} onChange={(e) => setAvgFillWeightMg(e.target.value)} />
           </Field>
-          <Field label={direction === "BOTTLES_TO_KG" ? "Target Bottles" : "Blended Powder (kg)"}>
+          <Field label={QUANTITY_FIELD_LABEL[direction]}>
             <input type="number" step="0.001" className="input" value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
           </Field>
         </div>
 
         {preview && (
-          <div className="grid grid-cols-3 gap-3 rounded-lg border border-border bg-surface-muted/40 p-3 text-center">
-            <div>
-              <p className="text-lg font-semibold tabular-nums text-foreground">{formatKg(preview.resultKg)} kg</p>
-              <p className="text-xs text-muted-foreground">Powder</p>
-            </div>
+          <div className={`grid gap-3 rounded-lg border border-border bg-surface-muted/40 p-3 text-center ${direction === "BOTTLES_TO_KG" ? "grid-cols-3" : "grid-cols-2"}`}>
+            {direction === "BOTTLES_TO_KG" && (
+              <div>
+                <p className="text-lg font-semibold tabular-nums text-foreground">{formatKg(preview.resultKg)} kg</p>
+                <p className="text-xs text-muted-foreground">Powder to Blend</p>
+              </div>
+            )}
             <div>
               <p className="text-lg font-semibold tabular-nums text-foreground">{formatWholeCount(preview.resultCapsules)}</p>
               <p className="text-xs text-muted-foreground">Capsules</p>
@@ -172,7 +187,7 @@ export default function CalculationClient({ calculations }: { calculations: Calc
                 <Th>Label</Th>
                 <Th>Type</Th>
                 <Th>Input</Th>
-                <Th>KG Powder</Th>
+                <Th>Weight (kg)</Th>
                 <Th>Capsules</Th>
                 <Th>Bottles</Th>
                 <Th>By</Th>
@@ -184,13 +199,13 @@ export default function CalculationClient({ calculations }: { calculations: Calc
                 <tr key={c.id} className="border-b border-border last:border-0 even:bg-surface-muted/30">
                   <td className="px-3 py-2 text-foreground">{c.label ?? "—"}</td>
                   <td className="px-3 py-2">
-                    <Badge tone={c.direction === "BOTTLES_TO_KG" ? "info" : "muted"}>{DIRECTION_LABEL[c.direction]}</Badge>
+                    <Badge tone={DIRECTION_TONE[c.direction]}>{DIRECTION_LABEL[c.direction]}</Badge>
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">
                     {c.direction === "BOTTLES_TO_KG" ? `${formatWholeCount(c.inputValue)} bottles` : `${formatKg(c.inputValue)} kg`}
                     <br />
                     <span className="text-xs">
-                      {c.capsulesPerBottle}/bottle, {c.avgFillWeightMg}mg fill
+                      {c.capsulesPerBottle}/bottle, {c.avgFillWeightMg}mg {c.direction === "BAGGED_KG_TO_OUTPUT" ? "full" : "fill"}
                     </span>
                   </td>
                   <td className="px-3 py-2 tabular-nums">{c.resultKg !== null ? formatKg(c.resultKg) : "—"}</td>

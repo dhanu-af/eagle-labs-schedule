@@ -2450,6 +2450,12 @@ model TaskRequest {
 enum CalculationDirection {
   BOTTLES_TO_KG
   KG_TO_OUTPUT
+  /// Post-encapsulation: a bag/bucket of finished (pressed) capsules weighed in kg ->
+  /// capsule count & bottle output. Same kg<->capsules math as KG_TO_OUTPUT, but the
+  /// weight figure is the capsule's AVERAGE FULL weight (shell + fill), not the fill
+  /// weight alone -- a different real quantity, so kept as its own direction rather
+  /// than merged with KG_TO_OUTPUT.
+  BAGGED_KG_TO_OUTPUT
 }
 
 model CapsuleCalculation {
