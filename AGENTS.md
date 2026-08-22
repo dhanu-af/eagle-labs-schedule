@@ -1,3 +1,5 @@
+Read `HANDOVER.md` in this directory first, before anything else, if it exists.
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
