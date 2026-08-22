@@ -2437,3 +2437,36 @@ model TaskRequest {
   @@index([toUserId, status])
   @@index([fromUserId])
 }
+
+// ---------------------------------------------------------------------------
+// Capsule Calculation -- quick production-math tool: given a target bottle
+// count, how many kg of powder to blend; or given a blended kg amount, how
+// many capsules/bottles that yields. Same "kg <-> capsules via avg fill
+// weight" formula Mfg Reconciliation's capsulesFromKg() already uses, just a
+// standalone planning calculator rather than a record tied to a real batch.
+// Every run a user submits is saved as a row here, building a running log.
+// ---------------------------------------------------------------------------
+
+enum CalculationDirection {
+  BOTTLES_TO_KG
+  KG_TO_OUTPUT
+}
+
+model CapsuleCalculation {
+  id                String               @id @default(cuid())
+  direction         CalculationDirection
+  label             String?
+  capsulesPerBottle Int
+  avgFillWeightMg   Float
+  /// The user's one given input: target bottle count for BOTTLES_TO_KG, or
+  /// blended kg for KG_TO_OUTPUT.
+  inputValue        Float
+  resultKg          Float?
+  resultCapsules    Float?
+  resultBottles     Float?
+  createdById       String?
+  createdByName     String?
+  createdAt         DateTime             @default(now())
+
+  @@index([createdAt])
+}

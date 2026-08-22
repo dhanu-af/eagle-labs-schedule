@@ -59,6 +59,7 @@ const icons = {
   weeklyMps: "🗓️",
   materialShortages: "📉",
   planningSearch: "🔎",
+  calculation: "🧮",
 };
 
 type Notification = {
@@ -136,6 +137,7 @@ export default function AppShell({
             { href: "/mfg-reconciliation", label: "Mfg Reconciliation", icon: icons.mfgReconciliation },
             { href: "/action-log", label: "Site Action Log", icon: icons.actionLog },
             { href: "/weekly-kpi", label: "Weekly KPI Scorecard", icon: icons.weeklyKpi },
+            { href: "/calculation", label: "Calculation", icon: icons.calculation },
             ...(canSeeIngredientLibrary ? [{ href: "/ingredients", label: "Ingredient Library", icon: icons.ingredients }] : []),
             { href: "/ask-dhanu", label: "Dhanu AI", icon: icons.askDhanu },
             { href: "/team-chat", label: "Team Hub", icon: icons.teamChat },
