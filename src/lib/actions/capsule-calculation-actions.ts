@@ -22,6 +22,8 @@ export async function listCalculations() {
 export async function createCalculation(data: {
   direction: CalculationDirection;
   label?: string | null;
+  productName?: string | null;
+  batchNumber?: string | null;
   capsulesPerBottle: number;
   avgFillWeightMg: number;
   inputValue: number;
@@ -37,6 +39,8 @@ export async function createCalculation(data: {
     data: {
       direction: data.direction,
       label: data.label?.trim() || null,
+      productName: data.productName?.trim() || null,
+      batchNumber: data.batchNumber?.trim() || null,
       capsulesPerBottle: data.capsulesPerBottle,
       avgFillWeightMg: data.avgFillWeightMg,
       inputValue: data.inputValue,

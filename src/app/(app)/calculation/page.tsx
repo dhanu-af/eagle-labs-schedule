@@ -15,6 +15,8 @@ export default async function CalculationPage() {
         id: c.id,
         direction: c.direction,
         label: c.label,
+        productName: c.productName,
+        batchNumber: c.batchNumber,
         capsulesPerBottle: c.capsulesPerBottle,
         avgFillWeightMg: c.avgFillWeightMg,
         inputValue: c.inputValue,

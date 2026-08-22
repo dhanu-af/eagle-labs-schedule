@@ -27,6 +27,8 @@ export type CalculationRow = {
   id: string;
   direction: CalculationDirection;
   label: string | null;
+  productName: string | null;
+  batchNumber: string | null;
   capsulesPerBottle: number;
   avgFillWeightMg: number;
   inputValue: number;
@@ -75,6 +77,8 @@ export default function CalculationClient({ calculations }: { calculations: Calc
   const [pending, startTransition] = useTransition();
   const [direction, setDirection] = useState<CalculationDirection>("BOTTLES_TO_KG");
   const [label, setLabel] = useState("");
+  const [productName, setProductName] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
   const [capsulesPerBottle, setCapsulesPerBottle] = useState("31");
   const [avgFillWeightMg, setAvgFillWeightMg] = useState("372");
   const [inputValue, setInputValue] = useState("");
@@ -96,11 +100,15 @@ export default function CalculationClient({ calculations }: { calculations: Calc
         await createCalculation({
           direction,
           label: label || null,
+          productName: productName || null,
+          batchNumber: batchNumber || null,
           capsulesPerBottle: capsulesPerBottleNum,
           avgFillWeightMg: avgFillWeightMgNum,
           inputValue: inputValueNum,
         });
         setLabel("");
+        setProductName("");
+        setBatchNumber("");
         setInputValue("");
         router.refresh();
       } catch (err) {
@@ -153,9 +161,15 @@ export default function CalculationClient({ calculations }: { calculations: Calc
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Field label="Product Name (optional)">
+            <input className="input" placeholder="e.g. Gut AU" value={productName} onChange={(e) => setProductName(e.target.value)} />
+          </Field>
+          <Field label="Batch Number (optional)">
+            <input className="input" placeholder="e.g. B-12345" value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} />
+          </Field>
           <Field label="Label (optional)">
-            <input className="input" placeholder="e.g. Gut AU August run" value={label} onChange={(e) => setLabel(e.target.value)} />
+            <input className="input" placeholder="e.g. August run" value={label} onChange={(e) => setLabel(e.target.value)} />
           </Field>
           <Field label={CONTAINER_FIELD_LABEL[direction]}>
             <input type="number" className="input" value={capsulesPerBottle} onChange={(e) => setCapsulesPerBottle(e.target.value)} />
@@ -205,9 +219,10 @@ export default function CalculationClient({ calculations }: { calculations: Calc
         <EmptyState title="No calculations yet" description="Run your first calculation above." />
       ) : (
         <Card padding="none" className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="w-full min-w-[1050px] text-sm">
             <thead>
               <tr className={THEAD_ROW_CLASS}>
+                <Th>Product / Batch</Th>
                 <Th>Label</Th>
                 <Th>Type</Th>
                 <Th>Input</Th>
@@ -221,6 +236,10 @@ export default function CalculationClient({ calculations }: { calculations: Calc
             <tbody>
               {calculations.map((c) => (
                 <tr key={c.id} className="border-b border-border last:border-0 even:bg-surface-muted/30">
+                  <td className="px-3 py-2 text-foreground">
+                    {c.productName ?? "—"}
+                    {c.batchNumber && <span className="text-xs text-muted-foreground"> ({c.batchNumber})</span>}
+                  </td>
                   <td className="px-3 py-2 text-foreground">{c.label ?? "—"}</td>
                   <td className="px-3 py-2">
                     <Badge tone={DIRECTION_TONE[c.direction]}>{DIRECTION_LABEL[c.direction]}</Badge>

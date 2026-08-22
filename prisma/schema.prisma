@@ -2475,6 +2475,8 @@ model CapsuleCalculation {
   id                String               @id @default(cuid())
   direction         CalculationDirection
   label             String?
+  productName       String?
+  batchNumber       String?
   capsulesPerBottle Int
   avgFillWeightMg   Float
   /// The user's one given input: target bottle count for BOTTLES_TO_KG, blended kg for
