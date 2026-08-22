@@ -1597,10 +1597,39 @@ model QcSample {
 
   labTest         QcLabTest?
   retentionRecord QcRetentionRecord?
+  attachments     QcSampleAttachment[]
 
   @@index([batchNumber])
   @@index([status])
   @@index([sampleType])
+}
+
+enum QcAttachmentKind {
+  COA
+  LAB_REPORT
+  PHOTO
+  OTHER
+}
+
+/// Real files (COA/lab report PDFs, product photos) for a sample -- distinct
+/// from the "COA Upload"/"Laboratory Report"/"Photographs" rows in the lab
+/// test checklist below, which are just Pass/Fail + a text-field stand-in for
+/// this. A dedicated sample-FK'd model rather than reusing the generic,
+/// already-unused CheckAttachment (checkType/checkId) above -- this app's own
+/// convention for QC-adjacent data is dedicated typed models (QcLabTest,
+/// QcRetentionRecord), not a shared polymorphic table nothing else uses.
+model QcSampleAttachment {
+  id             String           @id @default(cuid())
+  sampleId       String
+  sample         QcSample         @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  kind           QcAttachmentKind
+  url            String
+  fileName       String
+  fileSizeBytes  Int
+  uploadedByName String?
+  uploadedAt     DateTime         @default(now())
+
+  @@index([sampleId])
 }
 
 /// Header record for a sample's lab testing pass -- the actual checklist rows are QcLabTestItem,
