@@ -2456,16 +2456,29 @@ enum CalculationDirection {
   /// weight alone -- a different real quantity, so kept as its own direction rather
   /// than merged with KG_TO_OUTPUT.
   BAGGED_KG_TO_OUTPUT
+  /// Procurement: given a capsule count, how much empty-shell weight and how many
+  /// boxes of empty shells to buy. Reuses capsulesPerBottle as "capsules per box" and
+  /// avgFillWeightMg as "empty shell weight (mg)" -- see the field-reuse note on
+  /// CapsuleCalculation below.
+  CAPSULES_TO_SHELLS
 }
 
+/// Every field here is reused across all four CalculationDirections with a different
+/// real-world meaning depending on direction (capsulesPerBottle doubles as "capsules
+/// per box" for CAPSULES_TO_SHELLS; avgFillWeightMg doubles as "full weight" for
+/// BAGGED_KG_TO_OUTPUT and "empty shell weight" for CAPSULES_TO_SHELLS; resultBottles
+/// doubles as "boxes needed" for CAPSULES_TO_SHELLS). The UI's per-direction label maps
+/// (src/lib/capsule-calculation-defaults.ts) are the source of truth for what each
+/// field means on a given row -- don't assume the column name literally describes the
+/// value without checking `direction` first.
 model CapsuleCalculation {
   id                String               @id @default(cuid())
   direction         CalculationDirection
   label             String?
   capsulesPerBottle Int
   avgFillWeightMg   Float
-  /// The user's one given input: target bottle count for BOTTLES_TO_KG, or
-  /// blended kg for KG_TO_OUTPUT.
+  /// The user's one given input: target bottle count for BOTTLES_TO_KG, blended kg for
+  /// KG_TO_OUTPUT/BAGGED_KG_TO_OUTPUT, or capsule count for CAPSULES_TO_SHELLS.
   inputValue        Float
   resultKg          Float?
   resultCapsules    Float?
